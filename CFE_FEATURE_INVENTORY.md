@@ -46,8 +46,8 @@ outside `CFEUTIL.CPP` and `EXTERNS.H`.
 | `RANGEWRAPPER.H`, Vector `std::begin/end` (`a514953`) | A | Small C++ helpers. |
 | `mod.mix` / `mod_ra.mix` (243 / 247 bytes) | A (asset) | Legacy-format MIX loaded in `INIT.CPP`. 2 entries each: `ZVTRN.SHP` (id `d9f7b655`, 122 bytes – veterancy pips for the legacy renderer) and an unidentified 85-byte file (id `54c2d545`). Must ship with the game data. |
 | Mod Data `*.tga`, `*.DDS`, `*.XML`, `*.WAV` | C | Remastered client assets. |
-| Savegame layout changes (padding, new members) | A | CFE breaks savegame compatibility by design; VC CFE saves will be incompatible with stock VC saves. |
-| New `MISSION_ATTACKMOVE`, `MISSION_QATTACKMOVE`, `ACTION_ATTACKMOVE`, event changes | A | Changes the network protocol: CFE-VC and stock-VC builds can't play MP together. |
+| Savegame layout changes (padding, new members) | A | CFE commit messages state it breaks savegame compatibility (`24b6c94`, `0a65e9d`); expect VC CFE saves to be incompatible with stock VC saves (not tested). |
+| New `MISSION_ATTACKMOVE`, `MISSION_QATTACKMOVE`, `ACTION_ATTACKMOVE`, `SET_RALLY` event | A | Expected (not tested) to change the network protocol, so CFE-VC and stock-VC builds would not play MP together. |
 
 ### Shared features (TD and RA)
 
@@ -58,8 +58,8 @@ outside `CFEUTIL.CPP` and `EXTERNS.H`.
 | Rally points | `EnableRallyPoints` | 1 | 2 | A | Set/clear through `EVENT.CPP`. Draws a dotted line in Remastered and `CC_Draw_Line` in legacy (already in CFE). |
 | Harvester queue jumping | `EnableHarvyQueueJump`, `HarvyQueueJumpCutoff` | 4+2 | 5+2 | A | |
 | Harvester load balancing | `EnableHarvyLoadBalancing` | 8 | 7 | A | |
-| Harvester optimization | `EnableHarvyOptimize`, `HarvyOptimize*` | 12+4 | 11+4 | A | Some tuning ints are loaded but never read. |
-| Attack-move | `EnableAttackMove` (+ RA `EnableChronoTankAttackMove`) | 6 | 10+1 | D (small) | Shift is read via `DLL_Export_Get_Input_Key_State(KN_LSHIFT)` in `What_Action()`. VC already has `#ifdef REMASTER_BUILD` → `Keyboard->Down(Options.KeySelect*)`; reuse that pattern. UI-side only, so MP-safe. |
+| Harvester optimization | `EnableHarvyOptimize`, `HarvyOptimize*` | 12+5 | 11+5 | A | The `*Numerator`/`*Denominator` ints are only read in `CFEUTIL.CPP`, where they compute the `*Weight` values. |
+| Attack-move | `EnableAttackMove` (+ RA `EnableChronoTankAttackMove`) | 6 | 10+1 | D (small) | Shift is read via `DLL_Export_Get_Input_Key_State(KN_LSHIFT)`; all 6 such reads (TD `UNIT.CPP`; RA `UNIT`/`INFANTRY`/`VESSEL`/`AIRCRAFT`×2) are inside `What_Action()`, i.e. UI-side. VC already has `#ifdef REMASTER_BUILD` → `Keyboard->Down(Options.KeySelect*)`; reuse that pattern. |
 | Q-move | TD `EnableQMove`; RA `EnableQMoveLoops`, `EnableAirQMove`, `EnableAirQAMLRecall` | 1 | 5+1+1 | D | TD toggle lives only in `DLLInterface.cpp`, so it needs a legacy hotkey. VC RA already has `HouseClass::IsQueuedMovementToggle`. |
 | Commando / Tanya guard | `EnableCommandoGuard` / `EnableTanyaGuard` | 1 | 1 | A | |
 | Safe sabotage | `SafeSabotage` | 2 | 2 | A | |
@@ -67,7 +67,7 @@ outside `CFEUTIL.CPP` and `EXTERNS.H`.
 | Smarter repair bays | `EnableSmarterRepairBays` | 4 | 5 | A | |
 | Configurable build distance | TD `BuildingGap`; RA `BuildingGapOffset`, `EnableLongGapFix` | 5 | 6+2 | A* | DLLInterface placement preview is glue; legacy uses `DisplayClass::Passes_Proximity_Check`. |
 | Tiberium / ore growth scale | `TibGrowthScale` / `OreGrowthScale` | 4 | 5 | A | |
-| TS/RA2-style wall building | `WallBuildLength`, `AllowSandbagging`, `WallsAlwaysHaveFullCost` | 11+3+4 | 8+3 | D (small) | Ctrl disables it. `CFE_Patch_Should_Extend_Walls()` reads Ctrl inside building-placement logic: **not lockstep-safe in VC MP** — the Ctrl state must travel in the PLACE event. |
+| TS/RA2-style wall building | `WallBuildLength`, `AllowSandbagging`, `WallsAlwaysHaveFullCost` | 11+3+4 | 8+3 | D (small) | Ctrl disables it. Call chain (TD): `EventClass` `PLACE` → `HouseClass::Place_Object` (`HOUSE.CPP:2987`) → `tech->Unlimbo` (`:3148`) → `BuildingClass::Unlimbo_Wall` (`BUILDING.CPP:1909`) → `CFE_Patch_Should_Extend_Walls()` (`:1355`) reads Ctrl. That runs during event execution, so with VC's local `Keyboard` it is **not lockstep-safe in MP** — the Ctrl state must travel in the PLACE event. |
 | Inverse wall placement preview | `InverseBuildingPreviewMode` | 3 | 3 | C | Remastered-only by design (normal markers work in legacy). |
 | Better tiberium / ore growth | `BetterTibGrowth` / `BetterOreGrowth` | 1 | 2 | A | |
 | Tiberium / ore index bugfix | `TibIndexBugfix` / `OreIndexBugfix` | 11 | 5 | A | |
@@ -75,7 +75,7 @@ outside `CFEUTIL.CPP` and `EXTERNS.H`.
 | Burning tree fix | `EnableBurningTreeFix` | 6 | 4 | A | |
 | Death's door | `EnableDeathsDoorFix` | 1 | 1 | A | |
 | New skirmish AI groundwork | `EnableNewSkirmishAI` | 8 | 7 | A | Not in README feature list. |
-| Version announce | `EnableVersionAnnounce` | 1 | 1 | A | Uses the in-game message system. |
+| Version announce | `EnableVersionAnnounce` | 1 | 1 | A* | Calls `On_Message()` (TD `HOUSE.CPP:989`). In VC that function only exists in `REMASTER_BUILD` (`tiberiandawn/house.cpp:1184,1195`), so the standalone build needs a legacy message path (e.g. `Messages.Add_Message`). |
 
 ### TD-only features
 
@@ -91,7 +91,7 @@ outside `CFEUTIL.CPP` and `EXTERNS.H`.
 | Gunboat bugfix | `EnableGunboatBugfix` | 3 | A | |
 | Tiberium resurgence | `TibResurgence`, `TibResurgeDelay` | 1+1 | A | |
 | Visceroids (TS spawn, tree spawn, meaner) | `TSVisceroidSpawn`, `TreeVisceroidSpawn*`, `MeanerVisceroids` | 1+3+18 | A | Check the spawn animation asset in Phase 3. |
-| Nuke tank | `EnableNukeTank` | 2 | Defer | Code ports, but the art only exists as Remastered textures. Needs legacy SHP art or reused graphics. |
+| Nuke tank | `EnableNukeTank` | 2 | Defer | `NTNK` unit type already exists in EA's code. `NTNK.SHP` is not in any installed TD MIX nor in `mod.mix` (index search; the same search finds `HTNK.SHP` in `CONQUER.MIX`). Needs legacy SHP art or reused graphics. |
 | MP preplaced unit orders / disable neutral attacks | `MPPreplacedUnitOrderMode`, `DisableMPNeutralAttacks` | 4+1 | A | |
 | GDI9 fix | `EnableGDI9Fix` | 1 | A | |
 | Building death announcements | `BuildingDeathAnnounceMode` | 4 | A / check | Check whether the EVA lines exist in the legacy `SPEECH.MIX`. |
@@ -104,7 +104,7 @@ outside `CFEUTIL.CPP` and `EXTERNS.H`.
 | Dead building scatter fix | `DeadBuildingScatterFix` | 1 | A | |
 | Shroud remover | `ShroudRemover` | 4 | A* | Drop the DLLInterface line. |
 | Quieter airstrips | `QuieterAirstrips` | 3 | A* | One reference is in `SIDEBARGlyphx.CPP`; map it to VC's legacy `sidebar.cpp`. |
-| TD balance patch | `Override*`, `ApplyMPBalanceToSP`, `MPUnitsInSP` | ~25 | A | Mostly `SCENARIO.CPP`. |
+| TD balance patch | `Override*`, `ApplyMPBalanceToSP`, `MPUnitsInSP` | 31 | A | Mostly `SCENARIO.CPP`. |
 | JD's extra adjustments | `JDExtraAdjustments` | 7 | A | |
 | MP civilian sight | `MPCivSight` | 1 | A | |
 | Custom-mission INI tags (scenario number, dinos, loaners) | `DefaultCustomMissionScenarioNumber` + tags | 1 | A | |
@@ -133,7 +133,7 @@ outside `CFEUTIL.CPP` and `EXTERNS.H`.
 | Megamaps (TD) | B | VC compiles VanillaTD with `MEGAMAPS`. CFE's own port (`3e274c8`…`d515fff`) came from VC; reconcile the few CFE follow-ups (tib growth scaling on megamaps `d515fff`, `Goto_Tiberium` search radius `d2edf47`, base-node remap `f46a7ab`). |
 | 8 players (TD) | Phase 5 | VC `MAX_PLAYERS 6`; CFE `8`. Needs legacy lobby/score UI and remap tables. CFE already made legacy remap tables for the new team color (`1d22980`). |
 | Larger object limits, 64 KB map INI buffer | A | `44b0f3b`, `da3a781`, `ac86714`. |
-| ~35 commits "lifted from vanilla-conquer" | B | Already in VC. Verify case by case; skip when present. |
+| 31 commits whose subject says they were lifted from / done as per a vanilla-conquer commit | B (assumed) | Presence in current VC **not yet checked**; verify case by case and skip when present. |
 | Other vanilla bugfixes (engineers, chinooks, power, layers, two-units-one-cell, ReservingVehicle, sound/PlayerPtr fixes …) | A / review | The largest bucket of unflagged changes. Port after the flagged features. Some touch remaster-only PlayerPtr issues. |
 | Per-house unit visibility fixes (`79d7e0e` and follow-ups) | review | Written against Remastered's per-house visibility; check how much applies to the legacy renderer. |
 | Pixel-perfect zoom | C | Remastered client. |
