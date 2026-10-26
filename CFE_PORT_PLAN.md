@@ -15,7 +15,7 @@ TD +26.5k/-1.9k lines in 449 files, RA +11.8k/-2.2k lines in 630 files.
 - [x] `brew install cmake ninja openal-soft` (SDL2 via sdl2-compat)
 - [x] `CMAKE_PREFIX_PATH=/opt/homebrew/opt/openal-soft cmake --preset release && cmake --build --preset release`
 - [ ] Run vanillatd / vanillara with freeware retail data and play a mission
-- [ ] GitHub fork of Vanilla-Conquer, push `cfe-port`
+- [x] GitHub fork of Vanilla-Conquer (https://github.com/zfrankz/Vanilla-Conquer), push `cfe-port`
 
 ## Phase 1 – Feature inventory
 Map every README feature to its CFE commits and files, then bucket it:
