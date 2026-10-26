@@ -14,7 +14,14 @@ TD +26.5k/-1.9k lines in 449 files, RA +11.8k/-2.2k lines in 630 files.
 ## Phase 0 – Baseline
 - [x] `brew install cmake ninja openal-soft` (SDL2 via sdl2-compat)
 - [x] `CMAKE_PREFIX_PATH=/opt/homebrew/opt/openal-soft cmake --preset release && cmake --build --preset release`
-- [ ] Run vanillatd / vanillara with freeware retail data and play a mission
+- [x] Run vanillatd / vanillara with freeware retail data (RA: missions played; TD: English main menu)
+
+Data layout (`~/Library/Application Support/Vanilla-Conquer/`):
+- `vanillara/`: `MAIN.MIX`, `REDALERT.MIX` from the Allied CD
+- `vanillatd/`: shared MIX files from the GDI CD root, plus `UPDATE`, `UPDATEC`, `TRANSIT`,
+  `SPEECH`, `*ICNH` and `CCLOCAL.MIX` extracted from the CD's `INSTALL/SETUP.Z` (InstallShield 3).
+  `vanillatd/gdi/` and `vanillatd/nod/` hold each CD's `GENERAL.MIX` and `MOVIES.MIX`.
+  The CD's loose `INSTALL/CCLOCAL.MIX` is German – do not use it.
 - [x] GitHub fork of Vanilla-Conquer (https://github.com/zfrankz/Vanilla-Conquer), push `cfe-port`
 
 ## Phase 1 – Feature inventory
