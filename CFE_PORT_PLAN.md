@@ -24,7 +24,7 @@ Data layout (`~/Library/Application Support/Vanilla-Conquer/`):
   The CD's loose `INSTALL/CCLOCAL.MIX` is German – do not use it.
 - [x] GitHub fork of Vanilla-Conquer (https://github.com/zfrankz/Vanilla-Conquer), push `cfe-port`
 
-## Phase 1 – Feature inventory
+## Phase 1 – Feature inventory ✅ (see `CFE_FEATURE_INVENTORY.md`)
 Map every README feature to its CFE commits and files, then bucket it:
 - A: pure game logic – port directly
 - B: already in VC (megamaps, RA-derived INI/CRC/straw/pipe infra in common/, shared bugfixes) – skip or reconcile
