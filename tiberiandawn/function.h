@@ -136,6 +136,7 @@ typedef struct
 #include <stdarg.h>
 #include <ctype.h>
 #include <assert.h>
+#include <math.h>
 
 /*
 **	VQ player specific includes.
@@ -1065,6 +1066,15 @@ inline int Distance(COORDINATE coord1, COORDINATE coord2)
  *=============================================================================================*/
 inline int Distance(CELL coord1, CELL coord2)
 {
+    /*
+    **	CFE: true (rounded) distance instead of the fast approximation.
+    */
+    if (ActiveCFEPatchConfig.EnableDistanceCalcFix) {
+        int a = Cell_Y(coord1) - Cell_Y(coord2);
+        int b = Cell_X(coord1) - Cell_X(coord2);
+        return (int)(sqrt((double)a * a + (double)b * b) + 0.5);
+    }
+
     int diff1, diff2;
 
     diff1 = Cell_Y(coord1) - Cell_Y(coord2);

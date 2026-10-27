@@ -88,6 +88,15 @@ CELL Coord_Cell(COORDINATE coord)
  *=============================================================================================*/
 int Distance_Coord(COORDINATE coord1, COORDINATE coord2)
 {
+    /*
+    **	CFE: true (rounded) distance instead of the fast approximation.
+    */
+    if (ActiveCFEPatchConfig.EnableDistanceCalcFix) {
+        int a = Coord_Y(coord1) - Coord_Y(coord2);
+        int b = Coord_X(coord1) - Coord_X(coord2);
+        return (int)(sqrt((double)a * a + (double)b * b) + 0.5);
+    }
+
     int diff1, diff2;
 
     diff1 = Coord_Y(coord1) - Coord_Y(coord2);
