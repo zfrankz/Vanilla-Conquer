@@ -3,6 +3,7 @@
 Settings files live in `~/Library/Application Support/Vanilla-Conquer/vanillatd/`:
 - `cfepatchredux.ini`: CFE switches (`1` on, `0` off). It currently turns on the 8 TD fixes below.
 - `conquer.ini`, section `[Cheats]`: `Enabled=yes` turns on the F1–F6 cheats.
+  `StartMission=9` there makes Start New Game begin at mission 9 of the side you pick (GDI 1–15, Nod 1–13).
 
 The cheats help set up tests: F1 for money, F3 to see the whole map, F5 to build anything, F6 for instant build.
 

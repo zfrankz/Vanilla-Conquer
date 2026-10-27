@@ -66,6 +66,9 @@ shows an in-game message, e.g. "Cheat: +5000 credits".
 | F5 (`KeyFullCatalog`, 62) | Full catalog toggle | `PlayerPtr->DebugUnlockBuildables` (tech level 98, no prerequisites) + `IsRecalcNeeded`, as the Remastered debug request does |
 | F6 (`KeyInstantBuild`, 63) | Instant construction toggle | player's factories only; completes on the next production step when the rest of the price is affordable (still paid in full). TD reuses the `Debug_Instant_Build` check site, RA gets the same check |
 
+Not a key: `StartMission=N` (TD only) makes "Start New Game" begin the chosen side's campaign at
+mission N (GDI 1–15, Nod 1–13; the mission's own starting credits, no carry-over money).
+
 Keys are compared without modifiers (Shift+F1 does nothing) and with `WWKEY_VK_BIT` stripped.
 Key codes: F9 is stored by the games as `KeyBookmark1=66`, so F1–F6 are 58–63.
 

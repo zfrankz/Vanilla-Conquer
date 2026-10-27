@@ -49,6 +49,7 @@ const int CheatCredits = 5000;
 bool CheatsEnabled = false;
 KeyNumType CheatKeys[CHEAT_COUNT];
 bool CheatInstantBuild = false;
+int CheatStartMission = 1;
 
 bool Cheats_Allowed()
 {
@@ -102,6 +103,8 @@ void Init_Cheats()
         CheatKeys[index] =
             (KeyNumType)ini.Get_Int(CHEATS, CheatKeyEntries[index].Name, CheatKeyEntries[index].Default);
     }
+
+    CheatStartMission = Bound(ini.Get_Int(CHEATS, "StartMission", 1), 1, 15);
 }
 
 bool Cheat_Key(KeyNumType input)
@@ -163,4 +166,9 @@ bool Cheat_Key(KeyNumType input)
 bool Cheat_Instant_Build(HouseClass const* house)
 {
     return CheatInstantBuild && house == PlayerPtr && Cheats_Allowed();
+}
+
+int Cheat_Start_Mission()
+{
+    return CheatsEnabled ? CheatStartMission : 1;
 }

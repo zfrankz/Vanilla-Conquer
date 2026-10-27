@@ -1043,6 +1043,14 @@ bool Select_Game(bool fade)
                         ScenDir = SCEN_DIR_EAST;
                     }
 
+                    /*
+                    ** Cheat: start the campaign at a later mission ([Cheats] StartMission).
+                    ** GDI has 15 missions, Nod 13.
+                    */
+                    if (ScenPlayer != SCEN_PLAYER_JP) {
+                        Scen.Scenario = MIN(Cheat_Start_Mission(), ScenPlayer == SCEN_PLAYER_NOD ? 13 : 15);
+                    }
+
                     GameToPlay = GAME_NORMAL;
                     process = false;
                 } else {
