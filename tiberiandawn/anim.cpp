@@ -727,22 +727,28 @@ AnimClass::~AnimClass(void)
             */
             int index;
             for (index = 0; index < Anims.Count(); index++) {
-                if (Anims.Ptr(index) != this && Anims.Ptr(index)->Object == Object)
+                AnimClass* anim = Anims.Ptr(index);
+                if (anim != this && anim->Object == Object
+                    && (!ActiveCFEPatchConfig.EnableBurningTreeFix || anim->IsActive))
                     break;
             }
 
             /*
             **	Tell the object that it is no longer being damaged.
+            **
+            **	CFE: Fire_Out() can end in Detach_All(), which detaches this anim too and sets
+            **	Object to NULL, so work through a saved pointer.
             */
+            ObjectClass* object = Object;
             if (index == Anims.Count()) {
-                Object->Fire_Out();
-                if (Object->In_Which_Layer() == LAYER_GROUND)
-                    Object->Mark(MARK_OVERLAP_UP);
-                Object->IsAnimAttached = false;
-                if (Object->In_Which_Layer() == LAYER_GROUND)
-                    Object->Mark(MARK_OVERLAP_DOWN);
+                object->Fire_Out();
+                if (object->In_Which_Layer() == LAYER_GROUND)
+                    object->Mark(MARK_OVERLAP_UP);
+                object->IsAnimAttached = false;
+                if (object->In_Which_Layer() == LAYER_GROUND)
+                    object->Mark(MARK_OVERLAP_DOWN);
             }
-            Coord = Coord_Add(Object->Center_Coord(), Coord);
+            Coord = Coord_Add(object->Center_Coord(), Coord);
             Object = NULL;
         }
 
