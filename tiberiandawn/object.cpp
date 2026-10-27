@@ -1440,6 +1440,15 @@ ResultType ObjectClass::Take_Damage(int& damage, int distance, WarheadType warhe
         */
         switch (Strength) {
         case 0:
+            /*
+            **	CFE: a burning tree stays at 1 hp until the fire goes out (see TerrainClass::Fire_Out).
+            */
+            if (ActiveCFEPatchConfig.EnableBurningTreeFix && What_Am_I() == RTTI_TERRAIN
+                && ((TerrainClass*)this)->Is_On_Fire()) {
+                Strength = 1;
+                result = RESULT_MAJOR;
+                break;
+            }
             Record_The_Kill(source);
             result = RESULT_DESTROYED;
             Detach_All();
