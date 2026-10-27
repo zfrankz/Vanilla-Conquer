@@ -427,4 +427,6 @@ extern bool ShareAllyVisibility;
 // OmniBlade - Moves from tcpip.cpp as part of networking cleanup.
 extern bool Server; // Is this player acting as client or server
 
+#include "cfeconfig.h"
+
 #endif

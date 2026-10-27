@@ -615,6 +615,11 @@ bool Init_Game(int, char*[])
     Options.Load_Settings();
 
     /*
+    ** Load CFE Patch Redux settings (CFEPATCHREDUX.INI); all features are off without it.
+    */
+    Initialise_CFE_Patch_Config();
+
+    /*
     ** Now that conquer.ini has been read, we can check if we need zounds.mix.
     */
     if (!Is_Demo() && SampleType != 0 && !Debug_Quiet && Special.IsJuvenile) {

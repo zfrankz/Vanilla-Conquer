@@ -19,6 +19,7 @@ set(REDALERT_SRC
     ccptr.cpp
     cdata.cpp
     cell.cpp
+    cfeconfig.cpp
     checkbox.cpp
     cheklist.cpp
     colrlist.cpp

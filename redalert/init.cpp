@@ -186,6 +186,12 @@ bool Init_Game(int, char*[])
     */
     Bootstrap();
 
+    /*
+    ** Load CFE Patch Redux settings (CFEPATCHREDUX_RA.INI) early, in case they are used while
+    ** the game inits. All features are off without it.
+    */
+    Initialise_CFE_Patch_Config();
+
     ////////////////////////////////////////
     // The editor needs to not start the mouse up. - 7/22/2019 JAS
     if (!RunningFromEditor) {

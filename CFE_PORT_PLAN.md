@@ -31,9 +31,21 @@ Map every README feature to its CFE commits and files, then bucket it:
 - C: GlyphX/DLLInterface-only (pixel-perfect zoom, legacy-render auto-disable, GlyphX LAN fixes, wall preview) – drop
 - D: needs input/UI in the legacy client (attack-move, rally points, wall Ctrl, Alt-click) – reimplement
 
-## Phase 2 – Config plumbing
+## Phase 2 – Config plumbing ✅
 Port `CFEPatchConfig` (CFE `TIBERIANDAWN/EXTERNS.H:85`, used in 52 files), load via VC's INI
 from `~/Library/Application Support/Vanilla-Conquer/<game>/`. All features default off.
+
+Done in `tiberiandawn/cfeconfig.{h,cpp}` and `redalert/cfeconfig.{h,cpp}`:
+- Struct copied from CFE: same fields, types, defaults and order (TD 98, RA 53; checked by script).
+- Same INI keys and sections as CFE (TD 94, RA 50 entries), so CFE users' INIs work unchanged.
+  Files: `CFEPATCHREDUX.INI` (TD), `CFEPATCHREDUX_RA.INI` (RA); found case-insensitively.
+- Same post-processing (clamps, lepton conversion when A* is off, computed weights).
+- Differences from CFE: no `DEFAULT.CFEPATCHREDUX*.INI` (which turns most features on), and the
+  user's file is never rewritten. Uses a C++11 functor because VC builds with `-std=c++11`.
+- Called where CFE calls it: TD after `Options.Load_Settings()`, RA right after `Bootstrap()`.
+- Runtime check (temporary stderr print, removed): with no file both games report the defaults
+  (`astar=0 wall=5 vet=0 qjump=1024`); with a test file they report `astar=1 wall=10 vet=2 qjump=4`
+  (`WALL_BUILD_LENGTH=20` clamped to 10). Nothing reads the config yet, so gameplay is unchanged.
 
 ## Phase 2b – Cheats (TD and RA, not part of CFE)
 Single-player and skirmish only, refused in multiplayer: these actions bypass the event

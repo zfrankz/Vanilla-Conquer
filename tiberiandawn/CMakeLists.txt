@@ -14,6 +14,7 @@ set(TIBDAWN_SRC
     ccini.cpp
     cdata.cpp
     cell.cpp
+    cfeconfig.cpp
     checkbox.cpp
     cheklist.cpp
     colrlist.cpp
