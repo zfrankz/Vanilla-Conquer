@@ -23,8 +23,11 @@ Some of these are hard to see. "No crash, game plays normally" is a useful resul
   - Harvesters keep harvesting and delivering credits normally.
   - A nearly full harvester tops up to full in one scoop instead of coming back partly empty.
   - Tiberium fields still grow and spread.
-- [ ] **`GDI9_FIX`:** play GDI mission 9.
-  When Nod has no units left and its only buildings are the turrets on the south bank, Nod should be destroyed and the mission end. Before, you had to destroy those turrets too.
+- [ ] **`GDI9_FIX`:** play GDI mission 9 (the gunboat mission: "Take out Nod turrets along shore...").
+  It applies to mission 9 only; mission 10 still needs every Nod building destroyed, as in CFE.
+  The map has 8 Nod turrets. Only the 2 southernmost ones (map cells 2715 and 2717, the pair furthest south,
+  near the bottom middle of the map) are exempt: destroy the other 6, every other Nod building and every Nod unit
+  (harvester included). Nod should then blow up about a second later and the mission end.
 - [ ] **`DEATHS_DOOR_FIX`:**
   - Now and then a unit or building that would have died by a small margin survives with a sliver of health.
   - Big hits such as an airstrike, or hits that would kill outright, still kill.
