@@ -1129,7 +1129,22 @@ void AnimClass::Middle(void)
                 if (!Map.In_Radar(tcell))
                     continue;
 
-                int damage = rawdamage / ((ABS(radius) / 2) + 1);
+                /*
+                **	CFE: damage falls off with each cell's distance from ground zero. The original
+                **	used the fixed blast radius, so every cell took the same damage.
+                */
+                int damage;
+                if (ActiveCFEPatchConfig.EnableNukeRadiusFix) {
+                    int realradius;
+                    if (ActiveCFEPatchConfig.EnableDistanceCalcFix) {
+                        realradius = (int)(sqrt((double)((x * x) + (y * y))) + 0.5);
+                    } else {
+                        realradius = (ABS(x) > ABS(y)) ? ABS(x) + (ABS(y) / 2) : ABS(y) + (ABS(x) / 2);
+                    }
+                    damage = (2 * rawdamage) / (realradius + 2); // rearranged to minimize truncation error
+                } else {
+                    damage = rawdamage / ((ABS(radius) / 2) + 1);
+                }
                 Explosion_Damage(Cell_Coord(tcell), damage, building, WARHEAD_FIRE);
                 new SmudgeClass(Random_Pick(SMUDGE_SCORCH1, SMUDGE_SCORCH6), Cell_Coord(tcell));
             }
