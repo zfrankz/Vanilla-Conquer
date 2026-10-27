@@ -14,7 +14,7 @@ TD +26.5k/-1.9k lines in 449 files, RA +11.8k/-2.2k lines in 630 files.
 ## Phase 0 – Baseline
 - [x] `brew install cmake ninja openal-soft` (SDL2 via sdl2-compat)
 - [x] `CMAKE_PREFIX_PATH=/opt/homebrew/opt/openal-soft cmake --preset release && cmake --build --preset release`
-- [x] Run vanillatd / vanillara with freeware retail data (RA: missions played; TD: English main menu)
+- [x] Run vanillatd / vanillara with freeware retail data (RA: missions played; TD: GDI and Nod missions played)
 
 Data layout (`~/Library/Application Support/Vanilla-Conquer/`):
 - `vanillara/`: `MAIN.MIX`, `REDALERT.MIX` from the Allied CD
