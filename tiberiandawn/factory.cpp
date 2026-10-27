@@ -52,6 +52,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "function.h"
+#include "cheats.h"
 
 /***********************************************************************************************
  * FactoryClass::Validate -- validates factory pointer													  *
@@ -273,7 +274,7 @@ void FactoryClass::AI(void)
                     House->Spend_Money(cost);
                     Balance -= cost;
                 }
-                if (Debug_Instant_Build) {
+                if (Debug_Instant_Build || (Cheat_Instant_Build(House) && Balance <= House->Available_Money())) {
                     Set_Stage(STEP_COUNT);
                 }
                 /*

@@ -66,6 +66,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "function.h"
+#include "cheats.h"
 #include "msgbox.h"
 #include "keyframe.h"
 #include "language.h"
@@ -466,6 +467,11 @@ void Keyboard_Process(KeyNumType& input)
     */
     KeyNumType plain = KeyNumType(input & ~(WWKEY_SHIFT_BIT | WWKEY_ALT_BIT | WWKEY_CTRL_BIT | WWKEY_VK_BIT));
     KeyNumType key = KeyNumType(input & ~WWKEY_VK_BIT);
+
+    if (Cheat_Key(input)) {
+        input = KN_NONE;
+        return;
+    }
 
 #ifdef CHEAT_KEYS
 

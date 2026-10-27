@@ -57,6 +57,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "function.h"
+#include "cheats.h"
 #include "language.h"
 #include "msgbox.h"
 #include "loaddlg.h"
@@ -399,6 +400,7 @@ bool Init_Game(int, char*[])
     ** dialogs are invoked.  (GameSpeed must be synchronized between systems.)
     */
     Options.Load_Settings();
+    Init_Cheats();
 
     /*
     ** Initialise the color lookup tables for the chronal vortex

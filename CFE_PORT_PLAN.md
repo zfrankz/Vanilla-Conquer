@@ -50,39 +50,37 @@ Done in `tiberiandawn/cfeconfig.{h,cpp}` and `redalert/cfeconfig.{h,cpp}`:
   (`astar=0 wall=5 vet=0 qjump=1024`); with a test file they report `astar=1 wall=10 vet=2 qjump=4`
   (`WALL_BUILD_LENGTH=20` clamped to 10). Nothing reads the config yet, so gameplay is unchanged.
 
-## Phase 2b – Cheats (TD and RA, not part of CFE)
-Single-player and skirmish only, refused in multiplayer: these actions bypass the event
-queue and would desync. Off by default; enabled with `[Cheats] Enabled=yes` in the game INI.
-Each cheat gets a function key in the legacy client; every activation shows a short
-in-game message (e.g. "Cheat: +5000 credits").
+## Phase 2b – Cheats (TD and RA, not part of CFE) – implemented, in-game test pending
+`tiberiandawn/cheats.{h,cpp}`, `redalert/cheats.{h,cpp}`. Single-player and skirmish only
+(`GAME_NORMAL`/`GAME_SKIRMISH`, not in the map editor): the actions bypass the event queue
+and would desync multiplayer. Off unless `[Cheats] Enabled=yes` in `conquer.ini` / `redalert.ini`
+(the games re-read that file before saving options, so the section survives). Every activation
+shows an in-game message, e.g. "Cheat: +5000 credits".
 
-Default keys, rebindable in the INI like VC's other `Key*` options:
-
-| Key | Cheat |
-|---|---|
-| F1 | +5000 credits |
-| F2 | Map reveal |
-| F3 | Fog/shroud reveal (toggle) |
-| F4 | Spawn commando at cursor |
-| F5 | Full construction catalog (toggle) |
-| F6 | Instant construction (toggle) |
-
-Why F1–F6: TD only uses them in multiplayer (messages, `conquer.cpp:855`) and drops them
-in SP/skirmish (`conquer.cpp:920`); F4 is otherwise only a debug key. In RA, grep finds F2/F6
-only in the optional map editor (`MAP_EDITORRA`). Not yet tested in the running games.
-On Mac keyboards these need Fn unless "Use F1, F2, etc. keys as standard function keys" is on.
-
-| Cheat | Existing VC code | Work |
+| Key (INI entry, default SDL scancode) | Cheat | Implementation |
 |---|---|---|
-| +5000 credits | `HouseClass::Refund_Money` (TD `house.h:509`, RA `house.h:773`) | call on `PlayerPtr` |
-| Map reveal (one-shot: all cells become explored) | reveal-map crate: loop `Map.Map_Cell(cell, house)` over `MAP_CELL_TOTAL` (TD `cell.cpp:2195`, RA `cell.cpp:2493`) | same loop for `PlayerPtr`, then `Map.Flag_To_Redraw(true)` |
-| Fog/shroud reveal (toggle: shroud not drawn, everything visible) | `Debug_Unshroud` (TD `conquer.cpp:463`, RA `debug.cpp:323`) | bind toggle, force redraw |
-| Spawn commando at cursor | debug keys already unlimbo objects at `Map.Pixel_To_Coord(mouse)` | TD `INFANTRY_RAMBO`, RA `INFANTRY_TANYA` |
-| Full construction catalog | `Debug_Cheat` → tech level 98 (TD `house.cpp:727`; RA `house.cpp:909` also zeroes prerequisites, behind `CHEAT_KEYS`) | TD: zero prerequisites too, as TD's `DebugUnlockBuildables` already does; RA: drop the `CHEAT_KEYS` guard for our flag; refresh sidebar |
-| Instant construction | TD `Debug_Instant_Build` (`factory.cpp:276`) | RA: none, add the same check to RA `FactoryClass` |
+| F1 (`KeyCredits`, 58) | +5000 credits | `PlayerPtr->Refund_Money(5000)` |
+| F2 (`KeyRevealMap`, 59) | Map reveal, one-shot | reveal-map crate loop: `Map.Map_Cell` over `MAP_CELL_TOTAL` |
+| F3 (`KeyRevealShroud`, 60) | Shroud off/on toggle | `Debug_Unshroud`; reset by the game at each mission start |
+| F4 (`KeySpawnCommando`, 61) | Commando (TD) / Tanya (RA) at the cursor cell | `new InfantryClass` + `Unlimbo`, guard mission; message if the cell is blocked |
+| F5 (`KeyFullCatalog`, 62) | Full catalog toggle | `PlayerPtr->DebugUnlockBuildables` (tech level 98, no prerequisites) + `IsRecalcNeeded`, as the Remastered debug request does |
+| F6 (`KeyInstantBuild`, 63) | Instant construction toggle | player's factories only; completes on the next production step when the rest of the price is affordable (still paid in full). TD reuses the `Debug_Instant_Build` check site, RA gets the same check |
 
-VC's `debug.cpp` key handlers sit behind `CHEAT_KEYS`, which no VC CMake file defines. Don't
-enable it wholesale (it also adds explosion, win/lose and editor keys); reuse the flags only.
+Keys are compared without modifiers (Shift+F1 does nothing) and with `WWKEY_VK_BIT` stripped.
+Key codes: F9 is stored by the games as `KeyBookmark1=66`, so F1–F6 are 58–63.
+
+Why F1–F6 (real grep, both games): outside debug and map-editor code they're used only for
+multiplayer chat (TD `conquer.cpp:855`, RA `conquer.cpp:1083`) and TD multiplayer lobby dialogs
+(`netdlg.cpp`); F9–F12 are bookmarks. On Mac keyboards they need Fn unless "Use F1, F2, etc.
+keys as standard function keys" is on.
+
+Verified: both games build; cheat code is linked (`nm`); runtime config check (temporary print,
+removed): no section → `enabled=0 keys=58,59,60,61,62,63`; `Enabled=yes`, `KeyCredits=70` →
+`enabled=1 keys=70,59,60,61,62,63`, in both games.
+Not verified: pressing the keys in a mission (needs a person at the keyboard), message colour/
+placement, commando placement on occupied cells, sidebar refresh after F5.
+
+VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file defines; not enabled.
 
 ## Phase 3 – TD features (one commit per feature, built and play-tested on/off)
 1. Small bugfixes, tiberium index fix

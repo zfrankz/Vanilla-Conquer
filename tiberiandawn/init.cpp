@@ -41,6 +41,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "function.h"
+#include "cheats.h"
 #include "loaddlg.h"
 #include "common/gitinfo.h"
 #include "common/vqaconfig.h"
@@ -618,6 +619,7 @@ bool Init_Game(int, char*[])
     ** Load CFE Patch Redux settings (CFEPATCHREDUX.INI); all features are off without it.
     */
     Initialise_CFE_Patch_Config();
+    Init_Cheats();
 
     /*
     ** Now that conquer.ini has been read, we can check if we need zounds.mix.

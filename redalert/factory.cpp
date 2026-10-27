@@ -50,6 +50,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "function.h"
+#include "cheats.h"
 #include "factory.h"
 
 /***********************************************************************************************
@@ -215,6 +216,13 @@ void FactoryClass::AI(void)
                 } else {
                     House->Spend_Money(cost);
                     Balance -= cost;
+                }
+
+                /*
+                **	Player instant-build cheat: finish now if the rest can be paid for.
+                */
+                if (Cheat_Instant_Build(House) && Balance <= House->Available_Money()) {
+                    Set_Stage(STEP_COUNT);
                 }
 
                 /*
