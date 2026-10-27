@@ -50,7 +50,7 @@ Done in `tiberiandawn/cfeconfig.{h,cpp}` and `redalert/cfeconfig.{h,cpp}`:
   (`astar=0 wall=5 vet=0 qjump=1024`); with a test file they report `astar=1 wall=10 vet=2 qjump=4`
   (`WALL_BUILD_LENGTH=20` clamped to 10). Nothing reads the config yet, so gameplay is unchanged.
 
-## Phase 2b – Cheats (TD and RA, not part of CFE) – implemented, in-game test pending
+## Phase 2b – Cheats (TD and RA, not part of CFE) ✅
 `tiberiandawn/cheats.{h,cpp}`, `redalert/cheats.{h,cpp}`. Single-player and skirmish only
 (`GAME_NORMAL`/`GAME_SKIRMISH`, not in the map editor): the actions bypass the event queue
 and would desync multiplayer. Off unless `[Cheats] Enabled=yes` in `conquer.ini` / `redalert.ini`
@@ -77,8 +77,8 @@ keys as standard function keys" is on.
 Verified: both games build; cheat code is linked (`nm`); runtime config check (temporary print,
 removed): no section → `enabled=0 keys=58,59,60,61,62,63`; `Enabled=yes`, `KeyCredits=70` →
 `enabled=1 keys=70,59,60,61,62,63`, in both games.
-Not verified: pressing the keys in a mission (needs a person at the keyboard), message colour/
-placement, commando placement on occupied cells, sidebar refresh after F5.
+In-game: the user reported on 2026-10-27 that all six cheats work in both games.
+Not verified: commando placement on occupied cells.
 
 VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file defines; not enabled.
 
