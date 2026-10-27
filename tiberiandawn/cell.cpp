@@ -1508,13 +1508,18 @@ int CellClass::Reduce_Tiberium(int levels)
     Validate();
     int reducer = 0;
 
+    /*
+    **	CFE: OverlayData is a 0-based level, so the cell holds OverlayData + 1 levels.
+    */
+    int bugfixoffset = ActiveCFEPatchConfig.TibIndexBugfix ? 1 : 0;
+
     if (levels && Land == LAND_TIBERIUM) {
-        if (OverlayData > levels) {
+        if (OverlayData + bugfixoffset > levels) {
             OverlayData -= levels;
             reducer = levels;
         } else {
             Overlay = OVERLAY_NONE;
-            reducer = OverlayData;
+            reducer = OverlayData + bugfixoffset;
             OverlayData = 0;
             Recalc_Attributes();
         }
@@ -1904,6 +1909,7 @@ int CellClass::Tiberium_Adjust(bool pregame)
     if (Overlay != OVERLAY_NONE) {
         if (OverlayTypeClass::As_Reference(Overlay).Land == LAND_TIBERIUM) {
             static int _adj[9] = {0, 1, 3, 4, 6, 7, 8, 10, 11};
+            static int better_adj[24] = {0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11};
             int count = 0;
 
             /*
@@ -1930,7 +1936,15 @@ int CellClass::Tiberium_Adjust(bool pregame)
                 }
             }
 
-            OverlayData = _adj[count];
+            if (ActiveCFEPatchConfig.TibIndexBugfix) {
+                if (count == 0) {
+                    OverlayData = better_adj[Random_Pick(0, 2)];
+                } else {
+                    OverlayData = better_adj[(3 * (count - 1)) + Random_Pick(0, 2)];
+                }
+            } else {
+                OverlayData = _adj[count];
+            }
             return ((OverlayData + 1) * UnitTypeClass::TIBERIUM_STEP);
         }
     }

@@ -2463,8 +2463,17 @@ bool UnitClass::Harvesting(void)
         **	is a partial level, then lift that instead. Never lift more
         **	than the harvester can carry.
         */
-        int reducer = (ptr->OverlayData % 6) + 1;
-        reducer = ptr->Reduce_Tiberium(MIN(reducer, UnitTypeClass::STEP_COUNT - Tiberium));
+        int reducer;
+        const int emptyspace = UnitTypeClass::STEP_COUNT - Tiberium;
+        if (ActiveCFEPatchConfig.TibIndexBugfix && emptyspace <= 6) {
+            /*
+            **	CFE: if one scoop can fill the harvester, take it all now.
+            */
+            reducer = ptr->Reduce_Tiberium(emptyspace);
+        } else {
+            reducer = (ptr->OverlayData % 6) + 1;
+            reducer = ptr->Reduce_Tiberium(MIN(reducer, emptyspace));
+        }
         Tiberium += reducer;
         Set_Stage(0);
         Set_Rate(2);

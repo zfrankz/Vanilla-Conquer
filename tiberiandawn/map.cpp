@@ -1396,7 +1396,8 @@ void MapClass::Logic(void)
         **	Heavy Tiberium growth can spread.
         */
         TerrainClass* terrain = ptr->Cell_Terrain();
-        if (Special.IsTSpread && (ptr->Land_Type() == LAND_TIBERIUM && ptr->OverlayData > 6)
+        const int spreadthreshhold = ActiveCFEPatchConfig.TibIndexBugfix ? 5 : 6;
+        if (Special.IsTSpread && (ptr->Land_Type() == LAND_TIBERIUM && ptr->OverlayData > spreadthreshhold)
             || (terrain && terrain->Class->IsTiberiumSpawn)) {
 
             int tries = 1;
@@ -1483,7 +1484,7 @@ void MapClass::Logic(void)
                                 found = true;
                                 new OverlayClass(Random_Pick(OVERLAY_TIBERIUM1, OVERLAY_TIBERIUM12),
                                                  newcell->Cell_Number());
-                                newcell->OverlayData = 1;
+                                newcell->OverlayData = ActiveCFEPatchConfig.TibIndexBugfix ? 0 : 1;
                                 break;
                             }
                             if (found)
