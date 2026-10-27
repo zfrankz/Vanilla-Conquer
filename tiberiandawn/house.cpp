@@ -1434,6 +1434,27 @@ void HouseClass::AI(void)
     }
 
     /*
+    **	CFE: GDI mission 9 fix. The CPU self-destructs if all it has left are the turrets on
+    **	the south bank.
+    */
+    if (ActiveCFEPatchConfig.EnableGDI9Fix && GameToPlay == GAME_NORMAL && Scen.Scenario == 9
+        && Class->House == HOUSE_BAD && !IsHuman && !IsToDie && !ActiveAScan && !ActiveIScan && !ActiveUScan
+        && !(ActiveBScan & ~STRUCTF_TURRET)) {
+        bool shouldblowup = true;
+        for (int index = 0; index < Buildings.Count(); index++) {
+            BuildingClass const* building = Buildings.Ptr(index);
+            if (building && building->IsActive && !building->IsInLimbo && building->House == this
+                && Coord_Cell(building->Coord) < Confine_Old_Cell(2715)) {
+                shouldblowup = false;
+                break;
+            }
+        }
+        if (shouldblowup) {
+            Flag_To_Die();
+        }
+    }
+
+    /*
     ** Special win/lose check for multiplayer games; by-passes the
     ** trigger system.  We must wait for non-zero frame, because init
     ** may not properly set IScan etc for each house; you have to go
