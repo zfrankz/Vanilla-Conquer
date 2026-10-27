@@ -38,7 +38,24 @@ from `~/Library/Application Support/Vanilla-Conquer/<game>/`. All features defau
 ## Phase 2b – Cheats (TD and RA, not part of CFE)
 Single-player and skirmish only, refused in multiplayer: these actions bypass the event
 queue and would desync. Off by default; enabled with `[Cheats] Enabled=yes` in the game INI.
-Each cheat gets a hotkey in the legacy client.
+Each cheat gets a function key in the legacy client; every activation shows a short
+in-game message (e.g. "Cheat: +5000 credits").
+
+Default keys, rebindable in the INI like VC's other `Key*` options:
+
+| Key | Cheat |
+|---|---|
+| F1 | +5000 credits |
+| F2 | Map reveal |
+| F3 | Fog/shroud reveal (toggle) |
+| F4 | Spawn commando at cursor |
+| F5 | Full construction catalog (toggle) |
+| F6 | Instant construction (toggle) |
+
+Why F1–F6: TD only uses them in multiplayer (messages, `conquer.cpp:855`) and drops them
+in SP/skirmish (`conquer.cpp:920`); F4 is otherwise only a debug key. In RA, grep finds F2/F6
+only in the optional map editor (`MAP_EDITORRA`). Not yet tested in the running games.
+On Mac keyboards these need Fn unless "Use F1, F2, etc. keys as standard function keys" is on.
 
 | Cheat | Existing VC code | Work |
 |---|---|---|
