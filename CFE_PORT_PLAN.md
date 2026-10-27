@@ -83,7 +83,15 @@ Not verified: commando placement on occupied cells.
 VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file defines; not enabled.
 
 ## Phase 3 – TD features (one commit per feature, built and play-tested on/off)
-1. Small bugfixes, tiberium index fix
+1. Small bugfixes, tiberium index fix – ported, play-test pending
+   - Done (one commit each, switch off = original code): `TIB_INDEX_BUGFIX`, `GDI9_FIX`,
+     `DEATHS_DOOR_FIX`, `DEAD_BUILDING_SCATTER_FIX`, `DISTANCE_CALC_FIX`, `NUKE_RADIUS_FIX`,
+     `GUNBOAT_BUGFIX`, `BURNING_TREE_FIX`. Each builds; TD starts with all eight on (30 s smoke test).
+   - Deferred: `SELL_CHANCE_FIX` (needs CFE's `EffectiveScenario`), `HUNT_FIX` + `SEARCH_RANGE_FIX`
+     (new 108-line search function; port together), hunks inside CFE-only code (A* cell weights,
+     new tiberium spread function, meaner visceroids) come with those features.
+   - Not ported on purpose: CFE's extra `Limbo()` in `TerrainClass::AI` (VC's destructor already
+     calls it); CFE's unflagged tidy-ups in the same functions.
 2. Harvester features (queue jump, optimization, self-repair, smarter harvesters/refineries)
 3. Tiberium growth/resurgence, visceroids
 4. A* pathing + tiberium aversion (FINDPATH.CPP, SEARCH.H)
