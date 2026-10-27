@@ -90,6 +90,9 @@ VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file define
    - Deferred: `SELL_CHANCE_FIX` (needs CFE's `EffectiveScenario`), `HUNT_FIX` + `SEARCH_RANGE_FIX`
      (new 108-line search function; port together), hunks inside CFE-only code (A* cell weights,
      new tiberium spread function, meaner visceroids) come with those features.
+   - Crash found in play-test (burning tree, `AnimClass::~AnimClass`), fixed in `c0407c42` by porting
+     CFE `8f5389c`, which my first pass missed because it doesn't name the switch. From now on each
+     feature's CFE commits are also found by message keywords and by `git log -L` on the touched functions.
    - Not ported on purpose: CFE's extra `Limbo()` in `TerrainClass::AI` (VC's destructor already
      calls it); CFE's unflagged tidy-ups in the same functions.
 2. Harvester features (queue jump, optimization, self-repair, smarter harvesters/refineries)
