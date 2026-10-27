@@ -38,8 +38,11 @@ from `~/Library/Application Support/Vanilla-Conquer/<game>/`. All features defau
 Done in `tiberiandawn/cfeconfig.{h,cpp}` and `redalert/cfeconfig.{h,cpp}`:
 - Struct copied from CFE: same fields, types, defaults and order (TD 98, RA 53; checked by script).
 - Same INI keys and sections as CFE (TD 94, RA 50 entries), so CFE users' INIs work unchanged.
-  Files: `CFEPATCHREDUX.INI` (TD), `CFEPATCHREDUX_RA.INI` (RA); found case-insensitively.
-- Same post-processing (clamps, lepton conversion when A* is off, computed weights).
+  Files: `CFEPATCHREDUX.INI` (TD), `CFEPATCHREDUX_RA.INI` (RA). A lowercase file was found in the
+  runtime test; VC's `RawFileClass` looks up existing files ignoring case (`common/rawfile.cpp:177`),
+  not tested on a case-sensitive volume.
+- Same post-processing (clamps, lepton conversion when A* is off, computed weights); script-compared
+  with CFE: RA identical, TD identical except `AllowSandbagging`'s if/else written as one comparison.
 - Differences from CFE: no `DEFAULT.CFEPATCHREDUX*.INI` (which turns most features on), and the
   user's file is never rewritten. Uses a C++11 functor because VC builds with `-std=c++11`.
 - Called where CFE calls it: TD after `Options.Load_Settings()`, RA right after `Bootstrap()`.
@@ -72,7 +75,7 @@ On Mac keyboards these need Fn unless "Use F1, F2, etc. keys as standard functio
 | Cheat | Existing VC code | Work |
 |---|---|---|
 | +5000 credits | `HouseClass::Refund_Money` (TD `house.h:509`, RA `house.h:773`) | call on `PlayerPtr` |
-| Map reveal (one-shot: all cells become explored) | none found | mark every cell mapped for the player, redraw map and radar |
+| Map reveal (one-shot: all cells become explored) | reveal-map crate: loop `Map.Map_Cell(cell, house)` over `MAP_CELL_TOTAL` (TD `cell.cpp:2195`, RA `cell.cpp:2493`) | same loop for `PlayerPtr`, then `Map.Flag_To_Redraw(true)` |
 | Fog/shroud reveal (toggle: shroud not drawn, everything visible) | `Debug_Unshroud` (TD `conquer.cpp:463`, RA `debug.cpp:323`) | bind toggle, force redraw |
 | Spawn commando at cursor | debug keys already unlimbo objects at `Map.Pixel_To_Coord(mouse)` | TD `INFANTRY_RAMBO`, RA `INFANTRY_TANYA` |
 | Full construction catalog | `Debug_Cheat` → tech level 98 (TD `house.cpp:727`; RA `house.cpp:909` also zeroes prerequisites, behind `CHEAT_KEYS`) | TD: zero prerequisites too, as TD's `DebugUnlockBuildables` already does; RA: drop the `CHEAT_KEYS` guard for our flag; refresh sidebar |
