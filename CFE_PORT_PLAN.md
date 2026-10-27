@@ -35,6 +35,23 @@ Map every README feature to its CFE commits and files, then bucket it:
 Port `CFEPatchConfig` (CFE `TIBERIANDAWN/EXTERNS.H:85`, used in 52 files), load via VC's INI
 from `~/Library/Application Support/Vanilla-Conquer/<game>/`. All features default off.
 
+## Phase 2b – Cheats (TD and RA, not part of CFE)
+Single-player and skirmish only, refused in multiplayer: these actions bypass the event
+queue and would desync. Off by default; enabled with `[Cheats] Enabled=yes` in the game INI.
+Each cheat gets a hotkey in the legacy client.
+
+| Cheat | Existing VC code | Work |
+|---|---|---|
+| +5000 credits | `HouseClass::Refund_Money` (TD `house.h:509`, RA `house.h:773`) | call on `PlayerPtr` |
+| Map reveal (one-shot: all cells become explored) | none found | mark every cell mapped for the player, redraw map and radar |
+| Fog/shroud reveal (toggle: shroud not drawn, everything visible) | `Debug_Unshroud` (TD `conquer.cpp:463`, RA `debug.cpp:323`) | bind toggle, force redraw |
+| Spawn commando at cursor | debug keys already unlimbo objects at `Map.Pixel_To_Coord(mouse)` | TD `INFANTRY_RAMBO`, RA `INFANTRY_TANYA` |
+| Full construction catalog | `Debug_Cheat` → tech level 98 (TD `house.cpp:727`; RA `house.cpp:909` also zeroes prerequisites, behind `CHEAT_KEYS`) | TD: zero prerequisites too, as TD's `DebugUnlockBuildables` already does; RA: drop the `CHEAT_KEYS` guard for our flag; refresh sidebar |
+| Instant construction | TD `Debug_Instant_Build` (`factory.cpp:276`) | RA: none, add the same check to RA `FactoryClass` |
+
+VC's `debug.cpp` key handlers sit behind `CHEAT_KEYS`, which no VC CMake file defines. Don't
+enable it wholesale (it also adds explosion, win/lose and editor keys); reuse the flags only.
+
 ## Phase 3 – TD features (one commit per feature, built and play-tested on/off)
 1. Small bugfixes, tiberium index fix
 2. Harvester features (queue jump, optimization, self-repair, smarter harvesters/refineries)
