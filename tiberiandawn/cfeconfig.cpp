@@ -166,6 +166,10 @@ static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
     cfg.LegacyRenderDisableMode = std::max(0, std::min(cfg.LegacyRenderDisableMode, 2));
     cfg.SearchRangeFixMode = std::max(0, std::min(cfg.SearchRangeFixMode, 2));
 
+    // A-Star pathing is not ported yet; ignore the switch so the distance settings below are
+    // converted to the leptons the ported (non-A-Star) code compares them with.
+    cfg.EnableASPathing = false;
+
     // If A-Star isn't enabled, distance constants will be compared against leptons rather than cells, so convert here
     if (!cfg.EnableASPathing) {
         cfg.HarvyQueueJumpCutoff = Cell_To_Lepton(cfg.HarvyQueueJumpCutoff);
