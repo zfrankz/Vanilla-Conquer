@@ -809,6 +809,11 @@ bool Select_Game(bool fade)
                     }
                 }
 
+                /*
+                ** Cheat: start the campaign at a later mission ([Cheats] StartMission).
+                */
+                Cheat_Start_Mission();
+
                 Session.Type = GAME_NORMAL;
                 process = false;
                 break;

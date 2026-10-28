@@ -49,6 +49,7 @@ const int CheatCredits = 5000;
 bool CheatsEnabled = false;
 KeyNumType CheatKeys[CHEAT_COUNT];
 bool CheatInstantBuild = false;
+int CheatStartMission = 1;
 
 bool Cheats_Allowed()
 {
@@ -102,6 +103,11 @@ void Init_Cheats()
         CheatKeys[index] =
             (KeyNumType)ini.Get_Int(CHEATS, CheatKeyEntries[index].Name, CheatKeyEntries[index].Default);
     }
+
+    /*
+    ** Allies and Soviets have 14 campaign missions each.
+    */
+    CheatStartMission = Bound(ini.Get_Int(CHEATS, "StartMission", 1), 1, 14);
 }
 
 bool Cheat_Key(KeyNumType input)
@@ -163,4 +169,27 @@ bool Cheat_Key(KeyNumType input)
 bool Cheat_Instant_Build(HouseClass const* house)
 {
     return CheatInstantBuild && house == PlayerPtr && Cheats_Allowed();
+}
+
+/*
+** Swaps the first campaign mission picked by "Start New Game" for mission StartMission of the
+** same side, using the first of its map files that exists. Keeps the first mission if none does.
+*/
+void Cheat_Start_Mission()
+{
+    char const side = Scen.ScenarioName[2];
+    if (!CheatsEnabled || CheatStartMission <= 1 || (side != 'G' && side != 'U')) {
+        return;
+    }
+
+    char name[_MAX_FNAME + _MAX_EXT];
+    for (char const* dir = "EW"; *dir != '\0'; dir++) {
+        for (char var = 'A'; var <= 'D'; var++) {
+            snprintf(name, sizeof(name), "SC%c%02d%c%c.INI", side, CheatStartMission, *dir, var);
+            if (CCFileClass(name).Is_Available()) {
+                Scen.Set_Scenario_Name(name);
+                return;
+            }
+        }
+    }
 }

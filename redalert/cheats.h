@@ -25,5 +25,6 @@ class HouseClass;
 void Init_Cheats();
 bool Cheat_Key(KeyNumType input);
 bool Cheat_Instant_Build(HouseClass const* house);
+void Cheat_Start_Mission();
 
 #endif
