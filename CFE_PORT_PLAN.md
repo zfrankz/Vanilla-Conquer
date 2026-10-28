@@ -73,6 +73,8 @@ Not a key: `StartMission=N` makes "Start New Game" begin the chosen side's campa
 with that mission's own starting credits and no carry-over money. TD: GDI 1–15, Nod 1–13.
 RA (`redalert.ini`): Allies and Soviets 1–14, first existing map file (`SC?NNEA.INI` for all 28 in
 the installed data, checked with a temporary print); falls back to mission 1 if none exists.
+In-game: the user reported on 2026-10-28 that RA Start New Game with `StartMission=2` began at mission 2.
+TD `StartMission` not yet confirmed in-game.
 
 Keys are compared without modifiers (Shift+F1 does nothing) and with `WWKEY_VK_BIT` stripped.
 Key codes: F9 is stored by the games as `KeyBookmark1=66`, so F1–F6 are 58–63.
