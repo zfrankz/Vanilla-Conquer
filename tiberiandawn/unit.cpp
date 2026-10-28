@@ -378,6 +378,15 @@ void UnitClass::AI(void)
     }
 
     /*
+    **	CFE: harvesters repair themselves to half strength, like the Mammoth Tank.
+    */
+    if (ActiveCFEPatchConfig.EnableHarvySelfRepair && *this == UNIT_HARVESTER && (Frame % 16) == 0
+        && Health_Ratio() < 0x0080) {
+        Strength++;
+        Mark(MARK_CHANGE);
+    }
+
+    /*
     **	Transporters require special logic handled here since there isn't a MISSION_WAIT_FOR_PASSENGERS
     **	mission that they can follow. Passenger loading is merely a part of their normal operation.
     */
