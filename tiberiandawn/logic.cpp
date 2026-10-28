@@ -269,9 +269,16 @@ void LogicClass::AI(void)
 #endif // USE_RA_AI
 
     /*
-    **	Map related logic is performed.
+    **	Map related logic is performed. CFE: alternative tiberium growth, or the original
+    **	growth run TIB_GROWTH_SCALE times (once by default).
     */
-    Map.Logic();
+    if (ActiveCFEPatchConfig.BetterTibGrowth) {
+        Map.CFE_Logic();
+    } else {
+        for (int i = 0; i < ActiveCFEPatchConfig.TibGrowthScale; ++i) {
+            Map.Logic();
+        }
+    }
 
     //	Heap_Dump_Check( "After Map.Logic" );
 

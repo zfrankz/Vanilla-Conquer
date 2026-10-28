@@ -88,6 +88,7 @@ public:
     int Overpass(void);
 
     virtual void Logic(void);
+    void CFE_Logic(void);
     virtual void Set_Map_Dimensions(int x, int y, int w, int h);
 
     /*

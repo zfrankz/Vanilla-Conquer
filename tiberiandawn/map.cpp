@@ -2072,3 +2072,169 @@ CELL MapClass::Nearby_Location(CELL cell) const //, SpeedType speed, int zone, M
 }
 
 #endif // USE_RA_AI
+
+/***********************************************************************************************
+ * CFE_Random_Pick_Full_Range -- Random_Pick for ranges wider than 15 bits.                    *
+ *                                                                                             *
+ *    Scen.RandomNumber (behind Random_Pick) only yields 15 significant bits. CFE uses rand()  *
+ *    here because Random_Pick uses rand() in its build; VC's doesn't, so this combines two     *
+ *    15-bit draws from the same game generator, rejecting the uneven top end.                 *
+ *=============================================================================================*/
+static int CFE_Random_Pick_Full_Range(int minval, int maxval)
+{
+    if (minval > maxval) {
+        int temp = minval;
+        minval = maxval;
+        maxval = temp;
+    }
+    if (maxval - minval < 0x8000) {
+        return Random_Pick(minval, maxval);
+    }
+
+    unsigned range = (unsigned)(maxval - minval) + 1;
+    unsigned limit = (0x40000000u / range) * range;
+    unsigned value;
+    do {
+        value = ((unsigned)Random_Pick(0, 0x7FFF) << 15) | (unsigned)Random_Pick(0, 0x7FFF);
+    } while (value >= limit);
+    return minval + (int)(value % range);
+}
+
+/***********************************************************************************************
+ * MapClass::CFE_Logic -- CFE Patch Redux "better tiberium growth".                            *
+ *                                                                                             *
+ *    Replaces the original block-by-block scan with a per-frame pass over the whole map in    *
+ *    which every growable or spreading cell has the same small chance to act. On average the  *
+ *    amount of growth matches the original rate (one growth phase per 137 frames). A spreader *
+ *    with no free neighbour grows a neighbour or itself instead of wasting its turn.          *
+ *=============================================================================================*/
+void MapClass::CFE_Logic(void)
+{
+    /*
+    **	Bail early if there is no allowed growth or spread of Tiberium.
+    */
+    if (!Special.IsTGrowth && !Special.IsTSpread)
+        return;
+
+    /*
+    **	Scan the whole map for cells that can grow or spread. Tiberium trees are listed three
+    **	times, as in the original logic.
+    */
+    static CELL cangrowlist[MAP_CELL_TOTAL];
+    static CELL canspreadlist[MAP_CELL_TOTAL];
+    int growlistsize = 0;
+    int spreadlistsize = 0;
+    const int spreadthreshhold = ActiveCFEPatchConfig.TibIndexBugfix ? 5 : 6;
+
+    for (int index = 0; index < MAP_CELL_TOTAL; index++) {
+        CELL cell = index;
+        if (!Map.In_Radar(cell)) {
+            continue;
+        }
+        CellClass* ptr = &(*this)[cell];
+        TerrainClass* terrain = ptr->Cell_Terrain();
+        if (Special.IsTGrowth && ptr->Land_Type() == LAND_TIBERIUM && ptr->OverlayData < 11
+            && growlistsize < MAP_CELL_TOTAL) {
+            cangrowlist[growlistsize++] = cell;
+        }
+        if (Special.IsTSpread && ptr->Land_Type() == LAND_TIBERIUM && ptr->OverlayData > spreadthreshhold
+            && spreadlistsize < MAP_CELL_TOTAL) {
+            canspreadlist[spreadlistsize++] = cell;
+        } else if (terrain && terrain->Class->IsTiberiumSpawn) {
+            for (int i = 0; i < 3; i++) {
+                if (spreadlistsize < MAP_CELL_TOTAL) {
+                    canspreadlist[spreadlistsize++] = cell;
+                }
+            }
+        }
+    }
+
+    /*
+    **	Growth strength: doubled for fast growth and multiplayer, then scaled by the multiplayer
+    **	tiberium setting or TIB_GROWTH_SCALE, and by map area on megamaps.
+    */
+    int growthstrength = 1;
+    if (Special.IsTFast || GameToPlay != GAME_NORMAL) {
+        growthstrength = 2;
+    }
+    if (GameToPlay == GAME_GLYPHX_MULTIPLAYER) {
+        int scalefactor = MPlayerTiberium;
+        if (ActiveCFEPatchConfig.TibGrowthScale > scalefactor) {
+            scalefactor = ActiveCFEPatchConfig.TibGrowthScale;
+        }
+        growthstrength += (scalefactor - 1) * 2;
+    } else {
+        growthstrength *= ActiveCFEPatchConfig.TibGrowthScale;
+    }
+    if (MapBinaryVersion == MAP_VERSION_MEGA) {
+        /*
+        **	CFE stores this factor when the map loads; it is derived only from the map size, so
+        **	compute it here. Integer division, as in CFE, so it is a whole number.
+        */
+        float megafactor = ((MapCellWidth + 2) * (MapCellHeight + 2)) / 4096;
+        if (megafactor < 1.0f) {
+            megafactor = 1.0f;
+        }
+        float megagrowstrength = (growthstrength * megafactor) + 0.5f;
+        growthstrength = megagrowstrength;
+    }
+
+    /*
+    **	Grow tiberium. The original logic took 137 frames per growth phase.
+    */
+    int maxroll = (growlistsize * 137) - 1;
+    for (int i = 0; i < growlistsize; i++) {
+        if (CFE_Random_Pick_Full_Range(0, maxroll) < growthstrength) {
+            (*this)[cangrowlist[i]].OverlayData++;
+        }
+    }
+
+    /*
+    **	Spread tiberium.
+    */
+    maxroll = (spreadlistsize * 137) - 1;
+    for (int i = 0; i < spreadlistsize; i++) {
+        if (CFE_Random_Pick_Full_Range(0, maxroll) < growthstrength) {
+            CELL cell = canspreadlist[i];
+            if (Map.In_Radar(cell)) {
+                CellClass* newcell = NULL;
+                CellClass* backupcell = NULL;
+                bool foundideal = false;
+                bool foundbackup = false;
+
+                /*
+                **	Starting from a random direction, look for an empty neighbour; remember the
+                **	first neighbour with tiberium that can still grow as a fallback.
+                */
+                FacingType offset = Random_Pick(FACING_N, FACING_NW);
+                for (FacingType j = FACING_N; j < FACING_COUNT; j++) {
+                    newcell = (*this)[cell].Adjacent_Cell(j + offset);
+                    if (newcell && Map.In_Radar(newcell->Cell_Number()) && newcell->Cell_Object() == NULL
+                        && newcell->Land_Type() == LAND_CLEAR && newcell->Overlay == OVERLAY_NONE
+                        && newcell->TType != TEMPLATE_BRIDGE1 && newcell->TType != TEMPLATE_BRIDGE2
+                        && newcell->TType != TEMPLATE_BRIDGE3 && newcell->TType != TEMPLATE_BRIDGE4) {
+                        foundideal = true;
+                        break;
+                    } else if (!foundbackup && newcell && Map.In_Radar(newcell->Cell_Number())
+                               && newcell->Land_Type() == LAND_TIBERIUM && newcell->OverlayData < 11) {
+                        backupcell = newcell;
+                        foundbackup = true;
+                    }
+                }
+
+                if (foundideal) {
+                    new OverlayClass(Random_Pick(OVERLAY_TIBERIUM1, OVERLAY_TIBERIUM12), newcell->Cell_Number());
+                    newcell->OverlayData = ActiveCFEPatchConfig.TibIndexBugfix ? 0 : 1;
+                } else if (foundbackup) {
+                    backupcell->OverlayData++;
+                } else {
+                    CellClass* thiscell = &(*this)[cell];
+                    if (thiscell->Land_Type() == LAND_TIBERIUM && thiscell->OverlayData < 11) {
+                        thiscell->OverlayData++;
+                    }
+                }
+            }
+        }
+    }
+}
+
