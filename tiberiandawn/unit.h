@@ -216,6 +216,11 @@ public:
     int Validate(void) const;
 
     void Do_Harvester_Unstick(void);
+    void Reconsider_Refinery(void);
+    BuildingClass* Tiberium_Unload_Refinery(void) const
+    {
+        return TiberiumUnloadRefinery;
+    }
     CELL& Harvester_Last_Cell(void);
 
 private:

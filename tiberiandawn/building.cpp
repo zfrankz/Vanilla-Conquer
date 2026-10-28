@@ -200,6 +200,26 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
         // Refineries can't be interupted while they're processing a harvester - LLL April 22, 2020
         if (Mission == MISSION_HARVEST) {
             return (RADIO_NEGATIVE);
+        } else if (Class->Type == STRUCT_REFINERY && ActiveCFEPatchConfig.EnableHarvyQueueJump
+                   && (House->IsHuman || GameToPlay != GAME_NORMAL) && In_Radio_Contact()) {
+
+            /*
+            **	CFE harvester queue jumping: a harvester that is closer than the one this refinery
+            **	is waiting for takes its place, unless the waiting one is already close by.
+            **	(CFE also has an A-Star distance variant; it comes with A-Star pathing.)
+            */
+            if (from->What_Am_I() == RTTI_UNIT && *((UnitClass*)from) == UNIT_HARVESTER) {
+                UnitClass& current = *static_cast<UnitClass*>(Contact_With_Whom());
+                UnitClass& candidate = *static_cast<UnitClass*>(from);
+                int current_distance = current.Distance(this);
+                int candidate_distance = candidate.Distance(this);
+
+                if (current_distance > ActiveCFEPatchConfig.HarvyQueueJumpCutoff
+                    && candidate_distance < current_distance) {
+                    Transmit_Message(RADIO_CANCEL, &current);
+                    return (TechnoClass::Receive_Message(from, message, param));
+                }
+            }
         }
         break;
 
@@ -400,6 +420,20 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
         // Turn off the refinery lights - LLL April 22, 2020
         if (*this == STRUCT_REFINERY) {
             Begin_Mode(BSTATE_IDLE);
+
+            /*
+            **	CFE "optimize harvesters": harvesters of this house that are heading to a refinery
+            **	but aren't first in line pick their refinery again.
+            */
+            if (ActiveCFEPatchConfig.EnableHarvyOptimize && IsActive && !IsInLimbo) {
+                for (int index = 0; index < Units.Count(); index++) {
+                    UnitClass* unit = Units.Ptr(index);
+                    if (unit != NULL && unit->IsActive && !unit->IsInLimbo && unit->Class->IsToHarvest
+                        && unit->House == House) {
+                        unit->Reconsider_Refinery();
+                    }
+                }
+            }
         }
 
         TechnoClass::Receive_Message(from, message, param);
