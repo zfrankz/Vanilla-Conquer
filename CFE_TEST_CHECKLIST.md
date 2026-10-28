@@ -1,5 +1,8 @@
 # CFE port – play-test checklist
 
+Timings below are in game frames. A frame lasts `GameSpeed`/60 seconds (`conquer.ini`), so 20 frames a second at
+GameSpeed=3 and 15 at the default 4, if the computer keeps up.
+
 Settings files live in `~/Library/Application Support/Vanilla-Conquer/vanillatd/`:
 - `cfepatchredux.ini`: CFE switches (`1` on, `0` off). It currently turns on the 8 TD fixes below.
 - `conquer.ini`, section `[Cheats]`: `Enabled=yes` turns on the F1–F6 cheats.
@@ -51,9 +54,9 @@ They only affect your own harvesters (in single player). Build 2–3 refineries 
 
 - [ ] **Self-repair:** a damaged harvester slowly heals up to half health on its own.
 - [ ] **Smarter refineries:** park a tank on a refinery's unloading spot (the strip below it). When a harvester
-  heads in, the tank moves off within about 5 seconds (checked every 75 game frames).
+  heads in, the tank moves off within 75 game frames (about 4 seconds at your GameSpeed=3, 5 at the default 4).
 - [ ] **Smarter harvesters:** a harvester that gets wedged while harvesting backs up or moves aside after
-  4–8 seconds (two checks 60 game frames apart, 15 frames a second) and carries on. A harvester that ran out of tiberium and went idle tries again about once a
+  60–120 game frames (two checks 60 frames apart: 3–6 seconds at your GameSpeed=3, 4–8 at the default 4) and carries on. A harvester that ran out of tiberium and went idle tries again about once a
   minute; one you parked yourself (Stop/Guard) stays parked.
 - [ ] **Queue jump:** with a harvester driving to a refinery from far away, a full harvester right next to that
   refinery gets to unload first.
@@ -71,7 +74,8 @@ Resurgence and tree visceroids only work with `BETTER_TIB_GROWTH=1`.
 - [ ] **Growth scale:** with `BETTER_TIB_GROWTH=0` and `TIB_GROWTH_SCALE=3` under `[SETTINGS]`, tiberium grows
   about three times as fast.
 - [ ] **Resurgence:** harvest the field around a tiberium tree bare. After several minutes (default
-  `TIB_RESURGE_DELAY=7200` frames, about 8 minutes) the tree puffs spores and tiberium bursts out around it.
+  `TIB_RESURGE_DELAY=7200` game frames at the least: 6 minutes at your GameSpeed=3, 8 at the default 4;
+  longer if some tiberium is left next to the tree) the tree puffs spores and tiberium bursts out around it.
 - [ ] **Tree visceroids:** a tiberium tree completely surrounded by full tiberium (nowhere to spread)
   occasionally spawns a visceroid, with a squish sound.
 - [ ] **TS visceroids:** infantry that die walking through tiberium sometimes leave a visceroid behind.
