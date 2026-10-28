@@ -121,7 +121,19 @@ VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file define
    - Not ported here: A-Star distance variants and CFE's A-Star `FootClass::Find_Docking_Bay` (step 4).
      `ASTAR_PATHING` is ignored by the loader until then, so distance settings stay in leptons.
    - Step 2 code complete; play-test pending.
-3. Tiberium growth/resurgence, visceroids
+3. Tiberium growth/resurgence, visceroids – ported (except meaner visceroids), play-test pending
+   - Done (one commit each, switch off = original code): `BETTER_TIB_GROWTH` + `TIB_GROWTH_SCALE`,
+     `TIB_RESURGENCE` + `TIB_RESURGE_DELAY`, `TS_VISCEROID_SPAWN`, `TREE_VISCEROID_SPAWN_MODE` +
+     `TREE_VISCEROID_SPAWN_OVERRIDE`. Each builds with no warnings on changed lines; 9/9 saves pass the
+     version check; 40 s smoke test. Resurgence and tree spawning only run with `BETTER_TIB_GROWTH` on, as in CFE.
+   - Differences from CFE: rolls above 15 bits use two draws from the game's own generator instead of
+     `rand()` (uniformity checked with 300000 draws); new per-cell/per-infantry/map state lives in unsaved
+     tables or statics instead of saved members (resurgence build-up restarts after a load); the visceroid
+     grow-in animation is Remastered-renderer only, so spawning just plays the squish sound.
+   - Moved: `MEANER_VISCEROIDS` needs CFE's per-unit firepower/armor/speed biases (come with veterancy,
+     step 5) and its per-scenario type-stat adjustments (balance, step 8); port it after step 5.
+     CFE's killed-by-visceroid and chem-soldier visceroid spawns come with it / with the balance options.
+   - General bugfix bucket: CFE `1cab6b4` and `d2edf47` (`Goto_Tiberium` efficiency and megamap radius, no switch).
 4. A* pathing + tiberium aversion (FINDPATH.CPP, SEARCH.H)
 5. Veterancy, smarter SAMs/mammoths/aircraft/commandos
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)

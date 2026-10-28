@@ -61,6 +61,22 @@ They only affect your own harvesters (in single player). Build 2–3 refineries 
   queued ones switch to a free refinery when it's quicker.
 - [ ] With all six on: save, load, and keep playing.
 
+## 2c. Tiberium and visceroids (Phase 3 step 3)
+Add under `[FEATURES]`: `BETTER_TIB_GROWTH=1`, `TIB_RESURGENCE=1`, `TS_VISCEROID_SPAWN=1`; and under
+`[SETTINGS]`: `TREE_VISCEROID_SPAWN_MODE=2` (mode 2 = also in single player).
+Resurgence and tree visceroids only work with `BETTER_TIB_GROWTH=1`.
+
+- [ ] **Better growth:** tiberium fields grow and spread at roughly the usual pace, more evenly; fields
+  boxed in by other tiberium thicken instead of stalling.
+- [ ] **Growth scale:** with `BETTER_TIB_GROWTH=0` and `TIB_GROWTH_SCALE=3` under `[SETTINGS]`, tiberium grows
+  about three times as fast.
+- [ ] **Resurgence:** harvest the field around a tiberium tree bare. After several minutes (default
+  `TIB_RESURGE_DELAY=7200` frames, about 8 minutes) the tree puffs spores and tiberium bursts out around it.
+- [ ] **Tree visceroids:** a tiberium tree completely surrounded by full tiberium (nowhere to spread)
+  occasionally spawns a visceroid, with a squish sound.
+- [ ] **TS visceroids:** infantry that die walking through tiberium sometimes leave a visceroid behind.
+- [ ] Save and load with these on, then keep playing.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.
