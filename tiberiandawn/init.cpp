@@ -1049,6 +1049,14 @@ bool Select_Game(bool fade)
                     */
                     if (ScenPlayer != SCEN_PLAYER_JP) {
                         Scen.Scenario = MIN(Cheat_Start_Mission(), ScenPlayer == SCEN_PLAYER_NOD ? 13 : 15);
+
+                        /*
+                        ** Only mission 1 is on both discs; later maps are looked up below before
+                        ** Read_Scenario_Ini would switch, so switch to the side's disc now.
+                        */
+                        if (Scen.Scenario != 1) {
+                            Force_CD_Available(ScenPlayer == SCEN_PLAYER_NOD ? 1 : 0);
+                        }
                     }
 
                     GameToPlay = GAME_NORMAL;
