@@ -247,6 +247,8 @@ public:
     */
     int Validate(void) const;
 
+    unsigned char& Death_By_Tiberium(void);
+
     /*
     **	Translation table to convert facing into infantry shape number. This special
     **	table is needed since several facing stages are reused and flipped about the Y

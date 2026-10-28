@@ -4746,3 +4746,17 @@ void UnitClass::Reconsider_Refinery(void)
         TiberiumUnloadRefinery = NULL;
     }
 }
+
+/***********************************************************************************************
+ * UnitClass::Do_Squidgy_Spawn -- Announces a newly spawned visceroid.                         *
+ *                                                                                             *
+ *    CFE also grows the visceroid in over a few frames, but that is drawn by the Remastered   *
+ *    renderer only; here it just makes the squishy sound.                                     *
+ *=============================================================================================*/
+void UnitClass::Do_Squidgy_Spawn(void)
+{
+    if (*this != UNIT_VICE) {
+        return;
+    }
+    Sound_Effect(VOC_SQUISH2, Coord);
+}

@@ -216,6 +216,7 @@ public:
     int Validate(void) const;
 
     void Do_Harvester_Unstick(void);
+    void Do_Squidgy_Spawn(void);
     void Reconsider_Refinery(void);
     BuildingClass* Tiberium_Unload_Refinery(void) const
     {

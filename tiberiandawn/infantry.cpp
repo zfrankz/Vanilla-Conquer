@@ -248,6 +248,7 @@ InfantryClass::InfantryClass(InfantryType classid, HousesType house)
     }
     Doing = DO_NOTHING;
     Fear = 0; // Starts completely brave.
+    Death_By_Tiberium() = 0;
     IsProne = false;
     IsStoked = false;
     IsBoxing = false;
@@ -778,7 +779,15 @@ void InfantryClass::Per_Cell_Process(bool center)
     */
     if (IsActive && !IsInLimbo && center && cellptr->Land_Type() == LAND_TIBERIUM && *this != INFANTRY_E5) {
         int damage = 2;
-        Take_Damage(damage, 0, WARHEAD_FIRE);
+        ResultType result = Take_Damage(damage, 0, WARHEAD_FIRE);
+
+        /*
+        **	CFE "TS visceroid spawn": remember that it died walking through tiberium; a
+        **	visceroid may appear when its death animation ends.
+        */
+        if (result == RESULT_DESTROYED && ActiveCFEPatchConfig.TSVisceroidSpawn) {
+            Death_By_Tiberium() = 1;
+        }
     }
 }
 
@@ -1284,9 +1293,22 @@ void InfantryClass::AI(void)
         case DO_EXPLOSION_DEATH:
         case DO_EXPLOSION2_DEATH:
         case DO_GRENADE_DEATH:
-        case DO_FIRE_DEATH:
+        case DO_FIRE_DEATH: {
+            /*
+            **	CFE: remember what Delete_This() is about to clear, then maybe spawn a visceroid
+            **	once the cell is free.
+            */
+            COORDINATE coord = Coord;
+            CELL cell = Coord_Cell(Coord);
+            unsigned char death_by_tiberium = Death_By_Tiberium();
+
             Delete_This();
+
+            if (death_by_tiberium > 0) {
+                Map.Process_Tiberium_Death(cell, coord, death_by_tiberium);
+            }
             return;
+        }
         }
     }
 
@@ -3310,4 +3332,24 @@ bool InfantryClass::Is_Infantry(void) const
 {
     Validate();
     return (true);
+}
+
+/***********************************************************************************************
+ * InfantryClass::Death_By_Tiberium -- How this infantry died, for CFE visceroid spawning.     *
+ *                                                                                             *
+ *    0 = not by tiberium, 1 = walking through tiberium. CFE keeps this in InfantryClass; it   *
+ *    is kept per slot outside the class so the save format doesn't change. Not saved: an      *
+ *    infantry dying at the moment of a save won't spawn a visceroid after loading.            *
+ *=============================================================================================*/
+unsigned char& InfantryClass::Death_By_Tiberium(void)
+{
+    static unsigned char deaths[INFANTRY_MAX];
+    static unsigned char scratch;
+
+    int id = Infantry.ID(this);
+    if (id < 0 || id >= INFANTRY_MAX) {
+        scratch = 0;
+        return scratch;
+    }
+    return deaths[id];
 }
