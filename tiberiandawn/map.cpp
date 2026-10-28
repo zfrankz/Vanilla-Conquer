@@ -2247,6 +2247,33 @@ void MapClass::CFE_Logic(void)
                     CellClass* thiscell = &(*this)[cell];
                     if (thiscell->Land_Type() == LAND_TIBERIUM && thiscell->OverlayData < 11) {
                         thiscell->OverlayData++;
+                    } else if (ActiveCFEPatchConfig.TreeVisceroidSpawnMode > 0
+                               && (GameToPlay != GAME_NORMAL || ActiveCFEPatchConfig.TreeVisceroidSpawnMode > 1)
+                               && (GameToPlay == GAME_NORMAL || Special.IsVisceroids
+                                   || ActiveCFEPatchConfig.TreeVisceroidSpawnAnyway)) {
+                        /*
+                        **	CFE tree visceroid spawn: a tiberium tree that couldn't spread or grow
+                        **	at all may spawn a visceroid. 5% chance plus 1% per failure since the
+                        **	last spawn, scaled down by growth strength so the spawn rate doesn't
+                        **	rise with faster growth. (CFE keeps the failure count in MapClass,
+                        **	saved; here it is a static, not saved.)
+                        */
+                        static unsigned char frustration_count = 0;
+                        TerrainClass* thisterrain = thiscell->Cell_Terrain();
+                        if (thisterrain && thisterrain->Class->IsTiberiumSpawn) {
+                            frustration_count++;
+                            if (CFE_Random_Pick_Full_Range(0, (100 * growthstrength) - 1) < frustration_count + 4) {
+                                UnitClass* unit = new UnitClass(UNIT_VICE, HOUSE_JP);
+                                if (unit) {
+                                    if (Scan_Place_Object(unit, cell)) {
+                                        unit->Do_Squidgy_Spawn();
+                                        frustration_count = 0;
+                                    } else {
+                                        delete unit;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
