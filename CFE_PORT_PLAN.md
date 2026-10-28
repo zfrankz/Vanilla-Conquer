@@ -105,7 +105,17 @@ VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file define
      feature's CFE commits are also found by message keywords and by `git log -L` on the touched functions.
    - Not ported on purpose: CFE's extra `Limbo()` in `TerrainClass::AI` (VC's destructor already
      calls it); CFE's unflagged tidy-ups in the same functions.
-2. Harvester features (queue jump, optimization, self-repair, smarter harvesters/refineries)
+2. Harvester features (queue jump, optimization, self-repair, smarter harvesters/refineries) – in progress
+   - Done (one commit each, switch off = original code): `HARVY_SELF_REPAIR`, `SMARTER_REFINERIES`,
+     `SMARTER_HARVESTERS`. Each builds; TD starts with them compiled in (40 s smoke test).
+   - Save format unchanged: `sizeof(UnitClass)` stays 400 (temporary print), and all 9 existing TD saves
+     pass the version check in `Get_Savefile_Info`. Smarter harvesters' two flags use the padding byte
+     after `Flagged`; the last stuck cell is kept in an unsaved per-slot table.
+   - Differences from CFE: no `HasOpened` in VC (refinery check excludes construction/deconstruction
+     instead); the wake-up flag is cleared for every unit on a new mission (CFE clears it only for
+     gunboats); `Frame` instead of CFE's per-object `FrameMB()`.
+   - Pending: `HARVY_QUEUE_JUMP`, `HARVY_LOAD_BALANCING`, `HARVY_OPTIMIZE` (intertwined in `Mission_Harvest`
+     and refinery selection).
 3. Tiberium growth/resurgence, visceroids
 4. A* pathing + tiberium aversion (FINDPATH.CPP, SEARCH.H)
 5. Veterancy, smarter SAMs/mammoths/aircraft/commandos
