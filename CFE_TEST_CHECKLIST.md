@@ -44,6 +44,23 @@ Some of these are hard to see. "No crash, game plays normally" is a useful resul
 - [ ] **`GUNBOAT_BUGFIX`:** in a mission with a GDI gunboat on the river, the gunboat switches targets as it moves.
   It shouldn't keep firing at one target it can't reach.
 
+## 2b. Harvester features (Phase 3 step 2)
+Turn them on under `[FEATURES]` in `cfepatchredux.ini`: `HARVY_SELF_REPAIR=1`, `SMARTER_REFINERIES=1`,
+`SMARTER_HARVESTERS=1`, `HARVY_QUEUE_JUMP=1`, `HARVY_LOAD_BALANCING=1`, `HARVY_OPTIMIZE=1`.
+They only affect your own harvesters (in single player). Build 2–3 refineries and 4+ harvesters (F1, F5, F6 help).
+
+- [ ] **Self-repair:** a damaged harvester slowly heals up to half health on its own.
+- [ ] **Smarter refineries:** park a tank on a refinery's unloading spot (the strip below it). When a harvester
+  heads in, the tank moves off within a few seconds.
+- [ ] **Smarter harvesters:** a harvester that gets wedged while harvesting backs up or moves aside within
+  about 2 seconds and carries on. A harvester that ran out of tiberium and went idle tries again about once a
+  minute; one you parked yourself (Stop/Guard) stays parked.
+- [ ] **Queue jump:** with a harvester driving to a refinery from far away, a full harvester right next to that
+  refinery gets to unload first.
+- [ ] **Load balancing / optimize:** harvesters spread over your refineries instead of queuing at one, and
+  queued ones switch to a free refinery when it's quicker.
+- [ ] With all six on: save, load, and keep playing.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.
