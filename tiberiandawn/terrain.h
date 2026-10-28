@@ -169,6 +169,10 @@ public:
     {
         return IsOnFire;
     };
+    bool Is_Sporing(void) const
+    {
+        return IsSporing;
+    };
 
 private:
     /*

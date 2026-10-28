@@ -451,6 +451,7 @@ void MapClass::Init_Clear(void)
     IsForwardScan = true;
     TiberiumGrowthCount = 0;
     TiberiumSpreadCount = 0;
+    Clear_CFE_Cell_State();
 }
 
 /***********************************************************************************************
@@ -479,6 +480,7 @@ void MapClass::Alloc_Cells(void)
     */
     new (&Array) VectorClass<CellClass>;
     Array.Resize(Size);
+    Clear_CFE_Cell_State();
 }
 
 /***********************************************************************************************
@@ -2073,6 +2075,20 @@ CELL MapClass::Nearby_Location(CELL cell) const //, SpeedType speed, int zone, M
 
 #endif // USE_RA_AI
 
+/*
+**	CFE "tiberium resurgence" per-cell state. CFE keeps these in CellClass; here they are kept
+**	outside it so sizeof(CellClass), and so the save format, stays the same. They are not saved:
+**	after a load, resurgence build-up starts over.
+*/
+static int TibResurgenceBuildup[MAP_CELL_TOTAL];
+static int TibResurgenceCountdown[MAP_CELL_TOTAL];
+
+void MapClass::Clear_CFE_Cell_State(void)
+{
+    memset(TibResurgenceBuildup, 0, sizeof(TibResurgenceBuildup));
+    memset(TibResurgenceCountdown, 0, sizeof(TibResurgenceCountdown));
+}
+
 /***********************************************************************************************
  * CFE_Random_Pick_Full_Range -- Random_Pick for ranges wider than 15 bits.                    *
  *                                                                                             *
@@ -2231,6 +2247,113 @@ void MapClass::CFE_Logic(void)
                     CellClass* thiscell = &(*this)[cell];
                     if (thiscell->Land_Type() == LAND_TIBERIUM && thiscell->OverlayData < 11) {
                         thiscell->OverlayData++;
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+    **	CFE "tiberium resurgence": a tiberium tree with little tiberium around it builds up for
+    **	TIB_RESURGE_DELAY frames on average, then (starting with a sporing animation) bursts out
+    **	new tiberium around itself for 480 frames, slowing down over that time.
+    */
+    if (ActiveCFEPatchConfig.TibResurgence) {
+        for (int index = 0; index < MAP_CELL_TOTAL; index++) {
+            CELL cell = index;
+            if (!Map.In_Radar(cell)) {
+                continue;
+            }
+            CellClass* ptr = &(*this)[cell];
+            TerrainClass* terrain = ptr->Cell_Terrain();
+            if (terrain && terrain->Class->IsTiberiumSpawn) {
+                int& buildup = TibResurgenceBuildup[cell];
+                int& countdown = TibResurgenceCountdown[cell];
+
+                if (countdown == 0) {
+                    /*
+                    **	Build up while there is little tiberium next to the tree.
+                    */
+                    int nearbytibcount = 0;
+                    bool toomuch = false;
+                    for (FacingType j = FACING_N; j < FACING_COUNT; j++) {
+                        CellClass* newcell = (*this)[cell].Adjacent_Cell(j);
+                        if (newcell && Map.In_Radar(newcell->Cell_Number()) && newcell->Land_Type() == LAND_TIBERIUM) {
+                            nearbytibcount += newcell->OverlayData;
+                            if (ActiveCFEPatchConfig.TibIndexBugfix) {
+                                nearbytibcount++;
+                            }
+                            if (nearbytibcount > 8) {
+                                toomuch = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!toomuch) {
+                        buildup = buildup + 8 - Random_Pick(0, nearbytibcount);
+                        if (buildup >= 8 * ActiveCFEPatchConfig.TibResurgeDelay) {
+                            buildup = 0;
+                            countdown = 480;
+                        }
+                    }
+                } else if (countdown > 0 && (countdown < 480 || terrain->Is_Sporing())) {
+                    /*
+                    **	Spread until the countdown expires; wait for a sporing animation to start.
+                    */
+                    countdown--;
+                    FacingType offset = Random_Pick(FACING_N, FACING_NW);
+                    for (FacingType j = FACING_N; j < FACING_COUNT; j++) {
+                        // Decrease the odds over time so that growth bursts, then slows down.
+                        if (Random_Pick(0, 638 - countdown) > 9) {
+                            continue;
+                        }
+                        FacingType facingindex = j + offset;
+                        CellClass* newcell = (*this)[cell].Adjacent_Cell(facingindex);
+                        if (newcell && Map.In_Radar(newcell->Cell_Number()) && newcell->Cell_Object() == NULL
+                            && newcell->TType != TEMPLATE_BRIDGE1 && newcell->TType != TEMPLATE_BRIDGE2
+                            && newcell->TType != TEMPLATE_BRIDGE3 && newcell->TType != TEMPLATE_BRIDGE4) {
+                            if (newcell->Land_Type() == LAND_CLEAR && newcell->Overlay == OVERLAY_NONE) {
+                                new OverlayClass(Random_Pick(OVERLAY_TIBERIUM1, OVERLAY_TIBERIUM12),
+                                                 newcell->Cell_Number());
+                                newcell->OverlayData = ActiveCFEPatchConfig.TibIndexBugfix ? 0 : 1;
+                            } else if (newcell->Land_Type() == LAND_TIBERIUM) {
+                                if (newcell->OverlayData < 11) {
+                                    newcell->OverlayData++;
+                                } else {
+                                    /*
+                                    **	That neighbour is full: try the cells beyond it, favouring
+                                    **	the one straight ahead.
+                                    */
+                                    int maxroll = 3;
+                                    for (FacingType k = facingindex - FACING_NE; k <= facingindex + FACING_NE; k++) {
+                                        maxroll--;
+                                        if (maxroll) {
+                                            if (Random_Pick(0, maxroll) != 0) {
+                                                continue;
+                                            }
+                                        }
+                                        CellClass* newnewcell = newcell->Adjacent_Cell(k);
+                                        if (newnewcell && Map.In_Radar(newnewcell->Cell_Number())
+                                            && newnewcell->Cell_Object() == NULL && newnewcell->TType != TEMPLATE_BRIDGE1
+                                            && newnewcell->TType != TEMPLATE_BRIDGE2
+                                            && newnewcell->TType != TEMPLATE_BRIDGE3
+                                            && newnewcell->TType != TEMPLATE_BRIDGE4) {
+                                            if (newnewcell->Land_Type() == LAND_CLEAR
+                                                && newnewcell->Overlay == OVERLAY_NONE) {
+                                                new OverlayClass(Random_Pick(OVERLAY_TIBERIUM1, OVERLAY_TIBERIUM12),
+                                                                 newnewcell->Cell_Number());
+                                                newnewcell->OverlayData = ActiveCFEPatchConfig.TibIndexBugfix ? 0 : 1;
+                                                break;
+                                            } else if (newnewcell->Land_Type() == LAND_TIBERIUM
+                                                       && newnewcell->OverlayData < 11) {
+                                                newnewcell->OverlayData++;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

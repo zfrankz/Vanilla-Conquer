@@ -89,6 +89,7 @@ public:
 
     virtual void Logic(void);
     void CFE_Logic(void);
+    static void Clear_CFE_Cell_State(void);
     virtual void Set_Map_Dimensions(int x, int y, int w, int h);
 
     /*
