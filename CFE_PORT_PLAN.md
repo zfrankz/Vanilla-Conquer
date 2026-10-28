@@ -17,7 +17,10 @@ TD +26.5k/-1.9k lines in 449 files, RA +11.8k/-2.2k lines in 630 files.
 - [x] Run vanillatd / vanillara with freeware retail data (RA: missions played; TD: GDI and Nod missions played)
 
 Data layout (`~/Library/Application Support/Vanilla-Conquer/`):
-- `vanillara/`: `MAIN.MIX`, `REDALERT.MIX` from the Allied CD
+- `vanillara/`: `REDALERT.MIX`; each disc's `MAIN.MIX` in `allied/` and `soviet/`. The game switches
+  folder by mission side (`Change_Local_Dir` in `redalert/conquer.cpp`), which is how the Soviet videos
+  are found; a `MAIN.MIX` in `vanillara/` itself would always win, so there must not be one.
+  Soviet disc: `gamedata/soviet/RA_Soviet.iso`, converted from the MODE1/2352 bin in `RA_Soviet.zip`.
 - `vanillatd/`: shared MIX files from the GDI CD root, plus `UPDATE`, `UPDATEC`, `TRANSIT`,
   `SPEECH`, `*ICNH` and `CCLOCAL.MIX` extracted from the CD's `INSTALL/SETUP.Z` (InstallShield 3).
   `vanillatd/gdi/` and `vanillatd/nod/` hold each CD's `GENERAL.MIX` and `MOVIES.MIX`.
