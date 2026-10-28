@@ -1289,6 +1289,21 @@ void BuildingClass::AI(void)
             }
         }
     }
+
+    /*
+    **	CFE: periodically clear non-harvester units off a refinery's unloading area while a
+    **	harvester is on its way in. CFE checks its own HasOpened flag; VC has none, so the
+    **	construction and deconstruction missions are excluded instead.
+    */
+    if (ActiveCFEPatchConfig.EnableSmarterRefineries && IsActive && Strength && *this == STRUCT_REFINERY
+        && Mission != MISSION_CONSTRUCTION && Mission != MISSION_DECONSTRUCTION && In_Radio_Contact()
+        && Mission != MISSION_HARVEST && (Frame % 75) == 0) {
+        TechnoClass* tech = Contact_With_Whom();
+        if (tech && tech->IsActive && tech->Strength && tech->What_Am_I() == RTTI_UNIT
+            && *((UnitClass*)tech) == UNIT_HARVESTER) {
+            Flush_Refinery_Bib();
+        }
+    }
 }
 
 /***********************************************************************************************
@@ -5541,4 +5556,39 @@ bool BuildingClass::Passes_Proximity_Check(CELL homecell)
         }
     }
     return (false);
+}
+
+/***********************************************************************************************
+ * BuildingClass::Flush_Refinery_Bib -- Scatters friendly non-harvesters off a refinery's bib.   *
+ *                                                                                             *
+ *    CFE Patch Redux "smarter refineries": checks the row of 5 cells below the refinery's      *
+ *    center, starting 1 south and 2 west of it.                                               *
+ *=============================================================================================*/
+void BuildingClass::Flush_Refinery_Bib(void)
+{
+    if (*this != STRUCT_REFINERY) {
+        return;
+    }
+
+    COORDINATE center = Center_Coord();
+    CELL cell = Adjacent_Cell(Adjacent_Cell(Coord_Cell(center), FACING_SW), FACING_W);
+    for (int index = 0; index < 5; index++) {
+        if (Map.In_Radar(cell)) {
+            ObjectClass* obj = Map[cell].Cell_Occupier();
+            while (obj) {
+                if (obj->IsActive && obj->Strength && obj->Is_Techno() && House->Is_Ally(obj)) {
+                    RTTIType type = obj->What_Am_I();
+                    if (type == RTTI_INFANTRY || (type == RTTI_UNIT && *((UnitClass*)obj) != UNIT_HARVESTER)
+                        || type == RTTI_AIRCRAFT) {
+                        FootClass* foot = (FootClass*)obj;
+                        if (!foot->IsDeploying && !foot->IsFiring && !foot->IsRotating && !foot->IsDriving) {
+                            foot->Scatter(center, true, true);
+                        }
+                    }
+                }
+                obj = obj->Next;
+            }
+            cell = Adjacent_Cell(cell, FACING_E);
+        }
+    }
 }

@@ -316,6 +316,8 @@ public:
     */
     int Validate(void) const;
 
+    void Flush_Refinery_Bib(void);
+
 private:
     void Drop_Debris(TARGET source = TARGET_NONE);
     virtual BulletClass* Fire_At(TARGET target, int which);
