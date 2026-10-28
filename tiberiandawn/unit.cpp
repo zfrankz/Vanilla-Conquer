@@ -467,6 +467,24 @@ void UnitClass::AI(void)
     if (Cloak == CLOAKED && Flagged != HOUSE_NONE) {
         Do_Shimmer();
     }
+
+    /*
+    **	CFE: a harvester that sits still in the same cell for two checks in a row while
+    **	harvesting (and isn't unloading) is considered stuck and tries to get loose.
+    */
+    if (ActiveCFEPatchConfig.EnableSmarterHarvesters && IsActive && *this == UNIT_HARVESTER && (Frame % 60) == 0) {
+        if (Mission == MISSION_HARVEST && Speed == 0 && !IsRotating && !IsTethered && PrimaryFacing != DIR_SW_X1
+            && PrimaryFacing != DIR_SW_X2) {
+            CELL cell = Coord_Cell(Coord);
+            if (cell == Harvester_Last_Cell()) {
+                Do_Harvester_Unstick();
+            } else {
+                Harvester_Last_Cell() = cell;
+            }
+        } else {
+            Harvester_Last_Cell() = 0;
+        }
+    }
 }
 
 /***********************************************************************************************
@@ -1168,6 +1186,9 @@ UnitClass::UnitClass(UnitType classid, HousesType house)
     : TarComClass(classid, house)
 {
     Flagged = HOUSE_NONE;
+    HarvesterIsUnsticking = 0;
+    HarvCanWake = 0;
+    Harvester_Last_Cell() = 0;
     Reload = 0;
     Ammo = Class->MaxAmmo;
     IsCloakable = Class->IsCloakable;
@@ -1286,8 +1307,29 @@ void UnitClass::Enter_Idle_Mode(bool initial)
     if (Class->Primary == WEAPON_NONE) {
         if (Class->IsToHarvest) {
             if (!In_Radio_Contact() && Mission != MISSION_HARVEST) {
-                if (initial || !House->IsHuman || Map[Coord_Cell(Coord)].Land_Type() == LAND_TIBERIUM) {
+                if (initial || !House->IsHuman || Map[Coord_Cell(Coord)].Land_Type() == LAND_TIBERIUM
+                    || (ActiveCFEPatchConfig.EnableSmarterHarvesters && HarvesterIsUnsticking)) {
                     order = MISSION_HARVEST;
+
+                    /*
+                    **	CFE: back to harvesting after getting unstuck. Go back to the remembered
+                    **	tiberium cell unless it is now permanently blocked.
+                    */
+                    if (ActiveCFEPatchConfig.EnableSmarterHarvesters && HarvesterIsUnsticking) {
+                        HarvesterIsUnsticking = 0;
+                        if (Tiberium_Load() < 0x0100 && Target_Legal(ArchiveTarget)) {
+                            MoveType enter = Can_Enter_Cell(As_Cell(ArchiveTarget));
+                            CellClass* cellptr = &Map[As_Cell(ArchiveTarget)];
+                            if (enter <= MOVE_MOVING_BLOCK || enter == MOVE_TEMP
+                                || (enter == MOVE_DESTROYABLE && !cellptr->Cell_Building()
+                                    && !cellptr->Cell_Terrain())) {
+                                Assign_Destination(ArchiveTarget);
+                            } else {
+                                Goto_Tiberium();
+                            }
+                            ArchiveTarget = TARGET_NONE;
+                        }
+                    }
                 } else {
                     order = MISSION_GUARD;
                 }
@@ -2849,6 +2891,7 @@ int UnitClass::Mission_Harvest(void)
 
     case GOINGTOIDLE:
         Assign_Mission(MISSION_GUARD);
+        HarvCanWake = 1;
         break;
     }
     return (TICKS_PER_SECOND);
@@ -4022,7 +4065,12 @@ int UnitClass::Mission_Guard(void)
         return (TICKS_PER_SECOND);
     }
 
-    if (*this == UNIT_HARVESTER && !House->IsHuman) {
+    /*
+    **	CFE: a player's harvester that went idle on its own tries harvesting again once a minute.
+    */
+    if (*this == UNIT_HARVESTER
+        && (!House->IsHuman
+            || (ActiveCFEPatchConfig.EnableSmarterHarvesters && HarvCanWake && (Frame % TICKS_PER_MINUTE) == 0))) {
         Assign_Mission(MISSION_HARVEST);
         return (TICKS_PER_SECOND);
     }
@@ -4429,4 +4477,49 @@ RTTIType UnitClass::What_Am_I(void) const
 {
     Validate();
     return (RTTI_UNIT);
+}
+
+/***********************************************************************************************
+ * UnitClass::Do_Harvester_Unstick -- Tries to free a stuck harvester.                         *
+ *                                                                                             *
+ *    CFE Patch Redux "smarter harvesters": back up one cell if possible, otherwise scatter.   *
+ *    The harvester goes back to harvesting the next time it goes idle.                        *
+ *=============================================================================================*/
+void UnitClass::Do_Harvester_Unstick(void)
+{
+    if (*this != UNIT_HARVESTER || Mission != MISSION_HARVEST) {
+        return;
+    }
+
+    HarvesterIsUnsticking = 1;
+
+    CELL backup = Adjacent_Cell(Coord_Cell(Coord), (FacingType)((char)Dir_Facing(PrimaryFacing) ^ 4));
+    if (Map.In_Radar(backup)) {
+        MoveType result = Can_Enter_Cell(backup);
+        if (result <= MOVE_MOVING_BLOCK || result == MOVE_TEMP) {
+            Assign_Mission(MISSION_MOVE);
+            Assign_Destination(::As_Target(backup));
+            return;
+        }
+    }
+    Scatter(0, true, true);
+}
+
+/***********************************************************************************************
+ * UnitClass::Harvester_Last_Cell -- The cell a harvester was last seen stuck in.              *
+ *                                                                                             *
+ *    Kept per unit slot outside UnitClass so the save format doesn't change. It is not saved; *
+ *    after a load the stuck check simply starts over.                                         *
+ *=============================================================================================*/
+CELL& UnitClass::Harvester_Last_Cell(void)
+{
+    static CELL last_cells[UNIT_MAX];
+    static CELL scratch;
+
+    int id = Units.ID(this);
+    if (id < 0 || id >= UNIT_MAX) {
+        scratch = 0;
+        return scratch;
+    }
+    return last_cells[id];
 }

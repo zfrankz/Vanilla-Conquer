@@ -1084,6 +1084,14 @@ void FootClass::Assign_Mission(MissionType order)
     if (What_Am_I() != RTTI_UNIT || *(UnitClass*)this != UNIT_GUNBOAT) {
         Path[0] = FACING_NONE;
     }
+
+    /*
+    **	CFE "smarter harvesters": any new mission cancels the self wake-up; going idle on its own
+    **	sets it again afterwards. (CFE clears it only for gunboats, which defeats its purpose.)
+    */
+    if (What_Am_I() == RTTI_UNIT) {
+        ((UnitClass*)this)->HarvCanWake = 0;
+    }
     TechnoClass::Assign_Mission(order);
 }
 

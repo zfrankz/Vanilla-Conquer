@@ -54,6 +54,14 @@ public:
     */
     HousesType Flagged;
 
+    /*
+    **	CFE "smarter harvesters" state. Placed here so it fills the alignment padding byte after
+    **	Flagged and sizeof(UnitClass), and so the save format, stays the same. The last cell a
+    **	harvester was seen stuck in is kept outside the class (see Harvester_Last_Cell).
+    */
+    unsigned char HarvesterIsUnsticking : 1; // Resume harvesting when next idle.
+    unsigned char HarvCanWake : 1;           // Went idle on its own, so it may wake itself up.
+
     /*---------------------------------------------------------------------
     **	Constructors, Destructors, and overloaded operators.
     */
@@ -206,6 +214,9 @@ public:
     **	Dee-buggin' support.
     */
     int Validate(void) const;
+
+    void Do_Harvester_Unstick(void);
+    CELL& Harvester_Last_Cell(void);
 
 private:
     /*
