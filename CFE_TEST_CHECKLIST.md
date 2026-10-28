@@ -51,9 +51,9 @@ They only affect your own harvesters (in single player). Build 2–3 refineries 
 
 - [ ] **Self-repair:** a damaged harvester slowly heals up to half health on its own.
 - [ ] **Smarter refineries:** park a tank on a refinery's unloading spot (the strip below it). When a harvester
-  heads in, the tank moves off within a few seconds.
-- [ ] **Smarter harvesters:** a harvester that gets wedged while harvesting backs up or moves aside within
-  about 2 seconds and carries on. A harvester that ran out of tiberium and went idle tries again about once a
+  heads in, the tank moves off within about 5 seconds (checked every 75 game frames).
+- [ ] **Smarter harvesters:** a harvester that gets wedged while harvesting backs up or moves aside after
+  4–8 seconds (two checks 60 game frames apart, 15 frames a second) and carries on. A harvester that ran out of tiberium and went idle tries again about once a
   minute; one you parked yourself (Stop/Guard) stays parked.
 - [ ] **Queue jump:** with a harvester driving to a refinery from far away, a full harvester right next to that
   refinery gets to unload first.
