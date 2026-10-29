@@ -92,6 +92,20 @@ Not verified: commando placement on occupied cells.
 
 VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file defines; not enabled.
 
+Two original-TD war factory bugs that F6 (instant build) exposes, fixed always-on (user's choice,
+2026-10-29; not CFE, no switch):
+- A unit finished while the factory is still unloading the previous one got an ignored
+  `MISSION_UNLOAD` and sat inside forever, and production stopped with "Ready" showing.
+  `BuildingClass::Exit_Object` now returns 1 (try later) while the factory is in `MISSION_UNLOAD`,
+  as Red Alert does; `HouseClass::Place_Object` only counts 2 as exited. The AI retries after 3 s.
+- Clicking "Ready" while the factory was busy cancelled the unit ("no factory"). The click now
+  asks for the exit again when a factory exists but is busy; it still cancels if none is left.
+Verified with a temporary harness (save 4, jeep added to the sidebar, instant build): before,
+production stopped after 3 jeeps for 851+ frames (same with A* on and off); after, 25 and 23
+jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy factory: before
+101 clicks → 101 cancels; after 49 clicks → 0 cancels. Not verified: the AI path, and the
+"no factory left" cancel at runtime.
+
 ## Phase 3 – TD features (one commit per feature, built and play-tested on/off)
 1. Small bugfixes, tiberium index fix – ported, play-test pending
    - Done (one commit each, switch off = original code): `TIB_INDEX_BUGFIX`, `GDI9_FIX`,

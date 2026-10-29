@@ -2328,6 +2328,14 @@ int BuildingClass::Exit_Object(TechnoClass* base)
             return (0);
 
         case STRUCT_WEAP:
+            /*
+            **	Still driving the previous unit out (door open or closing): the new unit's
+            **	MISSION_UNLOAD would be ignored and it would sit inside forever. Return 1
+            **	(try again later) until the factory is idle. Red Alert has the same check.
+            */
+            if (Mission == MISSION_UNLOAD) {
+                return (1);
+            }
             ScenarioInit++;
             if (base->Unlimbo(Coord_Add(Coord, Class->ExitPoint), DIR_SW)) {
                 //						base->Assign_Mission(MISSION_MOVE);

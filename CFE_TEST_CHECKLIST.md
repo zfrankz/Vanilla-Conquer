@@ -103,6 +103,9 @@ Add under `[FEATURES]`: `ASTAR_PATHING=1`; and under `[SETTINGS]`: `INFANTRY_TIB
 ## 4. General
 - [ ] Save a game with the fixes on, load it, and keep playing.
 - [ ] Play at least one GDI and one Nod mission from start to finish with the fixes on.
+- [ ] **War factory with F6 (instant build):** order vehicles quickly, one after another, and click "Ready" icons
+  while the previous vehicle is still driving out. Every vehicle should come out; none should be cancelled.
+  If the war factory is destroyed while a vehicle is "Ready", clicking it should still cancel it ("no factory").
 - [ ] **Cheats, one case not yet tried:** press F4 with the mouse over an occupied spot (a building or another unit).
   Expected: the message "Cheat: can't spawn a commando there", and no crash.
 

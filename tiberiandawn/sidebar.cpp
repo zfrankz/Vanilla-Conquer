@@ -2412,7 +2412,16 @@ int SidebarClass::StripClass::SelectClass::Action(unsigned flags, KeyNumType& ke
                                 Map.IsTargettingMode = true;
                             } else {
                                 BuildingClass* builder = pending->Who_Can_Build_Me(false, false);
-                                if (!builder) {
+                                if (!builder && pending->What_Am_I() != RTTI_BUILDING
+                                    && pending->Who_Can_Build_Me(true, false)) {
+
+                                    /*
+                                    **	The factory is still busy with the previous object. Ask for the
+                                    **	exit again (it is retried until it succeeds) instead of
+                                    **	cancelling the finished object.
+                                    */
+                                    OutList.Add(EventClass(EventClass::PLACE, otype, -1));
+                                } else if (!builder) {
                                     OutList.Add(EventClass(EventClass::ABANDON, otype, oid));
                                     Speak(VOX_NO_FACTORY);
                                 } else {

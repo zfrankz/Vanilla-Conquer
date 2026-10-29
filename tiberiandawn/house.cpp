@@ -2887,7 +2887,7 @@ bool HouseClass::Place_Object(RTTIType type, CELL cell)
                 TechnoClass* builder = pending->Who_Can_Build_Me(false, false);
                 TechnoTypeClass const* object_type = pending->Techno_Type_Class();
 
-                if (builder && builder->Exit_Object(pending)) {
+                if (builder && builder->Exit_Object(pending) == 2) {
 
                     /*
                     **	Since the object has left the factory under its own power, delete
