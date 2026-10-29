@@ -95,4 +95,8 @@ Resurgence and tree visceroids only work with `BETTER_TIB_GROWTH=1`.
 ## Results
 | Test | Result | Notes |
 |---|---|---|
-| | | |
+| 1. Burning-tree crash | Pass (user, 2026-10-29) | Nothing odd seen; recheck if it turns up later |
+| 2b. Harvester features | Pass (user, 2026-10-29) | Same |
+| 2c. Tiberium and visceroids | Pass (user, 2026-10-29) | Same |
+| Save/load, including a save from before the features | Pass (user, 2026-10-29) | Same |
+| 3. Fixes off | Pass (user, 2026-10-29) | Same |
