@@ -915,6 +915,17 @@ bool DriveClass::Start_Of_Move(void)
     }
 #endif
 
+    // Chthon CFE Note: We can afford to repath periodically
+    // Fixes issues with path going stale because path got blocked or unblocked after it was computed
+    bool freerepath = false;
+    TCountDownTimerClass OldPathDelay = PathDelay;
+    if (ActiveCFEPatchConfig.EnableASPathing && !Repath_Delay() && PathDelay.Expired() && Target_Legal(NavCom)
+        && (Distance(As_Cell(NavCom)) > 4)) {
+        Path[0] = FACING_NONE;
+        facing = FACING_NONE;
+        freerepath = true;
+    }
+
     /*
     **	Reduce the path length if the target is a unit and the
     **	range to the unit is less than the precalculated path steps.
@@ -1017,8 +1028,15 @@ bool DriveClass::Start_Of_Move(void)
             }
         }
 
-        TryTryAgain = PATH_RETRY;
+        if (ActiveCFEPatchConfig.EnableASPathing) {
+            TryTryAgain = CFE_PATH_RETRY;
+        } else {
+            TryTryAgain = PATH_RETRY;
+        }
         facing = Path[0];
+        if (freerepath) {
+            PathDelay = OldPathDelay;
+        }
     }
 
     if (Class->IsLockTurret || !Class->IsTurretEquipped) {
@@ -2014,3 +2032,34 @@ DriveClass::TurnTrackType const DriveClass::TrackControl[67] = {
     {12, 12, DIR_SW_X2, F_}, // Drive back into refinery.
     {13, 13, DIR_SW, F_}     // Drive out of weapons factory.
 };
+
+/***********************************************************************************************
+ * DriveClass::CFE_Get_Next_Cell -- The cell this unit plans to enter after its current move.  *
+ *                                                                                             *
+ *    CFE Patch Redux A* pathing uses this so units avoid cutting off allied vehicles.         *
+ *    Note that DriveClass and InfantryClass behave differently: DriveClass advances Path[0]   *
+ *    as soon as it starts towards a new HeadToCoord, but infantry doesn't advance Path[0]     *
+ *    until it reaches that HeadToCoord.                                                       *
+ *                                                                                             *
+ * OUTPUT:  The next cell, or 0 if this unit isn't trying to go anywhere.                      *
+ *=============================================================================================*/
+CELL DriveClass::CFE_Get_Next_Cell(void) const
+{
+    CELL output = 0;
+    if (Path[0] != FACING_NONE) {
+        COORDINATE headto = Head_To_Coord();
+        // if we are currently moving, apply the next move in Path[0] to our present destination
+        if (headto != 0) {
+            output = Adjacent_Cell(Coord_Cell(headto), Path[0]);
+        }
+        // if we have a Path[], but aren't presently moving, apply the next move in Path[0] to our present location
+        else {
+            output = Adjacent_Cell(Coord_Cell(Coord), Path[0]);
+        }
+    }
+    if (Map.In_Radar(output)) {
+        return output;
+    }
+
+    return 0;
+}

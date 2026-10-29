@@ -1332,6 +1332,16 @@ void InfantryClass::AI(void)
             */
             if (Target_Legal(NavCom) && Strength && Mission != MISSION_GUARD) {
 
+                // Chthon CFE Note: We can afford to repath periodically
+                // Fixes issues with path going stale because path got blocked or unblocked after it was computed
+                bool freerepath = false;
+                TCountDownTimerClass OldPathDelay = PathDelay;
+                if (ActiveCFEPatchConfig.EnableASPathing && !Repath_Delay() && PathDelay.Expired()
+                    && Target_Legal(NavCom) && (Distance(As_Cell(NavCom)) > 4)) {
+                    Path[0] = FACING_NONE;
+                    freerepath = true;
+                }
+
                 /*
                 **	Determine if the next cell in the list is available
                 **	to be entered. If not, then abort the path and try
@@ -1394,7 +1404,14 @@ void InfantryClass::AI(void)
                         Stop_Driver();
                         return;
                     }
-                    TryTryAgain = PATH_RETRY;
+                    if (ActiveCFEPatchConfig.EnableASPathing) {
+                        TryTryAgain = CFE_PATH_RETRY;
+                    } else {
+                        TryTryAgain = PATH_RETRY;
+                    }
+                    if (freerepath) {
+                        PathDelay = OldPathDelay;
+                    }
                 }
 
                 /*

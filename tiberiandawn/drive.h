@@ -127,6 +127,7 @@ public:
 
     void Exit_Map(void);
     void Mark_Track(COORDINATE headto, MarkType type);
+    CELL CFE_Get_Next_Cell(void) const; // CFE Patch Redux A* pathing.
     /*
     **	File I/O.
     */

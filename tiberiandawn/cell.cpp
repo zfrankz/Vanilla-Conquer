@@ -2711,6 +2711,33 @@ void CellClass::Override_Land_Type(LandType type)
     OverrideLand = type;
 }
 
+/***********************************************************************************************
+ * CellClass::LongtermBlockage -- How permanently this cell blocks movement.                   *
+ *                                                                                             *
+ *    CFE Patch Redux A* pathing uses this to detect corners.                                  *
+ *                                                                                             *
+ * OUTPUT:  0 = passable, 1 = natural blockage, 2 = man-made blockage (building or wall).      *
+ *=============================================================================================*/
+int CellClass::LongtermBlockage(void) const
+{
+    if (Flag.Occupy.Building) {
+        return 2;
+    }
+    if (Overlay != OVERLAY_NONE) {
+        OverlayTypeClass const* overlay = &OverlayTypeClass::As_Reference(Overlay);
+        if (overlay && overlay->IsWall) {
+            return 2;
+        }
+    }
+
+    LandType myland = Land_Type();
+
+    if ((myland == LAND_WATER) || (myland == LAND_ROCK) || (myland == LAND_WALL) || Flag.Occupy.Monolith) {
+        return 1;
+    }
+    return 0;
+}
+
 #ifdef USE_RA_AI
 
 /*

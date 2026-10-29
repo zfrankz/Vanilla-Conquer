@@ -446,26 +446,30 @@ bool FootClass::Basic_Path(void)
                 memcpy(&path1, path, sizeof(path1));
                 found1 = true;
 
-                /*
-                **	Scan for the best path possible. If this succeeds, then do a simple
-                **	comparison with the most agressive path. If they are very close, then
-                **	go with the best (easiest) path method.
-                */
-                path = Find_Path(cell, &workpath2[0], sizeof(workpath2), MOVE_CLOAK);
-                if (path && path->Cost && path->Cost < MAX((path1.Cost + (path1.Cost / 2)), 3)) {
-                    memcpy(&path1, path, sizeof(path1));
-                    memcpy(workpath1, workpath2, sizeof(workpath1));
-                } else {
-
+                // Chthon CFE Note: Skip this when using A*. The path should already be optimal.
+                // All this is going to do is to encourage non-optimal paths that go around instead of wait out a block.
+                if (!ActiveCFEPatchConfig.EnableASPathing) {
                     /*
-                    **	The easiest path method didn't result in a satisfactory path. Scan through
-                    **	the rest of the path options, looking for the best one.
+                    **	Scan for the best path possible. If this succeeds, then do a simple
+                    **	comparison with the most agressive path. If they are very close, then
+                    **	go with the best (easiest) path method.
                     */
-                    for (MoveType move = MOVE_MOVING_BLOCK; move < maxtype; move++) {
-                        path = Find_Path(cell, &workpath2[0], sizeof(workpath2), move);
-                        if (path && path->Cost && path->Cost < MAX((path1.Cost + (path1.Cost / 2)), 3)) {
-                            memcpy(&path1, path, sizeof(path1));
-                            memcpy(workpath1, workpath2, sizeof(workpath1));
+                    path = Find_Path(cell, &workpath2[0], sizeof(workpath2), MOVE_CLOAK);
+                    if (path && path->Cost && path->Cost < MAX((path1.Cost + (path1.Cost / 2)), 3)) {
+                        memcpy(&path1, path, sizeof(path1));
+                        memcpy(workpath1, workpath2, sizeof(workpath1));
+                    } else {
+
+                        /*
+                        **	The easiest path method didn't result in a satisfactory path. Scan through
+                        **	the rest of the path options, looking for the best one.
+                        */
+                        for (MoveType move = MOVE_MOVING_BLOCK; move < maxtype; move++) {
+                            path = Find_Path(cell, &workpath2[0], sizeof(workpath2), move);
+                            if (path && path->Cost && path->Cost < MAX((path1.Cost + (path1.Cost / 2)), 3)) {
+                                memcpy(&path1, path, sizeof(path1));
+                                memcpy(workpath1, workpath2, sizeof(workpath1));
+                            }
                         }
                     }
                 }
@@ -520,7 +524,13 @@ bool FootClass::Basic_Path(void)
         }
 #endif
 
-        PathDelay = PATH_DELAY;
+        if (ActiveCFEPatchConfig.EnableASPathing) {
+            // randomize so that colliding units won't always keep retrying oon the same frame
+            PathDelay = Random_Pick(CFE_PATH_DELAY - 1, CFE_PATH_DELAY + 1);
+            Repath_Delay() = Random_Pick(3, 5); // Chthon CFE Note: how many cells to travel before automatically repathing
+        } else {
+            PathDelay = PATH_DELAY;
+        }
         if (Path[0] != FACING_NONE)
             return (true);
 
@@ -1438,6 +1448,15 @@ void FootClass::Per_Cell_Process(bool center)
 
     Map[Coord_Cell(Coord)].Goodie_Check(this, true);
 
+    // Chthon CFE Note: Per_Cell_Process is also called when rotating in place!
+    if (ActiveCFEPatchConfig.EnableASPathing && Coord_Cell(Coord) != Prior_Cell()) {
+        // Chthon CFE Note: count down to repathing
+        if (Repath_Delay()) {
+            Repath_Delay()--;
+        }
+        Prior_Cell() = Coord_Cell(Coord);
+    }
+
     TechnoClass::Per_Cell_Process(center);
 }
 
@@ -2076,4 +2095,189 @@ COORDINATE FootClass::Likely_Coord(void) const
         return (Head_To_Coord());
     }
     return (Target_Coord());
+}
+
+/***********************************************************************************************
+ * FootClass::Find_Docking_Bay -- Finds a suitable docking bay, by A* path length.             *
+ *                                                                                             *
+ *    CFE Patch Redux A* pathing: prefer the closest building that can be reached by ground,   *
+ *    and fall back to the closest by direct distance if none can. Without A* pathing this is  *
+ *    the original TechnoClass search.                                                         *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   22/06/2020 cfheunter : Use best by direct distance if no target is pathable               *
+ *=============================================================================================*/
+BuildingClass* FootClass::Find_Docking_Bay(StructType b, bool friendly) const
+{
+    if (!ActiveCFEPatchConfig.EnableASPathing) {
+        return TechnoClass::Find_Docking_Bay(b, friendly);
+    }
+
+    BuildingClass* as_best = nullptr;
+    BuildingClass* direct_best = nullptr;
+    /*
+    **	First check to see if there are ANY buildings of the specified
+    **	type in thi house's inventory. If not, then don't bother to scan
+    **	for one.
+    */
+    if (House->BScan & (1L << b)) {
+        int as_bestval = INT_MAX;
+        int direct_bestval = INT_MAX;
+
+        const bool is_aircraft = What_Am_I() == RTTI_AIRCRAFT;
+
+        /*
+        **	Loop through all the buildings and find the one that matches the specification
+        **	and is willing to dock with this object.
+        */
+        for (int index = 0; index < Buildings.Count(); index++) {
+            BuildingClass* building = Buildings.Ptr(index);
+
+            /*
+            **	Check to see if the building qualifies (preliminary scan).
+            */
+            if (!building->IsInLimbo && *building == b
+                && (friendly ? building->House->Is_Ally(this) : building->House == House)
+                && const_cast<FootClass&>(*this).TechnoClass::Transmit_Message(RADIO_CAN_LOAD, building)
+                       == RADIO_ROGER) {
+
+                /*
+                **	If the building qualifies and this building is better than the
+                **	last qualifying building (as rated by distance), then record
+                **	this building and keep scanning.
+                */
+                const int direct_distance = Distance(building);
+                const int as_distance =
+                    is_aircraft
+                        ? direct_distance
+                        : Find_Path_AStar(nullptr, Coord_Cell(Coord), building->Nearby_Location(), 1, MOVE_NO, -1);
+                if (direct_distance && (direct_distance < direct_bestval || building->IsLeader)) {
+                    direct_best = building;
+                    direct_bestval = direct_distance;
+                }
+                if (as_distance && (as_distance < as_bestval || building->IsLeader)) {
+                    as_best = building;
+                    as_bestval = as_distance;
+                }
+            }
+        }
+    }
+    return as_best ? as_best : direct_best;
+}
+
+/***********************************************************************************************
+ * FootClass::LeptonsPerTickSpeed -- This object's actual move speed in leptons per tick.      *
+ *                                                                                             *
+ *    CFE Patch Redux A* pathing uses this to estimate how long blockages take to clear.       *
+ *    (CFE also applies a per-unit speed bias, which this port does not have.)                 *
+ *=============================================================================================*/
+int FootClass::LeptonsPerTickSpeed(LandType landtype) const
+{
+    bool iaminfantry = (What_Am_I() == RTTI_INFANTRY);
+    bool iamunit = (What_Am_I() == RTTI_UNIT);
+    bool iamaircraft = (What_Am_I() == RTTI_AIRCRAFT);
+
+    if (!iaminfantry && !iamunit && !iamaircraft) {
+        return 0;
+    }
+
+    int mythrottle = 0xFF; // from InfantryClass::AI() / various points in Aircraft.CPP
+    MPHType myMPH = (MPHType)1;
+    if (iaminfantry) {
+        InfantryClass const* meguy = (InfantryClass const*)this;
+        if (meguy->IsProne) {
+            if (meguy->Class->IsFraidyCat && !meguy->Class->IsCrawling) {
+                mythrottle *= 2;
+            } else {
+                mythrottle /= 2;
+            }
+        }
+        myMPH = MPHType(min((unsigned)(meguy->Class->MaxSpeed * House->GroundspeedBias), MPH_LIGHT_SPEED));
+    } else if (iamunit) {
+        UnitClass const* meunit = (UnitClass const*)this;
+        mythrottle = Ground[landtype].Cost[meunit->Class->Speed]; // from DriveClass::Start_Of_Move()
+        if (Health_Ratio() < 0x0080) {
+            mythrottle *= 0.75;
+        }
+        myMPH = MPHType(min((int)(meunit->Class->MaxSpeed * House->GroundspeedBias), (int)MPH_LIGHT_SPEED));
+    } else if (iamaircraft) {
+        AircraftClass const* meair = (AircraftClass const*)this;
+        myMPH = MPHType(min((unsigned)(meair->Class->MaxSpeed * House->AirspeedBias), MPH_LIGHT_SPEED));
+    }
+
+    return Fixed_To_Cardinal(myMPH, mythrottle);
+}
+
+/***********************************************************************************************
+ * FootClass::Repath_Delay -- Cells left to travel before A* pathing repaths on its own.       *
+ *                                                                                             *
+ *    Kept per object slot outside FootClass so the save format doesn't change. It is not      *
+ *    saved and needs no reset: Basic_Path sets it every time it computes a path.              *
+ *=============================================================================================*/
+unsigned char& FootClass::Repath_Delay(void)
+{
+    static unsigned char unit_delay[UNIT_MAX];
+    static unsigned char infantry_delay[INFANTRY_MAX];
+    static unsigned char aircraft_delay[AIRCRAFT_MAX];
+    static unsigned char scratch;
+
+    int id = -1;
+    switch (What_Am_I()) {
+    case RTTI_UNIT:
+        id = Units.ID((UnitClass*)this);
+        if (id >= 0 && id < UNIT_MAX)
+            return unit_delay[id];
+        break;
+    case RTTI_INFANTRY:
+        id = Infantry.ID((InfantryClass*)this);
+        if (id >= 0 && id < INFANTRY_MAX)
+            return infantry_delay[id];
+        break;
+    case RTTI_AIRCRAFT:
+        id = Aircraft.ID((AircraftClass*)this);
+        if (id >= 0 && id < AIRCRAFT_MAX)
+            return aircraft_delay[id];
+        break;
+    default:
+        break;
+    }
+    scratch = 0;
+    return scratch;
+}
+
+/***********************************************************************************************
+ * FootClass::Prior_Cell -- The last cell this object did a cell-entry repath countdown for.   *
+ *                                                                                             *
+ *    Kept per object slot outside FootClass so the save format doesn't change. It is not      *
+ *    saved; a stale value only costs or adds one step of the repath countdown.                *
+ *=============================================================================================*/
+CELL& FootClass::Prior_Cell(void)
+{
+    static CELL unit_cell[UNIT_MAX];
+    static CELL infantry_cell[INFANTRY_MAX];
+    static CELL aircraft_cell[AIRCRAFT_MAX];
+    static CELL scratch;
+
+    int id = -1;
+    switch (What_Am_I()) {
+    case RTTI_UNIT:
+        id = Units.ID((UnitClass*)this);
+        if (id >= 0 && id < UNIT_MAX)
+            return unit_cell[id];
+        break;
+    case RTTI_INFANTRY:
+        id = Infantry.ID((InfantryClass*)this);
+        if (id >= 0 && id < INFANTRY_MAX)
+            return infantry_cell[id];
+        break;
+    case RTTI_AIRCRAFT:
+        id = Aircraft.ID((AircraftClass*)this);
+        if (id >= 0 && id < AIRCRAFT_MAX)
+            return aircraft_cell[id];
+        break;
+    default:
+        break;
+    }
+    scratch = 0;
+    return scratch;
 }

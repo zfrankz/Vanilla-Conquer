@@ -240,6 +240,7 @@ public:
     bool Goodie_Check(FootClass* object, bool check_steel = false);
     ObjectClass* Fetch_Occupier(void) const;
     bool Get_Template_Info(char* template_name, int& icon, void*& image_data);
+    int LongtermBlockage(void) const; // CFE Patch Redux A* pathing.
 
     /*
     **	Object placement and removal flag operations.

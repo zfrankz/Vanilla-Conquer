@@ -43,6 +43,15 @@
 class UnitClass;
 class BuildingClass;
 
+/*
+**	CFE Patch Redux A* pathing: a cell an allied unit plans to enter next, and that unit.
+*/
+struct CellBlockerPair
+{
+    CELL blockedcell;
+    ObjectClass* blockerptr;
+};
+
 /****************************************************************************
 **	Movable objects are handled by this class definition. Moveable objects
 **	cover everything except buildings.
@@ -171,7 +180,9 @@ public:
     enum
     {
         PATH_DELAY = 15,
-        PATH_RETRY = 10
+        PATH_RETRY = 10,
+        CFE_PATH_DELAY = 3, // CFE Patch Redux A* pathing values.
+        CFE_PATH_RETRY = 50
     };
     int TryTryAgain; // Number of retry attempts remaining.
 
@@ -275,7 +286,7 @@ public:
     virtual void Fixup_Path(PathType*){};
     virtual void Set_Speed(int speed);
     virtual MoveType Can_Enter_Cell(CELL, FacingType = FACING_NONE) const;
-    int Optimize_Moves(PathType* path, MoveType threshhold);
+    int Optimize_Moves(PathType* path, MoveType threshhold) const;
     virtual void Override_Mission(MissionType mission, TARGET tarcom, TARGET navcom);
     virtual bool Restore_Mission(void);
 
@@ -288,11 +299,40 @@ public:
     CELL Safety_Point(CELL src, CELL dst, int start, int max);
     int Rescue_Mission(TARGET tarcom);
 
+    /*
+    **	CFE Patch Redux A* pathing.
+    */
+    virtual BuildingClass* Find_Docking_Bay(StructType b, bool friendly) const;
+    int Find_Path_AStar(PathType* const resultPath,
+                        const CELL source,
+                        CELL dest,
+                        const int maxLen,
+                        const MoveType threshhold,
+                        const int threat) const;
+    float CFE_Passable_Cell(CELL cell,
+                            FacingType face,
+                            int depth,
+                            float currentprice,
+                            int threat,
+                            MoveType threshhold,
+                            CELL oneback,
+                            CELL twoback,
+                            int myleptonspertick,
+                            CellBlockerPair const* twoawayblockages,
+                            int twoawaycount) const;
+    int LeptonsPerTickSpeed(LandType landtype = LAND_CLEAR) const;
+    unsigned char& Repath_Delay(void);
+    CELL& Prior_Cell(void);
+
 private:
-    int Passable_Cell(CELL cell, FacingType face, int threat, MoveType threshhold);
+    int Passable_Cell(CELL cell, FacingType face, int threat, MoveType threshhold) const;
     PathType* Find_Path(CELL dest, FacingType* final_moves, int maxlen, MoveType threshhold);
+    CELL Find_Passable_Position_Near(const CELL target,
+                                     const int maxRadius,
+                                     const MoveType threshhold,
+                                     const int threat) const;
     void Debug_Draw_Map(const char* txt, CELL start, CELL dest, bool pause);
-    void Debug_Draw_Path(PathType* path);
+    void Debug_Draw_Path(PathType* path) const;
     bool Follow_Edge(CELL start,
                      CELL target,
                      PathType* path,
