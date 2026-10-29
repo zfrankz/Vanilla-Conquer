@@ -81,6 +81,20 @@ Resurgence and tree visceroids only work with `BETTER_TIB_GROWTH=1`.
 - [ ] **TS visceroids:** infantry that die walking through tiberium sometimes leave a visceroid behind.
 - [ ] Save and load with these on, then keep playing.
 
+## 2d. A* pathfinding (Phase 3 step 4a)
+Add under `[FEATURES]`: `ASTAR_PATHING=1`; and under `[SETTINGS]`: `INFANTRY_TIBERIUM_AVERSION=2` (CFE's default).
+
+- [ ] **Routes:** send groups of tanks and soldiers across the map, around rocks, rivers and buildings. They should
+  take sensible routes and get stuck or wander off less than before.
+- [ ] **Traffic:** send many units through a narrow gap or over a bridge at once. They should queue and flow rather
+  than bump into each other and turn back.
+- [ ] **Tiberium aversion:** order soldiers (not chem warriors) to a point on the other side of a tiberium field.
+  If there's a reasonable way around, they should take it instead of walking through.
+- [ ] **Refineries / repair bays:** a harvester or unit returning to dock picks one it can actually reach.
+- [ ] **Performance:** with lots of units moving, the game shouldn't slow down noticeably.
+- [ ] With A* on: save, load, and keep playing.
+- Note: harvester queue jump and optimization still measure straight-line distance; the A* versions are not ported yet.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

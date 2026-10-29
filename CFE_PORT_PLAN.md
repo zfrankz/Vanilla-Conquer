@@ -118,10 +118,10 @@ VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file define
      `Mission_Harvest`, `Find_Best_Refinery` and the refinery's radio handling). Adds `RADIO_CANCEL`.
      Builds, no warnings on changed lines, 9/9 saves pass the version check, 40 s smoke test.
      13 key conditions string-compared with CFE HEAD (terms, not parenthesisation).
-   - Not ported here: A-Star distance variants and CFE's A-Star `FootClass::Find_Docking_Bay` (step 4).
-     `ASTAR_PATHING` is ignored by the loader until then, so distance settings stay in leptons.
-   - Step 2 code complete; play-test pending.
-3. Tiberium growth/resurgence, visceroids – ported (except meaner visceroids), play-test pending
+   - Not ported here: A-Star distance variants (step 4c). CFE's A-Star `FootClass::Find_Docking_Bay` came
+     with step 4a. The harvester distance settings stay in leptons until 4c.
+   - Step 2 play-tested by the user on 2026-10-29: nothing odd seen.
+3. Tiberium growth/resurgence, visceroids – ported (except meaner visceroids), play-tested by the user on 2026-10-29 (nothing odd seen)
    - Done (one commit each, switch off = original code): `BETTER_TIB_GROWTH` + `TIB_GROWTH_SCALE`,
      `TIB_RESURGENCE` + `TIB_RESURGE_DELAY`, `TS_VISCEROID_SPAWN`, `TREE_VISCEROID_SPAWN_MODE` +
      `TREE_VISCEROID_SPAWN_OVERRIDE`. Each builds with no warnings on changed lines; 9/9 saves pass the
@@ -134,7 +134,26 @@ VC's `debug.cpp` handlers sit behind `CHEAT_KEYS`, which no VC CMake file define
      step 5) and its per-scenario type-stat adjustments (balance, step 8); port it after step 5.
      CFE's killed-by-visceroid and chem-soldier visceroid spawns come with it / with the balance options.
    - General bugfix bucket: CFE `1cab6b4` and `d2edf47` (`Goto_Tiberium` efficiency and megamap radius, no switch).
-4. A* pathing + tiberium aversion (FINDPATH.CPP, SEARCH.H)
+4. A* pathing + tiberium aversion – 4a ported, play-test pending; 4b and 4c to do
+   (SEARCH.H turned out to be unrelated: it came with CFE's INIClass backport.)
+   - 4a `ASTAR_PATHING` + `INFANTRY_TIBERIUM_AVERSION` (commit `f5e038eb`): A* search, CFE's traffic-flow cell
+     cost (`CFE_Passable_Cell`, includes the tiberium aversion), periodic repathing, A* `Find_Docking_Bay`.
+     Builds with no warnings on changed lines; the three FINDPATH functions and four helpers compared
+     with CFE HEAD ignoring whitespace (only the listed differences remain).
+     Instrumented runs (temporary code, removed): all 9 TD saves load and run 35 s each with A* on and
+     the player's units ordered to hunt; no crash; no path step into a MOVE_NO cell; A* found 85–100 % of
+     paths on saves 1–8. Save 9's failures are Delphi, boxed into a 24-cell area, hunting an unreachable
+     target (the original search can't reach it either). Hovercraft ordered to hunt drive onto land with
+     A* on and off alike (TD's terrain table gives hover speed on land); only the test order makes them do it.
+   - Differences from CFE: `emplace` instead of `try_emplace` (C++11); blocker list as pointer+count;
+     `RepathDelay`/`PriorCell` in unsaved side tables; the repath `Random_Pick` and the A* docking-bay
+     choice only run with the switch on (CFE runs both always); no per-unit `SpeedBias` (not ported);
+     `ReservingVehicle` lookup waits for 4b. Kept as in CFE: `Find_Path` retries pass `threat`, not
+     `asThreat`, and `Find_Passable_Position_Near` swaps x/y for the side columns (`XY_Cell(y, left)`).
+   - 4b: CFE's cell reservation / "two units in one spot" fixes (`c1cc791`, `6240eb9`, `0409a4f`, `5a38301`,
+     `3b95607`; ~990 lines, always on in CFE): need their own switch, `ReservingVehicle` as a side table.
+   - 4c: A* harvester distances (queue jump, load balancing, optimize; CFE `6061399`) and the cells/leptons
+     setting conversion keyed on `ASTAR_PATHING` again.
 5. Veterancy, smarter SAMs/mammoths/aircraft/commandos
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)
 7. Bucket D: attack-move, rally points, Q-move
