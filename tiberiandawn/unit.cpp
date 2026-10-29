@@ -3407,7 +3407,7 @@ MoveBitType UnitClass::Blocking_Object(TechnoClass const* techno, CELL cell) con
  *   04/16/1994 JLB : Converted to member function.                                            *
  *   07/04/1995 JLB : Allowed to drive on building trying to enter it.                         *
  *=============================================================================================*/
-MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType) const
+MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
 {
     Validate();
     CellClass const* cellptr = &Map[cell];
@@ -3575,6 +3575,13 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType) const
     }
 
     /*
+    **	CELL_RESERVATION_FIX: CFE's rewrite of the two reserved-cell checks below.
+    */
+    if (ActiveCFEPatchConfig.EnableCellReservationFix) {
+        return (CFE_Can_Enter_Reserved(cell, facing, retval));
+    }
+
+    /*
     **	If some allied object has reserved the cell, then consider the cell
     **	as blocked by a moving object.
     */
@@ -3631,6 +3638,188 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType) const
     /*
     **	Return with the most severe reason why this cell would be impassable.
     */
+    return (retval);
+}
+
+/***********************************************************************************************
+ * UnitClass::CFE_Can_Enter_Reserved -- CFE's reserved-cell and diagonal-crossing checks.      *
+ *                                                                                             *
+ *    CELL_RESERVATION_FIX: replaces the reserved-cell checks at the end of Can_Enter_Cell     *
+ *    with CFE's rewrite, which knows which unit reserved the cell and ignores this unit's own *
+ *    reservation, then checks for a unit crossing diagonally in front of this one.            *
+ *                                                                                             *
+ * INPUT:   cell     -- The cell to check.                                                     *
+ *          facing   -- The direction of the move into the cell (diagonals are checked).       *
+ *          retval   -- The result of Can_Enter_Cell's checks so far.                          *
+ *                                                                                             *
+ * OUTPUT:  Returns with the most severe reason why the cell would be impassable.              *
+ *=============================================================================================*/
+MoveType UnitClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveType retval) const
+{
+    CellClass const* cellptr = &Map[cell];
+
+    /*
+    **	CFE also lets rank 3 veteran buggies crush; veterancy isn't ported yet.
+    */
+    bool cancrush = Class->IsCrusher;
+
+    if (retval == MOVE_OK) {
+
+        /*
+        **	Another unit is heading into the cell.
+        */
+        FootClass* rv = cellptr->Reserving_Vehicle();
+        if (rv && rv != this && rv->IsActive) {
+            if (House->Is_Ally(rv)) {
+                retval = MOVE_MOVING_BLOCK;
+            } else if (!(cancrush && rv->Class_Of().IsCrushable)) {
+                if (rv->Is_Cloaked(this)) {
+                    retval = MOVE_CLOAK;
+                } else if (Class->Primary != WEAPON_NONE) {
+                    retval = MOVE_DESTROYABLE;
+                } else {
+                    return (MOVE_NO);
+                }
+            }
+        }
+
+        /*
+        **	A vehicle flag with no known owner: assume a moving block, as the original does.
+        */
+        if ((!rv || !rv->IsActive) && cellptr->Flag.Occupy.Vehicle && cellptr->Cell_Unit() != this) {
+            retval = MOVE_MOVING_BLOCK;
+        }
+
+        /*
+        **	Infantry are heading into the cell.
+        */
+        if ((cellptr->Flag.Composite & 0x1F) != 0) {
+            if (cellptr->InfType != HOUSE_NONE && House->Is_Ally(cellptr->InfType)) {
+                retval = MOVE_MOVING_BLOCK;
+            } else if (!cancrush) {
+                if (Class->Primary != WEAPON_NONE) {
+                    retval = MOVE_DESTROYABLE;
+                } else {
+                    return (MOVE_NO);
+                }
+            }
+        }
+    }
+
+    /*
+    **	A diagonal move can cross another unit's diagonal move at the shared corner without
+    **	either unit using the other's cells.
+    */
+    if (retval == MOVE_OK && (facing == FACING_NE || facing == FACING_SE || facing == FACING_SW || facing == FACING_NW)) {
+
+        /*
+        **	The crossing point is the upper-left corner of the southeast cell.
+        */
+        COORDINATE crossingpoint = 0;
+        switch (facing) {
+        case FACING_NE:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_S));
+            break;
+        case FACING_SE:
+            crossingpoint = Cell_Coord(cell);
+            break;
+        case FACING_SW:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_E));
+            break;
+        case FACING_NW:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_SE));
+            break;
+        default:
+            crossingpoint = Cell_Coord(cell);
+            break;
+        }
+        FacingType reversefacing = (FacingType)((char)facing ^ 4);
+        CELL xdcells[2] = {0, 0};
+        xdcells[0] = Adjacent_Cell(cell, reversefacing + (FacingType)1);
+        xdcells[1] = Adjacent_Cell(cell, reversefacing - (FacingType)1);
+        if (Map.In_Radar(xdcells[0]) && Map.In_Radar(xdcells[1])) {
+            for (int i = 0; i < 2; i++) {
+                ObjectClass* xdobj = Map[xdcells[i]].Cell_Occupier();
+                while (xdobj) {
+                    RTTIType xdrtti = xdobj->What_Am_I();
+                    if (xdobj != this && xdobj->IsActive && !xdobj->IsInLimbo && xdobj->Strength
+                        && (xdrtti == RTTI_UNIT || xdrtti == RTTI_INFANTRY)) {
+                        FootClass* xdfoot = (FootClass*)xdobj;
+                        COORDINATE xdhtcoord = xdfoot->Head_To_Coord();
+                        CELL xdhtcell = Coord_Cell(xdhtcoord);
+                        CELL otherxdcell = xdcells[(i + 1) % 2];
+                        bool iscrossblocker = false;
+                        if (xdhtcell == otherxdcell) {
+                            iscrossblocker = true;
+                        } else if (xdhtcell == xdcells[i]) {
+
+                            /*
+                            **	It may have just entered its destination cell but still be near the
+                            **	crossing point: check the box from the crossing point to just short
+                            **	of its destination.
+                            */
+                            int xbx = Coord_X(xdfoot->Coord);
+                            int xby = Coord_Y(xdfoot->Coord);
+                            int xbhtx = Coord_X(xdhtcoord);
+                            int xbhty = Coord_Y(xdhtcoord);
+                            int xpx = Coord_X(crossingpoint);
+                            int xpy = Coord_Y(crossingpoint);
+                            int highx;
+                            int lowx;
+                            int highy;
+                            int lowy;
+                            if (xbhtx > xpx) {
+                                highx = xbhtx - 1;
+                                lowx = xpx;
+                            } else {
+                                highx = xpx;
+                                lowx = xbhtx + 1;
+                            }
+                            if (xbhty > xpy) {
+                                highy = xbhty - 1;
+                                lowy = xpy;
+                            } else {
+                                highy = xpy;
+                                lowy = xbhty + 1;
+                            }
+                            if (xbx >= lowx && xbx <= highx && xby >= lowy && xby <= highy) {
+                                iscrossblocker = true;
+                            }
+                        }
+                        if (iscrossblocker) {
+                            if (xdrtti == RTTI_UNIT) {
+                                if (House->Is_Ally(xdfoot)) {
+                                    return (MOVE_MOVING_BLOCK);
+                                }
+                                if (xdfoot->Cloak == CLOAKED) {
+                                    return (MOVE_CLOAK);
+                                }
+                                return (Class->Primary != WEAPON_NONE) ? MOVE_DESTROYABLE : MOVE_NO;
+                            }
+                            if (House->Is_Ally(xdfoot)) {
+
+                                /*
+                                **	An enemy vehicle may be coming to crush them: keep checking.
+                                */
+                                retval = MOVE_MOVING_BLOCK;
+                            } else if (!cancrush) {
+
+                                /*
+                                **	A crusher can't crush them here either, but letting them block it
+                                **	would look odd, so it carries on as if it could.
+                                */
+                                if (xdfoot->Cloak == CLOAKED) {
+                                    return (MOVE_CLOAK);
+                                }
+                                return (Class->Primary != WEAPON_NONE) ? MOVE_DESTROYABLE : MOVE_NO;
+                            }
+                        }
+                    }
+                    xdobj = xdobj->Next;
+                }
+            }
+        }
+    }
     return (retval);
 }
 

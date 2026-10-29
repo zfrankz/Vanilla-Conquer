@@ -55,6 +55,7 @@ static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
     GetSetting(ActiveCFEPatchConfig.EnableVersionAnnounce, "FEATURES", "VERSION_ANNOUNCE");
     GetSetting(ActiveCFEPatchConfig.EnableRallyPoints, "FEATURES", "RALLY_POINTS");
     GetSetting(ActiveCFEPatchConfig.EnableASPathing, "FEATURES", "ASTAR_PATHING");
+    GetSetting(ActiveCFEPatchConfig.EnableCellReservationFix, "FEATURES", "CELL_RESERVATION_FIX");
     GetSetting(ActiveCFEPatchConfig.EnableOOMRepair, "FEATURES", "OOM_REPAIR");
     GetSetting(ActiveCFEPatchConfig.EnableHarvyQueueJump, "FEATURES", "HARVY_QUEUE_JUMP");
     GetSetting(ActiveCFEPatchConfig.EnableHarvyLoadBalancing, "FEATURES", "HARVY_LOAD_BALANCING");

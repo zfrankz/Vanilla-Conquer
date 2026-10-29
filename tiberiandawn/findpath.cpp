@@ -1022,7 +1022,14 @@ float FootClass::CFE_Passable_Cell(CELL cell, FacingType face, int depth, float 
             // that means someone used Mark_Track() to "reserve" it.
             // so let's try to find them if we can
             // because otherwise we need to guess about them
-            // (CFE's ReservingVehicle lookup goes here once the cell reservation fix is ported.)
+            // ReservingVehicle may be it (only set with CELL_RESERVATION_FIX on)
+            if (!uobject && cellptr->Reserving_Vehicle()){
+                FootClass* rv = cellptr->Reserving_Vehicle();
+                if ((rv != this) && rv->IsActive && !rv->IsInLimbo && rv->Strength){
+                    uobject = rv;
+                    isremoteblocker = true;
+                }
+            }
             // No ReservingVehicle? Then loop through all possibilities. 
             if (!uobject && cellptr->Flag.Occupy.Vehicle){
                 for (int i = 0; i < Units.Count(); i++) {

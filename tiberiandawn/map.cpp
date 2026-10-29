@@ -2083,10 +2083,110 @@ CELL MapClass::Nearby_Location(CELL cell) const //, SpeedType speed, int zone, M
 static int TibResurgenceBuildup[MAP_CELL_TOTAL];
 static int TibResurgenceCountdown[MAP_CELL_TOTAL];
 
+/*
+**	CFE "ReservingVehicle" (CELL_RESERVATION_FIX), kept outside CellClass for the same reason.
+**	Not saved either: Rebuild_Vehicle_Reservations() fills it in again after a load.
+*/
+static FootClass* ReservingVehicles[MAP_CELL_TOTAL];
+
 void MapClass::Clear_CFE_Cell_State(void)
 {
     memset(TibResurgenceBuildup, 0, sizeof(TibResurgenceBuildup));
     memset(TibResurgenceCountdown, 0, sizeof(TibResurgenceCountdown));
+    memset(ReservingVehicles, 0, sizeof(ReservingVehicles));
+}
+
+FootClass*& CellClass::Reserving_Vehicle(void) const
+{
+    return ReservingVehicles[Cell_Number()];
+}
+
+/***********************************************************************************************
+ * MapClass::Cleanup_Vehicle_Reservations -- Clears vehicle flags that nothing holds any more.  *
+ *                                                                                             *
+ *    CFE: vehicle occupy/reserve flags sometimes stay set after the unit has gone. Every     *
+ *    frame, clear the flag in any cell with no vehicle in it unless its live reserving unit    *
+ *    is headed there or will pass through it on a two-cell track.                             *
+ *=============================================================================================*/
+void MapClass::Cleanup_Vehicle_Reservations(void)
+{
+    /*
+    **	Check the playable area plus one row around it: units can drive on and off the map.
+    */
+    int maxx = MapCellX + MapCellWidth;
+    int maxy = MapCellY + MapCellHeight;
+    int minx = MapCellX - 1;
+    int miny = MapCellY - 1;
+
+    for (int index = 0; index < MAP_CELL_TOTAL; index++) {
+        CELL cell = index;
+        int cellx = Cell_X(cell);
+        int celly = Cell_Y(cell);
+        if (cellx > maxx || celly > maxy || cellx < minx || celly < miny) {
+            continue;
+        }
+        CellClass* cellptr = &(*this)[cell];
+        FootClass* someunit = cellptr->Reserving_Vehicle();
+
+        if (!someunit && !cellptr->Flag.Occupy.Vehicle) {
+            continue;
+        }
+        if (cellptr->Cell_Unit() || cellptr->Cell_Aircraft()) {
+            continue;
+        }
+        if (someunit && someunit->IsActive) {
+            if (Coord_Cell(someunit->Head_To_Coord()) == cell) {
+                continue;
+            }
+            if (someunit->What_Am_I() == RTTI_UNIT && ((DriveClass*)someunit)->Track_Midpoint_Cell() == cell) {
+                continue;
+            }
+        }
+        cellptr->Reserving_Vehicle() = NULL;
+        cellptr->Flag.Occupy.Vehicle = false;
+    }
+}
+
+/***********************************************************************************************
+ * MapClass::Rebuild_Vehicle_Reservations -- Refills the reserving-unit table after a load.    *
+ *                                                                                             *
+ *    The table isn't saved. Each vehicle claims the flagged cells it is in, heading to, or     *
+ *    passing through, so the flags aren't taken for orphans and cleared.                      *
+ *=============================================================================================*/
+static void Claim_Vehicle_Reservation(CELL cell, FootClass* unit)
+{
+    if ((unsigned)cell < MAP_CELL_TOTAL) {
+        CellClass* cellptr = &Map[cell];
+        if (cellptr->Flag.Occupy.Vehicle && !cellptr->Reserving_Vehicle()) {
+            cellptr->Reserving_Vehicle() = unit;
+        }
+    }
+}
+
+void MapClass::Rebuild_Vehicle_Reservations(void)
+{
+    if (!ActiveCFEPatchConfig.EnableCellReservationFix) {
+        return;
+    }
+    for (int index = 0; index < Units.Count(); index++) {
+        UnitClass* unit = Units.Ptr(index);
+        if (unit && unit->IsActive && !unit->IsInLimbo) {
+            Claim_Vehicle_Reservation(Coord_Cell(unit->Coord), unit);
+            if (unit->Head_To_Coord()) {
+                Claim_Vehicle_Reservation(Coord_Cell(unit->Head_To_Coord()), unit);
+            }
+            Claim_Vehicle_Reservation(unit->Track_Midpoint_Cell(), unit);
+        }
+    }
+    for (int index = 0; index < Aircraft.Count(); index++) {
+        AircraftClass* aircraft = Aircraft.Ptr(index);
+        if (aircraft && aircraft->IsActive && !aircraft->IsInLimbo) {
+            CELL cell = Coord_Cell(aircraft->Coord);
+            if ((unsigned)cell < MAP_CELL_TOTAL && Map[cell].Cell_Aircraft() == aircraft) {
+                Claim_Vehicle_Reservation(cell, aircraft);
+            }
+        }
+    }
 }
 
 /***********************************************************************************************

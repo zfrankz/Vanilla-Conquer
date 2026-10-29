@@ -272,6 +272,9 @@ void LogicClass::AI(void)
     **	Map related logic is performed. CFE: alternative tiberium growth, or the original
     **	growth run TIB_GROWTH_SCALE times (once by default).
     */
+    if (ActiveCFEPatchConfig.EnableCellReservationFix) {
+        Map.Cleanup_Vehicle_Reservations();
+    }
     if (ActiveCFEPatchConfig.BetterTibGrowth) {
         Map.CFE_Logic();
     } else {

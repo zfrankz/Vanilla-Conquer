@@ -148,7 +148,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      step 5) and its per-scenario type-stat adjustments (balance, step 8); port it after step 5.
      CFE's killed-by-visceroid and chem-soldier visceroid spawns come with it / with the balance options.
    - General bugfix bucket: CFE `1cab6b4` and `d2edf47` (`Goto_Tiberium` efficiency and megamap radius, no switch).
-4. A* pathing + tiberium aversion – 4a ported, play-test pending; 4b and 4c to do
+4. A* pathing + tiberium aversion – 4a and 4b ported, play-test pending; 4c to do
    (SEARCH.H turned out to be unrelated: it came with CFE's INIClass backport.)
    - 4a `ASTAR_PATHING` + `INFANTRY_TIBERIUM_AVERSION` (commit `f5e038eb`): A* search, CFE's traffic-flow cell
      cost (`CFE_Passable_Cell`, includes the tiberium aversion), periodic repathing, A* `Find_Docking_Bay`.
@@ -162,10 +162,29 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
    - Differences from CFE: `emplace` instead of `try_emplace` (C++11); blocker list as pointer+count;
      `RepathDelay`/`PriorCell` in unsaved side tables; the repath `Random_Pick` and the A* docking-bay
      choice only run with the switch on (CFE runs both always); no per-unit `SpeedBias` (not ported);
-     `ReservingVehicle` lookup waits for 4b. Kept as in CFE: `Find_Path` retries pass `threat`, not
+     `ReservingVehicle` lookup added in 4b. Kept as in CFE: `Find_Path` retries pass `threat`, not
      `asThreat`, and `Find_Passable_Position_Near` swaps x/y for the side columns (`XY_Cell(y, left)`).
-   - 4b: CFE's cell reservation / "two units in one spot" fixes (`c1cc791`, `6240eb9`, `0409a4f`, `5a38301`,
-     `3b95607`; ~990 lines, always on in CFE): need their own switch, `ReservingVehicle` as a side table.
+   - 4b `CELL_RESERVATION_FIX` (new switch, not a CFE setting: CFE always runs these): CFE's "two units in
+     one spot" fixes, from CFE HEAD for the hunks of `c1cc791`, `6240eb9`, `0409a4f`, `5a38301`, `3b95607`
+     (and `b7e4d45`). Cells record which unit or aircraft set the vehicle flag (`Reserving_Vehicle()`);
+     `Occupy_Down/Up` and `Mark_Track` leave another unit's flag alone; on a track jump the old track's flags
+     are lifted before `TrackNumber` changes; at the per-cell point a unit re-checks its second cell and stops
+     if something now blocks it; `UnitClass`/`InfantryClass::Can_Enter_Cell` get CFE's rewrite of the
+     reserved-cell checks and the diagonal-crossing check (in separate functions, called only with the switch
+     on); stale vehicle flags are cleared every frame; `CFE_Passable_Cell` uses the reserving unit.
+   - Differences from CFE: the reserving unit is in an unsaved side table, rebuilt after a load from where
+     each vehicle is, is heading and its track midpoint (CFE saves it, `0409a4f`/`5a38301`); the stale-flag
+     cleanup runs from `LogicClass::AI` (CFE runs it inside `Map.Clean()`, which only its DLL calls each
+     tick); no rank-3 veteran buggy crushing (needs veterancy, step 5); `Arbitrary_Smooth_Turn` not ported
+     (CFE only uses it in disabled code).
+   - Verified: builds, no warnings on changed lines. Instrumented runs (temporary code, removed): all 9 saves,
+     switch off and on, 45 s each with the player's units hunting: no crash; too little traffic to compare
+     (0–1 overlaps either way). Stress test on save 4, 30 light tanks in two groups swapping sides every 400
+     frames, 4 group splits per setting, totals at frame 1200:
+     A* off: fix off 215 same-cell pairs / 58 episodes / 181 arrivals; fix on 130 / 68 / 191.
+     A* on: fix off 233 / 32 / 635, plus 121 frames with two stopped tanks stacked; fix on 46 / 20 / 686, 0.
+     No orphan vehicle flags in any run. One run (A* on, fix off) produced no output at all; rerun was normal.
+     Not verified: real play; that the rebuilt table after a load matches what CFE would have saved.
    - 4c: A* harvester distances (queue jump, load balancing, optimize; CFE `6061399`) and the cells/leptons
      setting conversion keyed on `ASTAR_PATHING` again.
 5. Veterancy, smarter SAMs/mammoths/aircraft/commandos

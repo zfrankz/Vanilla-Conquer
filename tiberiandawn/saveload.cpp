@@ -491,6 +491,7 @@ bool Load_Game(const char* file_name)
     Map.Flag_To_Redraw(true);
 
     Fixup_Scenario();
+    Map.Rebuild_Vehicle_Reservations();
 
     ScenarioInit = 0;
 

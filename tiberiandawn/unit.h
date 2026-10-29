@@ -193,6 +193,7 @@ public:
     */
     virtual void Enter_Idle_Mode(bool initial = false);
     virtual MoveType Can_Enter_Cell(CELL cell, FacingType facing = FACING_NONE) const;
+    MoveType CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveType retval) const;
     virtual void Per_Cell_Process(bool center);
     virtual void Scatter(COORDINATE threat, bool forced = false, bool nokidding = false);
     void Exit_Repair(void);

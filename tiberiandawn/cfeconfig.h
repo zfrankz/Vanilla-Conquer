@@ -69,6 +69,8 @@ struct CFEPatchConfig
     bool EnableDistanceCalcFix = false;
     bool ShroudRemover = false;
     bool DeadBuildingScatterFix = false;
+    // Not a CFE setting: CFE always runs its "two units in one spot" fixes; this port switches them.
+    bool EnableCellReservationFix = false;
 
     bool OverrideAPCReqs = false;
     bool OverrideWarFactoryHP = false;

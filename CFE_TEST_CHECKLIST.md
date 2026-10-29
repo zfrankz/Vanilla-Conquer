@@ -95,6 +95,17 @@ Add under `[FEATURES]`: `ASTAR_PATHING=1`; and under `[SETTINGS]`: `INFANTRY_TIB
 - [ ] With A* on: save, load, and keep playing.
 - Note: harvester queue jump and optimization still measure straight-line distance; the A* versions are not ported yet.
 
+## 2e. Two units in one spot (Phase 3 step 4b)
+Add under `[FEATURES]`: `CELL_RESERVATION_FIX=1`. It works with or without `ASTAR_PATHING`; the test showed the
+clearest gain with both on.
+
+- [ ] **Crowds:** send two big groups of tanks through each other, back and forth. Two vehicles should not end
+  up parked on top of each other.
+- [ ] **Diagonal crossings:** units crossing diagonally at a corner should wait for each other rather than pass
+  through each other.
+- [ ] **No stuck units:** units shouldn't freeze in place waiting for a cell nobody is using.
+- [ ] With it on: save, load, and keep playing (traffic should carry on normally after the load).
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

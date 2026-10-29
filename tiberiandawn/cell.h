@@ -243,6 +243,13 @@ public:
     int LongtermBlockage(void) const; // CFE Patch Redux A* pathing.
 
     /*
+    **	CELL_RESERVATION_FIX: the unit or aircraft that set Flag.Occupy.Vehicle. CFE keeps this
+    **	in the cell; here it lives outside the class (see MapClass::Clear_CFE_Cell_State).
+    */
+    FootClass*& Reserving_Vehicle(void) const;
+    AircraftClass* Cell_Aircraft(void) const;
+
+    /*
     **	Object placement and removal flag operations.
     */
     void Occupy_Down(ObjectClass* object);

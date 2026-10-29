@@ -656,6 +656,23 @@ bool DriveClass::While_Moving(void)
                     if (!IsActive) {
                         return (false);
                     }
+
+                    /*
+                    **	CFE: something may have started to cross diagonally in front of us since the
+                    **	move began. Check the second cell again and stop here if it is no longer free;
+                    **	the path was already used up, so it is dropped.
+                    */
+                    if (ActiveCFEPatchConfig.EnableCellReservationFix
+                        && Can_Enter_Cell(Coord_Cell(Head_To_Coord()), Dir_Facing(dir)) != MOVE_OK) {
+                        Path[0] = FACING_NONE;
+                        actual = 0;
+                        Coord = Coord_Snap(Coord);
+                        Stop_Driver();
+                        TrackNumber = -1;
+                        TrackIndex = 0;
+                        Mark(MARK_DOWN);
+                        return (true);
+                    }
                 }
 
                 /*
@@ -678,6 +695,14 @@ bool DriveClass::While_Moving(void)
                         switch (Can_Enter_Cell(Coord_Cell(c), nextface)) {
                         case MOVE_OK:
                             IsOnShortTrack = false; // Shouldn't be necessary, but...
+
+                            /*
+                            **	CFE: lift this track's flags before TrackNumber changes, or Mark_Track
+                            **	lifts the wrong cells, possibly another unit's reservation.
+                            */
+                            if (ActiveCFEPatchConfig.EnableCellReservationFix) {
+                                Stop_Driver();
+                            }
                             TrackNumber = tnum;
                             track = newtrack;
 
@@ -689,7 +714,9 @@ bool DriveClass::While_Moving(void)
                             ptr = RawTracks[tracknum - 1].Track;
                             adj = false;
 
-                            Stop_Driver();
+                            if (!ActiveCFEPatchConfig.EnableCellReservationFix) {
+                                Stop_Driver();
+                            }
                             Per_Cell_Process(true);
                             if (Start_Driver(c)) {
                                 Set_Speed(oldspeed);
@@ -1218,7 +1245,7 @@ bool DriveClass::Start_Of_Move(void)
 
                         dest = Adjacent_Cell(dest, nextface);
                         destcell = Coord_Cell(dest);
-                        cando = Can_Enter_Cell(destcell);
+                        cando = Can_Enter_Cell(destcell, nextface);
                     }
 
                     if (cando != MOVE_OK) {
@@ -1579,6 +1606,26 @@ void DriveClass::Lay_Track(void)
 #endif
 }
 
+/*
+**	Sets or clears one cell's vehicle flag for Mark_Track. With CELL_RESERVATION_FIX on (CFE),
+**	a unit leaves a flag another unit has set alone, and the cell records who set it.
+*/
+static void Mark_Track_Cell(CELL cell, FootClass* unit, MarkType type, int value)
+{
+    CellClass* cellptr = &Map[cell];
+
+    if (!ActiveCFEPatchConfig.EnableCellReservationFix) {
+        cellptr->Flag.Occupy.Vehicle = value;
+        return;
+    }
+
+    FootClass*& rv = cellptr->Reserving_Vehicle();
+    if (!rv || rv == unit || (type == MARK_UP && !cellptr->Flag.Occupy.Vehicle)) {
+        cellptr->Flag.Occupy.Vehicle = value;
+        rv = (type == MARK_UP) ? NULL : unit;
+    }
+}
+
 /***********************************************************************************************
  * DriveClass::Mark_Track -- Marks the midpoint of the track as occupied.                      *
  *                                                                                             *
@@ -1624,7 +1671,7 @@ void DriveClass::Mark_Track(COORDINATE headto, MarkType type)
                         COORDINATE offset = Smooth_Turn(ptr[cellidx].Offset, &dir);
                         CELL cell = Coord_Cell(offset);
                         if ((unsigned)cell < MAP_CELL_TOTAL) {
-                            Map[cell].Flag.Occupy.Vehicle = value;
+                            Mark_Track_Cell(cell, this, type, value);
                         }
                     }
                 }
@@ -1632,7 +1679,7 @@ void DriveClass::Mark_Track(COORDINATE headto, MarkType type)
         }
         CELL cell = Coord_Cell(headto);
         if ((unsigned)cell < MAP_CELL_TOTAL) {
-            Map[cell].Flag.Occupy.Vehicle = value;
+            Mark_Track_Cell(cell, this, type, value);
         }
     }
 }
@@ -2062,4 +2109,29 @@ CELL DriveClass::CFE_Get_Next_Cell(void) const
     }
 
     return 0;
+}
+
+/***********************************************************************************************
+ * DriveClass::Track_Midpoint_Cell -- The middle cell of a two-cell track not yet reached.     *
+ *                                                                                             *
+ *    The same lookup Mark_Track uses. Returns -1 when there is no such cell. (CFE)            *
+ *=============================================================================================*/
+CELL DriveClass::Track_Midpoint_Cell(void)
+{
+    if (!IsOnShortTrack && TrackNumber != -1) {
+        int tracknum = TrackControl[TrackNumber].Track;
+        if (tracknum) {
+            TrackType const* ptr = RawTracks[tracknum - 1].Track;
+            int cellidx = RawTracks[tracknum - 1].Cell;
+            if (cellidx > -1) {
+                DirType dir = ptr[cellidx].Facing;
+
+                if (TrackIndex < cellidx) {
+                    COORDINATE offset = Smooth_Turn(ptr[cellidx].Offset, &dir);
+                    return Coord_Cell(offset);
+                }
+            }
+        }
+    }
+    return -1;
 }
