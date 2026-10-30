@@ -303,6 +303,10 @@ public:
     void Kill_Cargo(TechnoClass* source);
     virtual void Record_The_Kill(TechnoClass* source);
     virtual bool Target_Something_Nearby(ThreatType threat = THREAT_NORMAL);
+    bool Target_Something_Nearby_Hunt(ThreatType threat);
+    TARGET Greatest_Threat_Wall(ThreatType method, bool adjacent) const;
+    bool Evaluate_Cell_For_Wall(CELL cell) const;
+    bool Verify_Attack_Walls(bool speedcheck) const;
     virtual void Stun(void);
     virtual bool In_Range(COORDINATE coord, int which = 0) const;
     virtual bool In_Range(TARGET target, int which = 0, bool reciprocal_check = true) const;

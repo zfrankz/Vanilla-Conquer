@@ -3532,6 +3532,7 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
 
     MoveType retval = MOVE_OK;
     bool crushablewall = false;
+    bool shootablewall = false;
 
     /*
     **	Certain vehicles can drive over walls. Check for this case and
@@ -3557,9 +3558,14 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
                     &Warheads[BulletTypeClass::As_Reference(Weapons[Class->Primary].Fires).Warhead];
 
                 if (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden)) {
-                    if (!House->IsHuman && !House->Is_Ally(cellptr->Owner)) {
+
+                    // CFE AI vs walls: neutral walls are left alone unless ADV_WALL_OWN says otherwise.
+                    bool neutral = cellptr->Owner == HOUSE_NONE && ActiveCFEPatchConfig.AIvsWalls
+                                   && !ActiveCFEPatchConfig.EnableAdvancedWallOwnership;
+                    if (!House->IsHuman && !House->Is_Ally(cellptr->Owner) && !neutral) {
                         if (retval < MOVE_DESTROYABLE)
                             retval = MOVE_DESTROYABLE;
+                        shootablewall = ActiveCFEPatchConfig.AIvsWalls;
                     } else {
                         return (MOVE_NO);
                     }
@@ -3579,7 +3585,7 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
 #ifdef ADVANCED
     if (retval != MOVE_DESTROYABLE && !Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
 #else
-    if (!crushablewall && !Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
+    if (!crushablewall && !shootablewall && !Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
 #endif
         return (MOVE_NO);
     }

@@ -284,7 +284,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      armor-piercing vs steel 3→8. Shots in 500 frames: light tank 6→12, mammoth 8→16, with the quad gap of 12 frames.
      Not verified: real play; SAM, advanced tower and turret volleys; attack cycle ammunition; helicopter repair
      and reload; APC medic; SSM reload; stealth tank cloak timing and detection; commando firing while cloaked.
-6. Walls (TS-style building, crushing, ownership, AI wall shooting) – in progress: 6a ported, play-test pending
+6. Walls (TS-style building, crushing, ownership, AI wall shooting) – in progress: 6a and 6b ported, play-test pending
    - Split: 6a `WALL_CRUSH`, 6b `AI_VS_WALLS`, 6c `ADV_WALL_OWN`, 6d TS-style building.
    - 6a `WALL_CRUSH`: crushing vehicles (including rank 3 buggies) drive through and flatten crushable walls
      that aren't an ally's. `Reduce_Wall(-1)` destroys a wall outright, as in RA.
@@ -293,6 +293,15 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
    - Verified: builds. Instrumented run (temporary code, removed) on save 2, Mammoth: off, it can't enter
      any wall and drives around; on, it can enter an enemy sandbag cell but not brick or its own sandbags,
      drives through and the sandbags are gone. Not verified: real play; AI vehicles; rank 3 buggies.
+   - 6b `AI_VS_WALLS` + `HUNT_FIX`: computer controlled units and infantry shoot enemy walls in range when they
+     have no target or an adjacent wall seems to block the way, and may plan routes through them. `HUNT_FIX`
+     searches near first and the whole map only if nothing is near, with the same wall checks.
+   - Differences from CFE: `SEARCH_RANGE_FIX` isn't ported, so the wall search uses the plain range. With the
+     switches off the original `Can_Enter_Cell` results stand (CFE's refactor changes them even with both off).
+   - Verified: builds. Instrumented runs (temporary code, removed) on save 2: an enemy medium tank and grenadier
+     beside a player sandbag wall, far from anything else: off, both can't enter the cell and the wall is
+     never shot; on, both report it as destroyable and it's gone by frame 200. Hunting with `HUNT_FIX` on and
+     off: no crash, picks targets. Not verified: real play; hunt performance; walls blocking a real route.
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments
 

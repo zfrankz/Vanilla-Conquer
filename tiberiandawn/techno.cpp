@@ -4749,9 +4749,215 @@ bool TechnoClass::Target_Something_Nearby(ThreatType threat)
     }
 
     /*
+    **	CFE AI vs walls: if the target is out of range and an adjacent wall is closer to it than this
+    **	unit is, assume the wall is in the way and shoot it. With no target, look for a wall in range.
+    */
+    if (ActiveCFEPatchConfig.AIvsWalls && !House->IsHuman) {
+        if (Target_Legal(TarCom) && !In_Range(TarCom) && Verify_Attack_Walls(true)) {
+            TARGET wall = Greatest_Threat_Wall(THREAT_RANGE, true);
+            if (Target_Legal(wall) && Distance(TarCom) > As_Object(TarCom)->Distance(wall)) {
+                Assign_Target(wall);
+            }
+        }
+        if (!Target_Legal(TarCom) && Verify_Attack_Walls(false)) {
+            Assign_Target(Greatest_Threat_Wall(threat, false));
+        }
+    }
+
+    /*
     **	Return with answer to question: Does this unit have a target?
     */
     return (Target_Legal(TarCom));
+}
+
+/***********************************************************************************************
+ * TechnoClass::Target_Something_Nearby_Hunt -- Finds a target for a hunting unit.             *
+ *                                                                                             *
+ *    CFE: hunting scans the whole map only when nothing is near, instead of every time, and   *
+ *    a computer controlled unit stuck behind a wall shoots the wall.                          *
+ *                                                                                             *
+ * INPUT:   threat   -- THREAT_RANGE and/or THREAT_AREA.                                       *
+ *                                                                                             *
+ * OUTPUT:  Was a suitable target aquired and assigned to the TarCom?                          *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool TechnoClass::Target_Something_Nearby_Hunt(ThreatType threat)
+{
+    threat = threat & (THREAT_RANGE | THREAT_AREA);
+
+    // A wall that was the target may be gone by now.
+    if (!House->IsHuman && Is_Target_Cell(TarCom) && Map[As_Cell(TarCom)].Overlay == OVERLAY_NONE) {
+        Assign_Target(TARGET_NONE);
+    }
+
+    if (Target_Legal(TarCom)) {
+        if (In_Range(TarCom)) {
+            return (true);
+        }
+
+        // Keep a target within twice weapon range, unless an adjacent wall seems to block the way.
+        if ((threat & THREAT_AREA) && Threat_Range(1) >= Distance(TarCom)) {
+            if (ActiveCFEPatchConfig.AIvsWalls && Verify_Attack_Walls(true)) {
+                TARGET wall = Greatest_Threat_Wall(THREAT_RANGE, true);
+                if (Target_Legal(wall) && Distance(TarCom) > As_Object(TarCom)->Distance(wall)) {
+                    Assign_Target(wall);
+                }
+            }
+            return (true);
+        }
+    }
+
+    Assign_Target(TARGET_NONE);
+
+    TARGET bestinrange = Greatest_Threat(THREAT_RANGE);
+    TARGET bestinarea = Greatest_Threat(THREAT_AREA);
+    TARGET adjacentwall = TARGET_NONE;
+    if (ActiveCFEPatchConfig.AIvsWalls && Verify_Attack_Walls(true)) {
+        adjacentwall = Greatest_Threat_Wall(THREAT_RANGE, true);
+    }
+
+    if ((threat & THREAT_RANGE) && Target_Legal(bestinrange)) {
+        Assign_Target(bestinrange);
+    } else if ((threat & (THREAT_RANGE | THREAT_AREA)) && Target_Legal(bestinarea)) {
+        if (!In_Range(bestinarea) && Target_Legal(adjacentwall)
+            && Distance(bestinarea) > As_Object(bestinarea)->Distance(adjacentwall)) {
+            Assign_Target(adjacentwall);
+        } else {
+            Assign_Target(bestinarea);
+        }
+    }
+
+    if (!Target_Legal(TarCom) && Target_Legal(adjacentwall)) {
+        Assign_Target(adjacentwall);
+    }
+
+    // Nothing near, so search the whole map.
+    if (!Target_Legal(TarCom)) {
+        Assign_Target(Greatest_Threat(THREAT_NORMAL));
+        if (What_Am_I() != RTTI_UNIT || *((UnitClass*)this) != UNIT_GUNBOAT) {
+            Assign_Destination(TarCom);
+        }
+    }
+
+    return (Target_Legal(TarCom));
+}
+
+/***********************************************************************************************
+ * TechnoClass::Greatest_Threat_Wall -- Finds the nearest enemy wall this object can shoot.    *
+ *                                                                                             *
+ * INPUT:   method   -- THREAT_RANGE or THREAT_AREA, which sets the search range.              *
+ *                                                                                             *
+ *          adjacent -- Only consider the cells right next to this object?                     *
+ *                                                                                             *
+ * OUTPUT:  Returns with the wall's cell as a target, or TARGET_NONE.                          *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+TARGET TechnoClass::Greatest_Threat_Wall(ThreatType method, bool adjacent) const
+{
+    if (!(method & (THREAT_AREA | THREAT_RANGE))) {
+        return (TARGET_NONE);
+    }
+
+    int crange = (method & THREAT_RANGE) ? (MAX(Weapon_Range(0), Weapon_Range(1)) / ICON_LEPTON_W) + 1
+                                         : Threat_Range(1) / ICON_LEPTON_W;
+    if (adjacent) {
+        crange = 2;
+    }
+
+    CELL cell = Coord_Cell(Fire_Coord(0));
+    int cx = Cell_X(cell);
+    int cy = Cell_Y(cell);
+
+    for (int radius = 1; radius < crange; radius++) {
+        for (int x = -radius; x <= radius; x++) {
+            if (cx + x < Map.MapCellX || cx + x >= Map.MapCellX + Map.MapCellWidth) {
+                continue;
+            }
+            if (cy - radius >= Map.MapCellY && Evaluate_Cell_For_Wall(XY_Cell(cx + x, cy - radius))) {
+                return (::As_Target(XY_Cell(cx + x, cy - radius)));
+            }
+            if (cy + radius < Map.MapCellY + Map.MapCellHeight && Evaluate_Cell_For_Wall(XY_Cell(cx + x, cy + radius))) {
+                return (::As_Target(XY_Cell(cx + x, cy + radius)));
+            }
+        }
+        for (int y = -(radius - 1); y < radius; y++) {
+            if (cy + y < Map.MapCellY || cy + y >= Map.MapCellY + Map.MapCellHeight) {
+                continue;
+            }
+            if (cx - radius >= Map.MapCellX && Evaluate_Cell_For_Wall(XY_Cell(cx - radius, cy + y))) {
+                return (::As_Target(XY_Cell(cx - radius, cy + y)));
+            }
+            if (cx + radius < Map.MapCellX + Map.MapCellWidth && Evaluate_Cell_For_Wall(XY_Cell(cx + radius, cy + y))) {
+                return (::As_Target(XY_Cell(cx + radius, cy + y)));
+            }
+        }
+    }
+    return (TARGET_NONE);
+}
+
+/***********************************************************************************************
+ * TechnoClass::Evaluate_Cell_For_Wall -- Is there a wall in the cell this object should shoot?*
+ *                                                                                             *
+ *    Only computer controlled objects shoot walls by themselves, and only enemy walls (or     *
+ *    neutral ones with ADV_WALL_OWN).                                                         *
+ *                                                                                             *
+ * INPUT:   cell -- The cell to check.                                                         *
+ *                                                                                             *
+ * OUTPUT:  Should this object shoot the wall in the cell?                                     *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool TechnoClass::Evaluate_Cell_For_Wall(CELL cell) const
+{
+    if (House->IsHuman || !Map.In_Radar(cell)) {
+        return (false);
+    }
+
+    CellClass const* cellptr = &Map[cell];
+    if (cellptr->Overlay == OVERLAY_NONE) {
+        return (false);
+    }
+
+    OverlayTypeClass const* optr = &OverlayTypeClass::As_Reference(cellptr->Overlay);
+    if (!optr->IsWall || House->Is_Ally(cellptr->Owner)
+        || (cellptr->Owner == HOUSE_NONE && !ActiveCFEPatchConfig.EnableAdvancedWallOwnership)) {
+        return (false);
+    }
+
+    WeaponType weapon = Techno_Type_Class()->Primary;
+    if ((What_Am_I() != RTTI_UNIT && What_Am_I() != RTTI_INFANTRY) || weapon == WEAPON_NONE) {
+        return (false);
+    }
+    WarheadTypeClass const* whead = &Warheads[BulletTypeClass::As_Reference(Weapons[weapon].Fires).Warhead];
+    return (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden));
+}
+
+/***********************************************************************************************
+ * TechnoClass::Verify_Attack_Walls -- Can this object attack walls on its own initiative?     *
+ *                                                                                             *
+ * INPUT:   speedcheck -- Must the object be stopped?                                          *
+ *                                                                                             *
+ * OUTPUT:  Can this object attack walls on its own initiative?                                *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool TechnoClass::Verify_Attack_Walls(bool speedcheck) const
+{
+    if ((What_Am_I() != RTTI_UNIT && What_Am_I() != RTTI_INFANTRY) || House->IsHuman) {
+        return (false);
+    }
+    FootClass const* foot = (FootClass const*)this;
+    if (speedcheck && (foot->Speed != 0 || foot->IsRotating)) {
+        return (false);
+    }
+    WeaponType weapon = Techno_Type_Class()->Primary;
+    if (weapon == WEAPON_NONE) {
+        return (false);
+    }
+    WarheadTypeClass const* whead = &Warheads[BulletTypeClass::As_Reference(Weapons[weapon].Fires).Warhead];
+    return (whead->IsWallDestroyer || whead->IsWoodDestroyer);
 }
 
 /***********************************************************************************************

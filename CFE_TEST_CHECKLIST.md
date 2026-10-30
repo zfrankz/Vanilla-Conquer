@@ -169,6 +169,13 @@ Add under `[FEATURES]`: `WALL_CRUSH=1`.
 - [ ] **Crushing:** a Mammoth or other tracked vehicle drives straight through enemy sandbags, chain-link, barbed
   wire and wooden fences, flattening them. Concrete walls and your own walls still stop it.
 
+## 2l. AI against walls (Phase 3 step 6b)
+Add under `[FEATURES]`: `AI_VS_WALLS=1`, `HUNT_FIX=1`.
+
+- [ ] **Walls:** wall in part of your base. Enemy units shoot their way through instead of giving up or
+  only going around.
+- [ ] **Hunting:** enemy units in hunt mode still find you, with no slowdown.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

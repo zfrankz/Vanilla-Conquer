@@ -1702,6 +1702,7 @@ MoveType InfantryClass::Can_Enter_Cell(CELL cell, FacingType facing) const
     **	Walls are considered impassable for infantry UNLESS the wall has a hole
     **	in it.
     */
+    MoveType wallretval = MOVE_OK;
     if (cellptr->Overlay != OVERLAY_NONE) {
         OverlayTypeClass const& otype = OverlayTypeClass::As_Reference(cellptr->Overlay);
 
@@ -1711,7 +1712,23 @@ MoveType InfantryClass::Can_Enter_Cell(CELL cell, FacingType facing) const
 
         if (otype.IsWall) {
             if ((cellptr->OverlayData / 16) != otype.DamageLevels) {
-                return (MOVE_NO);
+
+                /*
+                **	CFE AI vs walls: computer controlled infantry may plan a route through a wall
+                **	they can shoot.
+                */
+                bool canshoot = false;
+                if (ActiveCFEPatchConfig.AIvsWalls && !House->IsHuman && Class->Primary != WEAPON_NONE
+                    && !House->Is_Ally(cellptr->Owner)
+                    && (cellptr->Owner != HOUSE_NONE || ActiveCFEPatchConfig.EnableAdvancedWallOwnership)) {
+                    WarheadTypeClass const* whead =
+                        &Warheads[BulletTypeClass::As_Reference(Weapons[Class->Primary].Fires).Warhead];
+                    canshoot = whead->IsWallDestroyer || (whead->IsWoodDestroyer && otype.IsWooden);
+                }
+                if (!canshoot) {
+                    return (MOVE_NO);
+                }
+                wallretval = MOVE_DESTROYABLE;
             }
         }
     }
@@ -1720,7 +1737,7 @@ MoveType InfantryClass::Can_Enter_Cell(CELL cell, FacingType facing) const
     ** Loop through all of the objects in the square setting a bit
     ** for how they affect movement.
     */
-    MoveType retval = MOVE_OK;
+    MoveType retval = wallretval;
     ObjectClass* obj = cellptr->Cell_Occupier();
     while (obj) {
 

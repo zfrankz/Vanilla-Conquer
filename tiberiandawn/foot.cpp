@@ -746,7 +746,9 @@ int FootClass::Mission_Hunt(void)
         }
     }
 
-    if (!Target_Something_Nearby(THREAT_NORMAL)) {
+    bool found = ActiveCFEPatchConfig.EnableHuntFix ? Target_Something_Nearby_Hunt(THREAT_RANGE)
+                                                    : Target_Something_Nearby(THREAT_NORMAL);
+    if (!found) {
         Random_Animate();
     } else if (ActiveCFEPatchConfig.SmarterCPUCommandos && What_Am_I() == RTTI_INFANTRY) {
         if (!CFE_Send_After_Building()) {
