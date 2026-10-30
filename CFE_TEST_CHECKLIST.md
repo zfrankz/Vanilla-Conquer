@@ -9,6 +9,8 @@ Settings files live in `~/Library/Application Support/Vanilla-Conquer/vanillatd/
   `StartMission=9` there makes Start New Game begin at mission 9 of the side you pick (GDI 1–15, Nod 1–13).
   Red Alert has the same setting in `vanillara/redalert.ini` (Allies and Soviets 1–14).
 
+  `SkipStartupMovie=yes` under `[Intro]` skips the logo movie at each start (TD in `conquer.ini`, RA in `redalert.ini`).
+
 The cheats help set up tests: F1 for money, F3 to see the whole map, F5 to build anything, F6 for instant build.
 
 If something goes wrong, note the mission, what you did, and the switches that were on. If the game crashes, send the crash log.

@@ -54,6 +54,19 @@
 **	Function prototypes for this module **
 *****************************************/
 static void Play_Intro(bool for_real = false);
+
+/*
+**	[Intro] SkipStartupMovie=yes in the config file skips the movie played every time the game starts.
+*/
+static bool Skip_Startup_Movie()
+{
+    INIClass ini;
+    CCFileClass file(CONFIG_FILE_NAME);
+    if (file.Is_Available()) {
+        ini.Load(file);
+    }
+    return (ini.Get_Bool("Intro", "SkipStartupMovie", false));
+}
 void Init_CDROM_Access(void);
 
 extern unsigned int RandNumb;
@@ -476,7 +489,7 @@ bool Init_Game(int, char*[])
     **	Play the introduction movies.
     */
     CCDebugString("C&C95 - About to play the intro movie\n");
-    if (!Special.IsFromInstall)
+    if (!Special.IsFromInstall && !Skip_Startup_Movie())
         Play_Intro(true);
 
     /*

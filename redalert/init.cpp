@@ -85,6 +85,19 @@ extern bool bNoMovies;
 **	Function prototypes for this module **
 *****************************************/
 static void Play_Intro(bool sequenced = false);
+
+/*
+**	[Intro] SkipStartupMovie=yes in the config file skips the movie played every time the game starts.
+*/
+static bool Skip_Startup_Movie()
+{
+    INIClass ini;
+    CCFileClass file(CONFIG_FILE_NAME);
+    if (file.Is_Available()) {
+        ini.Load(file);
+    }
+    return (ini.Get_Bool("Intro", "SkipStartupMovie", false));
+}
 static void Init_Color_Remaps(void);
 static void Init_Heaps(void);
 static void Init_Expansion_Files(void);
@@ -324,7 +337,9 @@ bool Init_Game(int, char*[])
     if (!Special.IsFromInstall) {
         VisiblePage.Clear();
         //		Mono_Printf("Playing Intro\n");
-        Play_Intro();
+        if (!Skip_Startup_Movie()) {
+            Play_Intro();
+        }
         memset(CurrentPalette, 0x01, 768);
         WhitePalette.Set();
     } else {
