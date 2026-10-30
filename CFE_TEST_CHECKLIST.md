@@ -93,7 +93,10 @@ Add under `[FEATURES]`: `ASTAR_PATHING=1`; and under `[SETTINGS]`: `INFANTRY_TIB
 - [ ] **Refineries / repair bays:** a harvester or unit returning to dock picks one it can actually reach.
 - [ ] **Performance:** with lots of units moving, the game shouldn't slow down noticeably.
 - [ ] With A* on: save, load, and keep playing.
-- Note: harvester queue jump and optimization still measure straight-line distance; the A* versions are not ported yet.
+- [ ] **Harvesters with A\* (step 4c):** with the six harvester switches from 2b also on, build 2–3 refineries
+  with something in the way (a river, cliffs or a long wall). Harvesters should go to the refinery that is
+  closest by road, not the one that looks closest in a straight line, and the 2b queue-jump and
+  spreading-out behaviour should still work.
 
 ## 2e. Two units in one spot (Phase 3 step 4b)
 Add under `[FEATURES]`: `CELL_RESERVATION_FIX=1`. It works with or without `ASTAR_PATHING`; the test showed the

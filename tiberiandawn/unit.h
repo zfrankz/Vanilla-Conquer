@@ -104,6 +104,7 @@ public:
     void APC_Close_Door(void);
     void APC_Open_Door(void);
     virtual BuildingClass* Find_Best_Refinery(void) const;
+    int CFE_AStar_Refinery_Distance(BuildingClass const* refinery) const;
 
     /*
     **	Query functions.

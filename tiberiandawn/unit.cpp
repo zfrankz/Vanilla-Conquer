@@ -95,6 +95,7 @@
 
 #include "function.h"
 #include "ccini.h"
+#include <climits>
 
 /***********************************************************************************************
  * UnitClass::Validate -- validates unit pointer.															  *
@@ -2531,6 +2532,23 @@ static int _refinery_compare(const void* left, const void* right)
     return 0;
 }
 
+/*
+**	CFE: distance from this harvester to a refinery when A-Star pathing is on, in cells along the
+**	A-Star path. A-Star returns 0 both when the harvester is already by the refinery and when there
+**	is no path, so within 6 cells the straight-line distance in cells is used instead and anything
+**	further counts as unreachable (INT_MAX).
+*/
+int UnitClass::CFE_AStar_Refinery_Distance(BuildingClass const* refinery) const
+{
+    CELL dest = Coord_Cell(refinery->Center_Coord());
+    int distance = Find_Path_AStar(nullptr, Coord_Cell(Coord), dest, 1, MOVE_NO, -1);
+    if (distance) {
+        return distance;
+    }
+    distance = Distance(dest);
+    return (distance <= 6) ? distance : INT_MAX;
+}
+
 BuildingClass* UnitClass::Find_Best_Refinery(void) const
 {
     if ((!ActiveCFEPatchConfig.EnableHarvyLoadBalancing && !ActiveCFEPatchConfig.EnableHarvyOptimize)
@@ -2555,18 +2573,40 @@ BuildingClass* UnitClass::Find_Best_Refinery(void) const
     }
 
     /*
-    **	CFE load balancing/optimize. Distances are in leptons; the distance settings are
-    **	converted to leptons when the config is loaded. (CFE also has an A-Star distance
-    **	variant; it comes with A-Star pathing.)
+    **	CFE load balancing/optimize. With A-Star pathing the distances are A-Star path lengths
+    **	in cells, and refineries this harvester can't reach are left out. Without it they are
+    **	straight-line leptons, and the distance settings are converted to leptons when the
+    **	config is loaded.
     */
     static DynamicVectorClass<RefineryData> _refineries;
 
     _refineries.Clear();
-    for (int i = 0; i < Buildings.Count(); ++i) {
-        BuildingClass* refinery = Buildings.Ptr(i);
-        if (refinery != NULL && refinery->IsActive && !refinery->IsInLimbo && refinery->House == House
-            && *refinery == STRUCT_REFINERY) {
-            _refineries.Add(RefineryData{refinery, Distance(refinery), 0});
+    if (ActiveCFEPatchConfig.EnableASPathing) {
+        for (int i = 0; i < Buildings.Count(); ++i) {
+            BuildingClass* refinery = Buildings.Ptr(i);
+            if (refinery != NULL && refinery->IsActive && !refinery->IsInLimbo && refinery->House == House
+                && *refinery == STRUCT_REFINERY) {
+                int distance = CFE_AStar_Refinery_Distance(refinery);
+                if (distance != INT_MAX) {
+                    _refineries.Add(RefineryData{refinery, distance, 0});
+                }
+            }
+        }
+    }
+
+    // Without A-Star, or if A-Star reaches none of them, use the straight-line distance
+    // (converted to cells when the settings are in cells).
+    if (!ActiveCFEPatchConfig.EnableASPathing || _refineries.Count() == 0) {
+        for (int i = 0; i < Buildings.Count(); ++i) {
+            BuildingClass* refinery = Buildings.Ptr(i);
+            if (refinery != NULL && refinery->IsActive && !refinery->IsInLimbo && refinery->House == House
+                && *refinery == STRUCT_REFINERY) {
+                int distance = Distance(refinery);
+                if (ActiveCFEPatchConfig.EnableASPathing) {
+                    distance = Lepton_To_Cell(distance);
+                }
+                _refineries.Add(RefineryData{refinery, distance, 0});
+            }
         }
     }
 
@@ -2593,7 +2633,9 @@ BuildingClass* UnitClass::Find_Best_Refinery(void) const
                     // first in line).
                     if (ActiveCFEPatchConfig.EnableHarvyOptimize
                         && (ActiveCFEPatchConfig.EnableHarvyQueueJump || unit->Status == 2)) {
-                        int other_distance = unit->Distance(refinery);
+                        int other_distance = ActiveCFEPatchConfig.EnableASPathing
+                                                 ? unit->CFE_AStar_Refinery_Distance(refinery)
+                                                 : unit->Distance(refinery);
                         if (_refineries[index].Distance + ActiveCFEPatchConfig.HarvyOptimizeCommunalismWeight
                                 < other_distance
                             && other_distance > ActiveCFEPatchConfig.HarvyQueueJumpCutoff) {

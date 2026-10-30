@@ -132,8 +132,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      `Mission_Harvest`, `Find_Best_Refinery` and the refinery's radio handling). Adds `RADIO_CANCEL`.
      Builds, no warnings on changed lines, 9/9 saves pass the version check, 40 s smoke test.
      13 key conditions string-compared with CFE HEAD (terms, not parenthesisation).
-   - Not ported here: A-Star distance variants (step 4c). CFE's A-Star `FootClass::Find_Docking_Bay` came
-     with step 4a. The harvester distance settings stay in leptons until 4c.
+   - A-Star distance variants: ported in step 4c. CFE's A-Star `FootClass::Find_Docking_Bay` came with step 4a.
    - Step 2 play-tested by the user on 2026-10-29: nothing odd seen.
 3. Tiberium growth/resurgence, visceroids – ported (except meaner visceroids), play-tested by the user on 2026-10-29 (nothing odd seen)
    - Done (one commit each, switch off = original code): `BETTER_TIB_GROWTH` + `TIB_GROWTH_SCALE`,
@@ -148,7 +147,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      step 5) and its per-scenario type-stat adjustments (balance, step 8); port it after step 5.
      CFE's killed-by-visceroid and chem-soldier visceroid spawns come with it / with the balance options.
    - General bugfix bucket: CFE `1cab6b4` and `d2edf47` (`Goto_Tiberium` efficiency and megamap radius, no switch).
-4. A* pathing + tiberium aversion – 4a and 4b ported, play-test pending; 4c to do
+4. A* pathing + tiberium aversion – 4a, 4b and 4c ported, play-test pending
    (SEARCH.H turned out to be unrelated: it came with CFE's INIClass backport.)
    - 4a `ASTAR_PATHING` + `INFANTRY_TIBERIUM_AVERSION` (commit `f5e038eb`): A* search, CFE's traffic-flow cell
      cost (`CFE_Passable_Cell`, includes the tiberium aversion), periodic repathing, A* `Find_Docking_Bay`.
@@ -185,8 +184,21 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      A* on: fix off 233 / 32 / 635, plus 121 frames with two stopped tanks stacked; fix on 46 / 20 / 686, 0.
      No orphan vehicle flags in any run. One run (A* on, fix off) produced no output at all; rerun was normal.
      Not verified: real play; that the rebuilt table after a load matches what CFE would have saved.
-   - 4c: A* harvester distances (queue jump, load balancing, optimize; CFE `6061399`) and the cells/leptons
-     setting conversion keyed on `ASTAR_PATHING` again.
+   - 4c (no new switch; active when `ASTAR_PATHING` and the harvester switches are on): A* harvester distances
+     from CFE HEAD (CFE `6061399` and later). Refinery queue jump, load balancing and optimize measure the A*
+     path length in cells; when A* returns 0 the straight-line cell distance is used up to 6 cells, beyond
+     that the refinery counts as unreachable (left out of the choice; a waiting harvester counts as infinitely
+     far). If no refinery is reachable, straight-line distances in cells are used. The cells-to-leptons
+     conversion of `QUEUE_JUMP_CUTOFF` and the optimize weights runs only with A* off again, as in CFE.
+   - Differences from CFE: the three copies of the A*-or-nearby distance code are one function,
+     `UnitClass::CFE_AStar_Refinery_Distance`.
+   - Verified: builds, no warnings on changed lines. Instrumented runs (temporary code, removed) on save 2
+     with 2 extra refineries and 4 extra harvesters added (3 refineries, 9 harvesters): A* on, 12000 frames:
+     114 refinery choices, 342 A* distances (A* path sum 3530 cells vs straight-line 3365), 0 unreachable,
+     0 fallbacks, 6 queue jumps, all with the waiting harvester over the 4-cell cutoff and the newcomer closer.
+     A* off, 4000 frames: 39 choices, all in leptons, 1 queue jump. No crash.
+     Not verified: real play; an unreachable refinery (no test map had one); the AI's harvesters (CFE limits
+     these features to human players in single player).
 5. Veterancy, smarter SAMs/mammoths/aircraft/commandos
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)
 7. Bucket D: attack-move, rally points, Q-move
