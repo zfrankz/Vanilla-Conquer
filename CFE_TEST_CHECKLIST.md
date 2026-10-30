@@ -127,8 +127,19 @@ Add under `[FEATURES]`: `SMARTER_SAMS=1`; and under `[SETTINGS]`: `SMARTER_SAM_A
 - [ ] **Volleys:** with `SMARTER_SAM_AMMO=6`, a SAM site under air attack fires 6 missiles before going back down.
 - [ ] **Retargeting:** when its target dies and it has shots left, the SAM stays up for about 2 seconds and
   turns to the next aircraft instead of going down.
-- [ ] **Balance:** `SMARTER_SAM_BALANCE_DELAY` adds game frames between pairs of shots (0 = 3 seconds, as in CFE).
+- [ ] **Balance:** `SMARTER_SAM_BALANCE_DELAY` adds game frames between pairs of shots. With 0, the test showed
+  about 90 frames between pairs (at your GameSpeed=3, about 4.5 seconds).
 - [ ] Save during an air attack, load, and keep playing.
+
+## 2h. Smarter aircraft (Phase 3 step 5c)
+Add under `[FEATURES]`: `SMARTER_AIRCRAFT=1`.
+
+- [ ] **Free pads:** with two helipads and the primary one occupied, a new helicopter appears on the free one.
+- [ ] **No pad free:** with every pad occupied, new helicopters fly in level with the primary pad, not from a
+  random point along the map edge.
+- [ ] **No ammo:** tell a helicopter with no missiles left to attack something: it goes home to rearm instead of
+  flying off to the target.
+- [ ] **Moving targets:** send a helicopter after a moving vehicle far away: it turns to follow as it flies.
 
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.

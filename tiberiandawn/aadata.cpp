@@ -589,6 +589,8 @@ short const* AircraftTypeClass::Overlap_List(void) const
 BuildingClass* AircraftTypeClass::Who_Can_Build_Me(bool, bool legal, HousesType house) const
 {
     BuildingClass* anybuilding = NULL;
+    BuildingClass* anyfreebuilding = NULL;
+    bool foundleader = false;
     for (int index = 0; index < Buildings.Count(); index++) {
         BuildingClass* building = Buildings.Ptr(index);
 
@@ -597,10 +599,37 @@ BuildingClass* AircraftTypeClass::Who_Can_Build_Me(bool, bool legal, HousesType 
             && (!legal || building->House->Can_Build(Type, building->ActLike))
             && building->Class->ToBuild == RTTI_AIRCRAFTTYPE) {
 
-            if (building->IsLeader)
-                return (building);
-            anybuilding = building;
+            /*
+            **	CFE smarter aircraft: use a free pad when there is one, the primary if possible,
+            **	so new helicopters don't appear on a pad that is busy.
+            */
+            if (ActiveCFEPatchConfig.EnableSmarterAircraft) {
+                bool isleader = building->IsLeader;
+                if (isleader) {
+                    foundleader = true;
+                }
+                bool busy = building->In_Radio_Contact();
+                if (isleader && !busy) {
+                    return (building);
+                }
+                if (!busy && anyfreebuilding == NULL) {
+                    anyfreebuilding = building;
+                }
+                if (foundleader && anyfreebuilding != NULL) {
+                    return (anyfreebuilding);
+                }
+                if (isleader || !foundleader) {
+                    anybuilding = building;
+                }
+            } else {
+                if (building->IsLeader)
+                    return (building);
+                anybuilding = building;
+            }
         }
+    }
+    if (anyfreebuilding != NULL) {
+        return (anyfreebuilding);
     }
     return (anybuilding);
 }

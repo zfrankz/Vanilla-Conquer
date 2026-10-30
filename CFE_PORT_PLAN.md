@@ -199,7 +199,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      A* off, 4000 frames: 39 choices, all in leptons, 1 queue jump. No crash.
      Not verified: real play; an unreachable refinery (no test map had one); the AI's harvesters (CFE limits
      these features to human players in single player).
-5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a and 5b ported, play-test pending; 5c–5e to do
+5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a–5c ported, play-test pending; 5d and 5e to do
    - Split: 5a small switches, 5b `SMARTER_SAMS`, 5c `SMARTER_AIRCRAFT`, 5d `SMARTER_CPU_COMMANDOS`, 5e veterancy.
    - 5a: `DISABLE_COMMANDO_AIRSTRIKES` (no enemy A10 reinforcements in single player until the player has a
      discovered building), `SMARTER_MAMMOTHS` (mammoths use missiles on infantry), `COMMANDO_GUARD` (0 off,
@@ -226,6 +226,18 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      ammo 6, a volley of 6 about 90 frames apart per pair, a new target for each pair; with one-hit Orcas
      the same, then a reload and a new volley.
      Not verified: real play; a load during a volley; `SMARTER_SAM_BALANCE_DELAY` other than 0.
+   - 5c `SMARTER_AIRCRAFT`: new helicopters use a free pad, the primary if possible; helicopters without a pad
+     fly in level with the primary pad; an aircraft with no ammo told to attack goes straight home; every 120
+     frames of flight it re-picks its attack position, so it follows a moving target.
+   - Differences from CFE: the recheck counter is in an unsaved side table (saved in CFE). CFE's check in
+     `Mission_Move` for attack-moving aircraft without ammo comes with attack-move (step 7).
+   - Verified: builds, no warnings on changed lines. Instrumented runs (temporary code, removed) on save 2 with
+     the map revealed. Two pads, primary busy: off picks the primary, on the free one; both free or both
+     busy: the primary either way. 4 helicopters with no pad: off arrive at random heights (35–59, pad at 52),
+     on all at 52. Orca with no ammo: off goes on to pick a position, on heads home at once. Orca attacking a
+     jeep on the move: off flies to the old position and first fires on frame 229 from 3759 leptons; on
+     re-picks on frame 138 and first fires on frame 170 from 1240 leptons.
+     Not verified: real play; the helicopter's firing accuracy; AI aircraft behaviour.
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments

@@ -2296,10 +2296,16 @@ int BuildingClass::Exit_Object(TechnoClass* base)
         } else {
             AircraftClass* air = (AircraftClass*)base;
 
+            /*
+            **	CFE smarter aircraft: helicopters without a pad fly in level with the primary pad.
+            */
+            int y_cell = ActiveCFEPatchConfig.EnableSmarterAircraft
+                             ? Cell_Y(Coord_Cell(Center_Coord()))
+                             : Random_Pick(0, Map.MapCellHeight - 1) + Map.MapCellY;
             if (Cell_X(Coord_Cell(Center_Coord())) - Map.MapCellX < Map.MapCellWidth / 2) {
-                cell = XY_Cell(Map.MapCellX - 1, Random_Pick(0, Map.MapCellHeight - 1) + Map.MapCellY);
+                cell = XY_Cell(Map.MapCellX - 1, y_cell);
             } else {
-                cell = XY_Cell(Map.MapCellX + Map.MapCellWidth, Random_Pick(0, Map.MapCellHeight - 1) + Map.MapCellY);
+                cell = XY_Cell(Map.MapCellX + Map.MapCellWidth, y_cell);
             }
             ScenarioInit++;
             if (air->Unlimbo(Cell_Coord(cell), DIR_N)) {

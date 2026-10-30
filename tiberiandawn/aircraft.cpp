@@ -2257,6 +2257,12 @@ DirType AircraftClass::Pose_Dir(void) const
  * HISTORY:                                                                                    *
  *   06/19/1995 JLB : Created.                                                                 *
  *=============================================================================================*/
+/*
+**	CFE smarter aircraft: frames each aircraft has flown toward its attack position since it was last
+**	picked, by aircraft index. Not saved, to keep the save format; it restarts with each new position.
+*/
+static int _cfe_target_recheck[AIRCRAFT_MAX];
+
 int AircraftClass::Mission_Attack(void)
 {
     Validate();
@@ -2281,7 +2287,7 @@ int AircraftClass::Mission_Attack(void)
     **	Double check target and validate the attack zone.
     */
     case VALIDATE_AZ:
-        if (!Target_Legal(TarCom)) {
+        if (!Target_Legal(TarCom) || (ActiveCFEPatchConfig.EnableSmarterAircraft && !IsALoaner && !Ammo)) {
             Status = RETURN_TO_BASE;
         } else {
             Status = PICK_ATTACK_LOCATION;
@@ -2298,6 +2304,7 @@ int AircraftClass::Mission_Attack(void)
             Assign_Destination(Good_Fire_Location(TarCom));
             if (Target_Legal(NavCom)) {
                 Status = TAKE_OFF;
+                _cfe_target_recheck[Aircraft.ID(this)] = 0;
             } else {
                 Status = RETURN_TO_BASE;
             }
@@ -2348,6 +2355,16 @@ int AircraftClass::Mission_Attack(void)
             if (!Target_Legal(NavCom)) {
                 Status = PICK_ATTACK_LOCATION;
                 return (1);
+            }
+
+            /*
+            **	CFE smarter aircraft: after flying for a while, check whether the target has moved.
+            */
+            if (ActiveCFEPatchConfig.EnableSmarterAircraft) {
+                if (++_cfe_target_recheck[Aircraft.ID(this)] >= 120) {
+                    Status = PICK_ATTACK_LOCATION;
+                    return (1);
+                }
             }
 
             int distance = Process_Fly_To(true);
