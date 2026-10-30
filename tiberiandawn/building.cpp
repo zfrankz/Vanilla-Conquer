@@ -1104,9 +1104,14 @@ void BuildingClass::AI(void)
     */
     if (!Strength) {
         if (CountDown.Expired()) {
+            CELL centercell = Coord_Cell(Center_Coord());
+            HousesType formerowner = Owner();
             Limbo();
             Drop_Debris(WhomToRepay);
             Delete_This();
+            if (ActiveCFEPatchConfig.EnableAdvancedWallOwnership) {
+                Map.Flip_Walls(centercell, HOUSE_NONE, formerowner);
+            }
         }
         return;
     }
@@ -1505,6 +1510,11 @@ bool BuildingClass::Unlimbo(COORDINATE coord, DirType dir)
             // if (IsOwnedByPlayer) {
             Map.PowerClass::IsToRedraw = true;
             Map.Flag_To_Redraw(false);
+        }
+
+        // CFE: nearby walls may now belong to this house.
+        if (ActiveCFEPatchConfig.EnableAdvancedWallOwnership) {
+            Map.Flip_Walls(Coord_Cell(Center_Coord()), Owner(), HOUSE_NONE);
         }
         return (true);
     }
@@ -3872,6 +3882,11 @@ bool BuildingClass::Captured(HouseClass* newowner)
             oldowner->Check_Pertinent_Structures();
         }
 
+        // CFE: nearby walls may change hands along with the building.
+        if (ActiveCFEPatchConfig.EnableAdvancedWallOwnership) {
+            Map.Flip_Walls(Coord_Cell(Center_Coord()), Owner(), oldowner ? oldowner->Class->House : HOUSE_NONE);
+        }
+
         return (true);
     }
     return (false);
@@ -4284,6 +4299,8 @@ int BuildingClass::Mission_Deconstruction(void)
 
     case DURING:
         if (IsReadyToCommence) {
+            CELL centercell = Coord_Cell(Center_Coord());
+            HousesType formerowner = Owner();
 
             /*
             **	Construction yards that deconstruct, really just revert back
@@ -4353,6 +4370,11 @@ int BuildingClass::Mission_Deconstruction(void)
                 **	Finally, delete the building from the game.
                 */
                 Delete_This();
+            }
+
+            // CFE: nearby walls may go neutral with the building gone.
+            if (ActiveCFEPatchConfig.EnableAdvancedWallOwnership) {
+                Map.Flip_Walls(centercell, HOUSE_NONE, formerowner);
             }
             House->IsRecalcNeeded = true;
         }

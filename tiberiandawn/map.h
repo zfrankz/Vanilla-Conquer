@@ -92,6 +92,7 @@ public:
     static void Clear_CFE_Cell_State(void);
     void Cleanup_Vehicle_Reservations(void);
     void Rebuild_Vehicle_Reservations(void);
+    void Flip_Walls(CELL centercell, HousesType gainhouse, HousesType losehouse);
     bool Process_Tiberium_Death(CELL where, COORDINATE specifically_where, unsigned char how);
     virtual void Set_Map_Dimensions(int x, int y, int w, int h);
 

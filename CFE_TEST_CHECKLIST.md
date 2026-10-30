@@ -176,6 +176,13 @@ Add under `[FEATURES]`: `AI_VS_WALLS=1`, `HUNT_FIX=1`.
   only going around.
 - [ ] **Hunting:** enemy units in hunt mode still find you, with no slowdown.
 
+## 2m. Wall ownership (Phase 3 step 6c)
+Add under `[FEATURES]`: `ADV_WALL_OWN=1`.
+
+- [ ] **Map walls:** walls around an enemy base count as theirs; enemy units don't shoot them, yours can be
+  ordered to.
+- [ ] **Changing hands:** capture or destroy the buildings by a wall and it goes to whoever's base it's now in.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

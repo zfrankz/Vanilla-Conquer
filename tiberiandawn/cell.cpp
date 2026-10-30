@@ -2884,3 +2884,77 @@ bool CellClass::Is_Clear_To_Move(bool ignoreinfantry, bool ignorevehicles) const
 }
 
 #endif // USE_RA_AI
+
+/***********************************************************************************************
+ * CellClass::Flip_Wall -- Gives a wall to the house whose base it belongs to.                 *
+ *                                                                                             *
+ *    CFE advanced wall ownership: each house scores by the buildings near the wall, with      *
+ *    inverse square weighting, against a fixed score for the current owner. The wall only     *
+ *    changes hands if a house lost it because it lost a building, or gained it because it     *
+ *    gained one, and never between allies.                                                    *
+ *                                                                                             *
+ * INPUT:   gainhouse -- The house that gained a building, or HOUSE_NONE.                      *
+ *                                                                                             *
+ *          losehouse -- The house that lost a building, or HOUSE_NONE.                        *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void CellClass::Flip_Wall(HousesType gainhouse, HousesType losehouse)
+{
+    if (Overlay == OVERLAY_NONE || !OverlayTypeClass::As_Reference(Overlay).IsWall) {
+        return;
+    }
+
+    bool hasgainer = gainhouse != HOUSE_NONE;
+    bool hasloser = losehouse != HOUSE_NONE;
+    if (hasgainer && gainhouse == Owner) {
+        return;
+    }
+    if (!hasgainer && hasloser && losehouse != Owner) {
+        return;
+    }
+
+    // A neutral wall scores half of an owned one, which scores like a building 4 diagonal cells away.
+    int hscores[HOUSE_COUNT];
+    memset(&hscores[0], 0, HOUSE_COUNT * sizeof(int));
+    int nonescore = 0;
+    if (Owner == HOUSE_NONE) {
+        nonescore = 270;
+    } else {
+        hscores[Owner] = 540;
+    }
+
+    // 576 is 24 squared: 16 cells diagonally in the fast distance formula, about the size of a base.
+    for (int i = 0; i < Buildings.Count(); i++) {
+        BuildingClass* building = Buildings.Ptr(i);
+        if (building && building->IsActive && !building->IsInLimbo && building->Strength) {
+            HousesType owner = building->Owner();
+            if (owner != HOUSE_NONE) {
+                int distance = Distance(Cell_Number(), Coord_Cell(building->Center_Coord()));
+                int score = 576 - (distance * distance);
+                if (score > 0) {
+                    hscores[owner] += score;
+                }
+            }
+        }
+    }
+
+    HousesType bestowner = HOUSE_NONE;
+    int bestscore = nonescore;
+    for (int i = 0; i < HOUSE_COUNT; i++) {
+        if (hscores[i] > bestscore) {
+            bestowner = (HousesType)i;
+            bestscore = hscores[i];
+        }
+    }
+
+    if (Owner != bestowner
+        && ((!hasgainer && !hasloser) || (hasgainer && bestowner == gainhouse) || (hasloser && Owner == losehouse))) {
+        HouseClass* house = (Owner != HOUSE_NONE) ? HouseClass::As_Pointer(Owner) : NULL;
+        if (!house || !house->Is_Ally(bestowner)) {
+            Owner = bestowner;
+        }
+    }
+}

@@ -366,6 +366,11 @@ void OverlayClass::Read_INI(CCINIClass& ini)
             */
             if (cell >= MAP_CELL_W && cell <= MAP_CELL_TOTAL - MAP_CELL_W) {
                 new OverlayClass(classid, cell);
+
+                // CFE: a map wall belongs to the base it's in. Buildings are placed before overlays.
+                if (ActiveCFEPatchConfig.EnableAdvancedWallOwnership && OverlayTypeClass::As_Reference(classid).IsWall) {
+                    Map[cell].Flip_Wall(HOUSE_NONE, HOUSE_NONE);
+                }
             }
         }
     }

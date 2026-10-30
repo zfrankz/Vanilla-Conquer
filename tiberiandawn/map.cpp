@@ -2519,3 +2519,36 @@ bool MapClass::Process_Tiberium_Death(CELL where, COORDINATE specifically_where,
     }
     return false;
 }
+
+/***********************************************************************************************
+ * MapClass::Flip_Walls -- Reassigns the walls around a building that changed hands.           *
+ *                                                                                             *
+ * INPUT:   centercell -- The cell at the center of the building.                              *
+ *                                                                                             *
+ *          gainhouse  -- The house that gained a building, or HOUSE_NONE.                     *
+ *                                                                                             *
+ *          losehouse  -- The house that lost a building, or HOUSE_NONE.                       *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void MapClass::Flip_Walls(CELL centercell, HousesType gainhouse, HousesType losehouse)
+{
+    int centerx = Cell_X(centercell);
+    int centery = Cell_Y(centercell);
+    for (int y = centery - 16; y <= centery + 16; y++) {
+        if (y < 0 || y >= MAP_CELL_H) {
+            continue;
+        }
+        for (int x = centerx - 16; x <= centerx + 16; x++) {
+            if (x < 0 || x >= MAP_CELL_W) {
+                continue;
+            }
+            CELL cell = XY_Cell(x, y);
+            if (In_Radar(cell)) {
+                (*this)[cell].Flip_Wall(gainhouse, losehouse);
+            }
+        }
+    }
+}

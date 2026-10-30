@@ -288,6 +288,7 @@ public:
     int Reduce_Tiberium(int levels);
     int Reduce_Wall(int damage);
     void Incoming(COORDINATE threat = 0, bool forced = false, bool nokidding = false, bool veteransonly = false);
+    void Flip_Wall(HousesType gainhouse, HousesType losehouse);
     void Adjust_Threat(HousesType house, int threat_value);
 
     int operator!=(CellClass const&) const

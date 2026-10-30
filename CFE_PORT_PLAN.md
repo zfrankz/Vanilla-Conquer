@@ -284,7 +284,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      armor-piercing vs steel 3→8. Shots in 500 frames: light tank 6→12, mammoth 8→16, with the quad gap of 12 frames.
      Not verified: real play; SAM, advanced tower and turret volleys; attack cycle ammunition; helicopter repair
      and reload; APC medic; SSM reload; stealth tank cloak timing and detection; commando firing while cloaked.
-6. Walls (TS-style building, crushing, ownership, AI wall shooting) – in progress: 6a and 6b ported, play-test pending
+6. Walls (TS-style building, crushing, ownership, AI wall shooting) – in progress: 6a–6c ported, play-test pending
    - Split: 6a `WALL_CRUSH`, 6b `AI_VS_WALLS`, 6c `ADV_WALL_OWN`, 6d TS-style building.
    - 6a `WALL_CRUSH`: crushing vehicles (including rank 3 buggies) drive through and flatten crushable walls
      that aren't an ally's. `Reduce_Wall(-1)` destroys a wall outright, as in RA.
@@ -302,6 +302,13 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      beside a player sandbag wall, far from anything else: off, both can't enter the cell and the wall is
      never shot; on, both report it as destroyable and it's gone by frame 200. Hunting with `HUNT_FIX` on and
      off: no crash, picks targets. Not verified: real play; hunt performance; walls blocking a real route.
+   - 6c `ADV_WALL_OWN`: map walls belong to the base they're in, and walls near a building that is built, lost,
+     sold or captured can change hands, by a score of nearby buildings. Never between allies.
+   - Differences from CFE: none in the logic. The cell owner was already saved, so saves are unaffected.
+   - Verified: builds. Instrumented runs (temporary code, removed) on save 2: a neutral wall in the player's base
+     goes to the player with the switch on and stays neutral with it off; with an enemy building beside it,
+     destroying the player's base hands it to the enemy (off: stays neutral). With no other house nearby
+     the owner keeps it, as CFE's scoring says. Not verified: real play; capture; selling; real map walls.
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments
 
