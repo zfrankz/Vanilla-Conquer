@@ -499,5 +499,5 @@ bool MissionClass::Restore_Mission(void)
 char const* MissionClass::Missions[MISSION_COUNT] = {
     "Sleep",    "Attack",       "Move",    "Retreat", "Guard",  "Sticky",  "Enter",      "Capture",
     "Harvest",  "Area Guard",   "Return",  "Stop",    "Ambush", "Hunt",    "Timed Hunt", "Unload",
-    "Sabotage", "Construction", "Selling", "Repair",  "Rescue", "Missile",
+    "Sabotage", "Construction", "Selling", "Repair",  "Rescue", "Missile", "Attack-Move",
 };

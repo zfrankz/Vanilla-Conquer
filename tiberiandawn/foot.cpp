@@ -562,7 +562,21 @@ bool FootClass::Basic_Path(void)
 int FootClass::Mission_Move(void)
 {
     if (!Target_Legal(NavCom) && !IsDriving && MissionQueue == MISSION_NONE) {
-        Enter_Idle_Mode();
+        if (Attack_Move().IsOn) {
+
+            /*
+            **	CFE: an attack-move ends at the destination, or when there is no way to get there.
+            */
+            TARGET destination = Attack_Move().Destination;
+            if (!Target_Legal(destination) || Distance(destination) <= 3 * CELL_LEPTON_W
+                || !Find_Path_AStar(nullptr, Coord_Cell(Coord), As_Cell(destination), 1, MOVE_MOVING_BLOCK, -1)) {
+                Reset_Attack_Move();
+            } else {
+                Attack_Move_Enter_Move_Mode();
+            }
+        } else {
+            Enter_Idle_Mode();
+        }
     }
     if (!Target_Legal(TarCom) && !House->IsHuman) {
         Target_Something_Nearby(THREAT_RANGE);
@@ -618,6 +632,9 @@ int FootClass::Mission_Attack(void)
 {
     if (Target_Legal(TarCom)) {
         Approach_Target();
+    } else if (Attack_Move().IsOn) {
+        Attack_Move_Enter_Move_Mode();
+        return (1);
     } else {
         Enter_Idle_Mode();
     }
@@ -938,6 +955,7 @@ COORDINATE FootClass::Sort_Y(void) const
  *=============================================================================================*/
 void FootClass::Stun(void)
 {
+    Reset_Attack_Move();
     Assign_Destination(TARGET_NONE);
     Path[0] = FACING_NONE;
     Stop_Driver();
@@ -1399,6 +1417,12 @@ void FootClass::Active_Click_With(ActionType action, ObjectClass* object)
         }
         break;
 
+    case ACTION_ATTACKMOVE:
+        if (Can_Player_Move()) {
+            Player_Assign_Mission(MISSION_ATTACKMOVE, TARGET_NONE, object->As_Target());
+        }
+        break;
+
     case ACTION_NO_DEPLOY:
         Speak(VOX_DEPLOY);
         break;
@@ -1432,6 +1456,7 @@ void FootClass::Active_Click_With(ActionType action, CELL cell)
         Player_Assign_Mission(MISSION_HARVEST, TARGET_NONE, ::As_Target(cell));
         break;
 
+    case ACTION_ATTACKMOVE:
     case ACTION_MOVE:
         if (AllowVoice) {
             COORDINATE coord = Map.Pixel_To_Coord(Get_Mouse_X(), Get_Mouse_Y());
@@ -1442,7 +1467,9 @@ void FootClass::Active_Click_With(ActionType action, CELL cell)
     case ACTION_NOMOVE:
         // using function for IsVisible so we have different results for different players - JAS 2019/09/30
         if (What_Am_I() != RTTI_AIRCRAFT || Map[cell].Is_Visible(PlayerPtr)) {
-            Player_Assign_Mission(MISSION_MOVE, TARGET_NONE, ::As_Target(cell));
+            Player_Assign_Mission(action == ACTION_ATTACKMOVE ? MISSION_ATTACKMOVE : MISSION_MOVE,
+                                  TARGET_NONE,
+                                  ::As_Target(cell));
         }
         break;
 
@@ -2381,4 +2408,260 @@ CELL& FootClass::Prior_Cell(void)
     }
     scratch = 0;
     return scratch;
+}
+
+/*
+**	CFE attack-move state. It lives outside the objects so that their layout, and with it the
+**	save version, stays the same.
+*/
+static CFEAttackMove _cfe_am_units[UNIT_MAX];
+static CFEAttackMove _cfe_am_infantry[INFANTRY_MAX];
+static CFEAttackMove _cfe_am_aircraft[AIRCRAFT_MAX];
+
+static CFEAttackMove* CFE_Attack_Move_Table(RTTIType rtti, int& count)
+{
+    switch (rtti) {
+    case RTTI_UNIT:
+        count = UNIT_MAX;
+        return (_cfe_am_units);
+    case RTTI_INFANTRY:
+        count = INFANTRY_MAX;
+        return (_cfe_am_infantry);
+    case RTTI_AIRCRAFT:
+        count = AIRCRAFT_MAX;
+        return (_cfe_am_aircraft);
+    default:
+        count = 0;
+        return (NULL);
+    }
+}
+
+/***********************************************************************************************
+ * FootClass::Attack_Move -- Fetches this object's attack-move state.                          *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Returns with a reference to the attack-move state.                                 *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+CFEAttackMove& FootClass::Attack_Move(void) const
+{
+    static CFEAttackMove _none;
+    int id = -1;
+    int count = 0;
+    CFEAttackMove* table = CFE_Attack_Move_Table(What_Am_I(), count);
+    switch (What_Am_I()) {
+    case RTTI_UNIT:
+        id = Units.ID((UnitClass const*)this);
+        break;
+    case RTTI_INFANTRY:
+        id = Infantry.ID((InfantryClass const*)this);
+        break;
+    case RTTI_AIRCRAFT:
+        id = Aircraft.ID((AircraftClass const*)this);
+        break;
+    default:
+        break;
+    }
+    return ((id >= 0 && id < count) ? table[id] : _none);
+}
+
+/***********************************************************************************************
+ * FootClass::Reset_Attack_Move -- Ends any attack-move.                                       *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   Call from the constructor of the final class, since it needs What_Am_I().       *
+ *=============================================================================================*/
+void FootClass::Reset_Attack_Move(void)
+{
+    Attack_Move() = CFEAttackMove();
+}
+
+/***********************************************************************************************
+ * FootClass::Attack_Move_Enter_Move_Mode -- Heads for the attack-move destination again.      *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void FootClass::Attack_Move_Enter_Move_Mode(void)
+{
+    TARGET destination = Attack_Move().Destination;
+    if (!Target_Legal(destination)) {
+        Reset_Attack_Move();
+        Enter_Idle_Mode();
+        return;
+    }
+
+    Assign_Target(TARGET_NONE);
+    Assign_Mission(MISSION_MOVE);
+    Assign_Destination(destination);
+
+    if (What_Am_I() == RTTI_AIRCRAFT) {
+        if (((AircraftClass*)this)->Is_Mid_Flight()) {
+            Commence();
+        }
+    }
+}
+
+/***********************************************************************************************
+ * FootClass::Attack_Move_Enter_Attack_Mode -- Stops to fight the current target.              *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void FootClass::Attack_Move_Enter_Attack_Mode(void)
+{
+    Assign_Destination(TARGET_NONE);
+    Assign_Mission(MISSION_ATTACK);
+}
+
+/***********************************************************************************************
+ * FootClass::AI -- Handles the attack-move target scan.                                       *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void FootClass::AI(void)
+{
+    if (ActiveCFEPatchConfig.EnableAttackMove && Strength && Attack_Move().IsOn) {
+
+        /*
+        **	A target out of range gives way to a closer one. Not for aircraft: they would
+        **	constantly swap targets.
+        */
+        if (Target_Legal(TarCom) && What_Am_I() != RTTI_AIRCRAFT) {
+            TARGET oldtarget = TarCom;
+            if (Target_Something_Nearby(THREAT_RANGE) && TarCom != oldtarget) {
+                Attack_Move_Enter_Attack_Mode();
+            }
+        }
+
+        if (!Target_Legal(TarCom) && Target_Something_Nearby(THREAT_RANGE)) {
+            Attack_Move_Enter_Attack_Mode();
+        }
+
+        /*
+        **	Backstop in case some other mission took over.
+        */
+        TARGET destination = Attack_Move().Destination;
+        if (What_Am_I() != RTTI_AIRCRAFT && Mission != MISSION_MOVE && Mission != MISSION_ATTACK
+            && MissionQueue != MISSION_MOVE && MissionQueue != MISSION_ATTACK && Target_Legal(destination)
+            && Distance(destination) > 3 * CELL_LEPTON_W) {
+            Attack_Move_Enter_Move_Mode();
+        }
+    }
+
+    TechnoClass::AI();
+}
+
+/*
+**	Attack-move block at the end of the save file, after the veterancy one: a marker, the size of
+**	a record and the number of records, then the records. Older saves end before the marker.
+*/
+static const unsigned int _cfe_am_marker = 0x564D4143; // "CAMV"
+
+/***********************************************************************************************
+ * CFE_Save_Attack_Move -- Writes the attack-move block to the end of a save file.             *
+ *                                                                                             *
+ * INPUT:   file -- The save file.                                                             *
+ *                                                                                             *
+ * OUTPUT:  Was the block written?                                                             *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool CFE_Save_Attack_Move(FileClass& file)
+{
+    static RTTIType const _types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_AIRCRAFT};
+    int records = 0;
+
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFEAttackMove const* table = CFE_Attack_Move_Table(_types[t], count);
+        for (int id = 0; id < count; id++) {
+            if (table[id].IsOn) {
+                records++;
+            }
+        }
+    }
+
+    int size = sizeof(CFEAttackMove);
+    if (file.Write(&_cfe_am_marker, sizeof(_cfe_am_marker)) != sizeof(_cfe_am_marker)
+        || file.Write(&size, sizeof(size)) != sizeof(size) || file.Write(&records, sizeof(records)) != sizeof(records)) {
+        return (false);
+    }
+
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFEAttackMove const* table = CFE_Attack_Move_Table(_types[t], count);
+        int rtti = _types[t];
+        for (int id = 0; id < count; id++) {
+            if (table[id].IsOn) {
+                if (file.Write(&rtti, sizeof(rtti)) != sizeof(rtti) || file.Write(&id, sizeof(id)) != sizeof(id)
+                    || file.Write(&table[id], sizeof(CFEAttackMove)) != sizeof(CFEAttackMove)) {
+                    return (false);
+                }
+            }
+        }
+    }
+    return (true);
+}
+
+/***********************************************************************************************
+ * CFE_Load_Attack_Move -- Reads the attack-move block from the end of a save file.            *
+ *                                                                                             *
+ *    Clears all attack-moves first, so a save without the block loads with none.              *
+ *                                                                                             *
+ * INPUT:   file -- The save file, positioned after the veterancy block.                       *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void CFE_Load_Attack_Move(FileClass& file)
+{
+    static RTTIType const _types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_AIRCRAFT};
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFEAttackMove* table = CFE_Attack_Move_Table(_types[t], count);
+        for (int id = 0; id < count; id++) {
+            table[id] = CFEAttackMove();
+        }
+    }
+
+    unsigned int marker = 0;
+    int size = 0;
+    int records = 0;
+    if (!ActiveCFEPatchConfig.EnableAttackMove || file.Read(&marker, sizeof(marker)) != sizeof(marker)
+        || marker != _cfe_am_marker || file.Read(&size, sizeof(size)) != sizeof(size) || size != sizeof(CFEAttackMove)
+        || file.Read(&records, sizeof(records)) != sizeof(records)) {
+        return;
+    }
+
+    for (int i = 0; i < records; i++) {
+        int rtti;
+        int id;
+        CFEAttackMove record;
+        if (file.Read(&rtti, sizeof(rtti)) != sizeof(rtti) || file.Read(&id, sizeof(id)) != sizeof(id)
+            || file.Read(&record, sizeof(record)) != sizeof(record)) {
+            return;
+        }
+        int count;
+        CFEAttackMove* table = CFE_Attack_Move_Table((RTTIType)rtti, count);
+        if (table && id >= 0 && id < count) {
+            table[id] = record;
+        }
+    }
 }

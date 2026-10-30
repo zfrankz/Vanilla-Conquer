@@ -326,6 +326,18 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      reached 2100 frames, exit 0. Difference kept on purpose: with `AI_VS_WALLS` off CFE skips the terrain check
      for AI units with wall-destroying weapons; here off stays vanilla (`MOVE_NO`).
 7. Bucket D: attack-move, rally points, Q-move
+   - Split: 7a `ATTACK_MOVE`, 7b `RALLY_POINTS`, 7c `Q_MOVE`.
+   - 7a `ATTACK_MOVE`: Shift+click on the ground (Alt+Shift over an object) moves armed units, which stop to fight
+     what comes into range and then carry on. Infantry and vehicles end at the destination, helicopters go home;
+     Stop or any other order ends it. Aircraft with no ammo go home (`SMARTER_AIRCRAFT` also checks before leaving).
+   - Differences from CFE: state lives in side tables (`FootClass::Attack_Move`) saved in a block after the veterancy
+     one, so class sizes and older saves are unchanged. Multiplayer isn't handled (Phase 5).
+   - Verified: builds, no new warning types. Instrumented runs (temporary code, removed) on save 2, orders through the
+     real event queue, enemies asleep, test unit made tough, targets killed by the harness. Medium tank, plain move:
+     keeps driving; attack-move: stops, fights each target in range, reaches the destination, `on=0`, guard. Minigunner:
+     same. Orca: fights, reaches the destination, `on=0`, flies home. Stop and a new plain move end it. Saved mid-way
+     to slot 50 and loaded: state restored, finishes at the destination. Save 1 (no block) loads.
+     Not verified: Shift on the real keyboard, the cursor, radar clicks, group orders, real play, AI interactions.
 8. Balance patch, JD's adjustments
 
 VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be

@@ -173,6 +173,10 @@ public:
     */
     virtual void AI(void);
     virtual void Enter_Idle_Mode(bool initial = false);
+    bool Is_Mid_Flight(void) const
+    {
+        return (!IsLanding && !IsTakingOff);
+    }
     virtual RadioMessageType Receive_Message(RadioClass* from, RadioMessageType message, int& param);
     virtual void Scatter(COORDINATE threat, bool forced = false, bool nokidding = false);
     void Set_Reinforcement_Delay(int delay);

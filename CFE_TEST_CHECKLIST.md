@@ -213,3 +213,14 @@ Add under `[SETTINGS]`: `WALL_BUILD_LENGTH=5`, and `WALLS_HAVE_FULL_COST=0` for 
 | 2c. Tiberium and visceroids | Pass (user, 2026-10-29) | Same |
 | Save/load, including a save from before the features | Pass (user, 2026-10-29) | Same |
 | 3. Fixes off | Pass (user, 2026-10-29) | Same |
+
+## 2o. Attack-move (`ATTACK_MOVE=1` under `[FEATURES]`)
+
+Any mission or skirmish with a mixed group.
+- Select armed units and Shift+click the ground past some enemies: they stop to fight, then carry on to the spot.
+- Same with a plain click: they ignore enemies on the way, as usual.
+- Same on the radar map.
+- Press Stop (S) mid-way, or give a plain order: the attack-move ends.
+- Helicopters: Shift+click: they attack on the way, then go home. With `SMARTER_AIRCRAFT=1` and no ammo, they don't leave.
+- Save mid-way, load: units carry on.
+- With the switch off, Shift+click is a forced move, as in the original game.

@@ -3305,6 +3305,10 @@ ActionType BuildingClass::What_Action(ObjectClass* object) const
     Validate();
     ActionType action = TechnoClass::What_Action(object);
 
+    if (action == ACTION_ATTACKMOVE) {
+        action = ACTION_MOVE;
+    }
+
     if (action == ACTION_SELF) {
         if (Class->IsFactory && PlayerPtr == House) {
             switch (Class->ToBuild) {
@@ -3377,6 +3381,10 @@ ActionType BuildingClass::What_Action(CELL cell) const
 {
     Validate();
     ActionType action = TechnoClass::What_Action(cell);
+
+    if (action == ACTION_ATTACKMOVE) {
+        action = ACTION_MOVE;
+    }
 
     if (action == ACTION_MOVE && (*this != STRUCT_CONST || !Special.IsMCVDeploy)) {
         action = ACTION_NONE;

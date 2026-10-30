@@ -586,7 +586,22 @@ void EventClass::Execute(void)
                     object->Clicked_As_Target((HousesType)ID);
                 }
             }
-            techno->Assign_Mission(Data.MegaMission.Mission);
+            if (ActiveCFEPatchConfig.EnableAttackMove && Data.MegaMission.Mission == MISSION_ATTACKMOVE) {
+                techno->Assign_Mission(MISSION_MOVE);
+                if (techno->What_Am_I() == RTTI_INFANTRY || techno->What_Am_I() == RTTI_UNIT
+                    || techno->What_Am_I() == RTTI_AIRCRAFT) {
+                    CFEAttackMove& attackmove = ((FootClass*)techno)->Attack_Move();
+                    attackmove.IsOn = true;
+                    attackmove.Destination = Data.MegaMission.Destination;
+                }
+            } else {
+                techno->Assign_Mission(Data.MegaMission.Mission);
+                if (ActiveCFEPatchConfig.EnableAttackMove
+                    && (techno->What_Am_I() == RTTI_INFANTRY || techno->What_Am_I() == RTTI_UNIT
+                        || techno->What_Am_I() == RTTI_AIRCRAFT)) {
+                    ((FootClass*)techno)->Reset_Attack_Move();
+                }
+            }
 
             /*
             **	Guard area mode is handled with care. The specified target is actually
@@ -625,6 +640,11 @@ void EventClass::Execute(void)
     */
     case IDLE:
         techno = As_Techno(Data.Target.Whom);
+        if (techno && techno->IsActive && !techno->IsInLimbo && ActiveCFEPatchConfig.EnableAttackMove
+            && (techno->What_Am_I() == RTTI_INFANTRY || techno->What_Am_I() == RTTI_UNIT
+                || techno->What_Am_I() == RTTI_AIRCRAFT)) {
+            ((FootClass*)techno)->Reset_Attack_Move();
+        }
         if (techno && techno->IsActive && !techno->IsInLimbo && !techno->IsTethered) {
             techno->Assign_Destination(TARGET_NONE);
             techno->Assign_Target(TARGET_NONE);

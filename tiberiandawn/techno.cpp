@@ -3007,6 +3007,9 @@ ActionType TechnoClass::What_Action(ObjectClass* object) const
             // Changed for multiplayer. ST - 3/13/2019 5:52PM
             if (Is_Owned_By_Player() && Can_Player_Move()) {
                 // if (IsOwnedByPlayer && Can_Player_Move()) {
+                if (ActiveCFEPatchConfig.EnableAttackMove && Techno_Type_Class()->Primary != WEAPON_NONE && shiftdown) {
+                    return (ACTION_ATTACKMOVE);
+                }
                 return (ACTION_MOVE);
             }
         }
@@ -3149,6 +3152,9 @@ ActionType TechnoClass::What_Action(CELL cell) const
         **	Special override to force a move regardless of what is occupying the location.
         */
         if (shiftdown) {
+            if (ActiveCFEPatchConfig.EnableAttackMove && Techno_Type_Class()->Primary != WEAPON_NONE) {
+                return (ACTION_ATTACKMOVE);
+            }
             return (ACTION_MOVE);
         }
 

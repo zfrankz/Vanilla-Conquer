@@ -1276,6 +1276,7 @@ UnitClass::UnitClass(UnitType classid, HousesType house)
     House->Tracking_Add(this);
 #endif // USE_RA_AI
     Reset_Veterancy();
+    Reset_Attack_Move();
 }
 
 /***********************************************************************************************
@@ -4265,6 +4266,15 @@ ActionType UnitClass::What_Action(ObjectClass* object) const
         } else {
             action = ACTION_SELECT;
         }
+    }
+
+    /*
+    **	CFE: attack-move to the cells this level makes movable, such as for crushing.
+    */
+    if (ActiveCFEPatchConfig.EnableAttackMove && action == ACTION_MOVE && Is_Owned_By_Player()
+        && Class->Primary != WEAPON_NONE
+        && (Keyboard->Down(Options.KeySelect1) || Keyboard->Down(Options.KeySelect2))) {
+        action = ACTION_ATTACKMOVE;
     }
 
     /*

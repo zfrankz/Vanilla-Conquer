@@ -3730,6 +3730,7 @@ void DisplayClass::Mouse_Left_Up(bool shadow, ObjectClass* object, ActionType ac
             Set_Default_Mouse(MOUSE_AIR_STRIKE, wwsmall);
             break;
 
+        case ACTION_ATTACKMOVE:
         case ACTION_NOMOVE:
             if (CurrentObject.Count()) {
                 MouseType mouse_type = MOUSE_NO_MOVE;
@@ -3760,6 +3761,7 @@ void DisplayClass::Mouse_Left_Up(bool shadow, ObjectClass* object, ActionType ac
             Set_Default_Mouse(MOUSE_CAN_SELECT, wwsmall);
             break;
 
+        case ACTION_ATTACKMOVE:
         case ACTION_MOVE:
             Set_Default_Mouse(MOUSE_CAN_MOVE, wwsmall);
             break;
@@ -4491,7 +4493,7 @@ COORDINATE DisplayClass::Center_Map(COORDINATE center)
 }
 
 static ActionType _priority_actions[] =
-    {ACTION_ATTACK, ACTION_ENTER, ACTION_REPAIR, ACTION_SABOTAGE, ACTION_CAPTURE, ACTION_MOVE};
+    {ACTION_ATTACK, ACTION_ENTER, ACTION_REPAIR, ACTION_SABOTAGE, ACTION_CAPTURE, ACTION_MOVE, ACTION_ATTACKMOVE};
 
 static int get_action_priority(ActionType action)
 {

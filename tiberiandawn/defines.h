@@ -512,6 +512,7 @@ typedef enum MissionType : signed char
     MISSION_REPAIR,         // Repair process mission.
     MISSION_RESCUE,
     MISSION_MISSILE,
+    MISSION_ATTACKMOVE, // CFE: travels in the event queue, becomes MISSION_MOVE on arrival.
 
     MISSION_COUNT,
     MISSION_FIRST = 0
@@ -566,6 +567,7 @@ typedef enum ActionType : unsigned char
     ACTION_GUARD_AREA,     // Guard the area/object clicked on.
     ACTION_TOGGLE_PRIMARY, // Toggle the primary status of the factory.
     ACTION_NO_DEPLOY,
+    ACTION_ATTACKMOVE, // CFE: move, but stop and fight whatever comes into range.
 
     ACTION_COUNT
 } ActionType;

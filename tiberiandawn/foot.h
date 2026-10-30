@@ -62,6 +62,24 @@ struct CellBlockerPair
 */
 #define AI_COMMANDO_CROSSOVER_DIST (8 * CELL_LEPTON_W)
 
+/*
+**	CFE attack-move state of one foot object; see FootClass::Attack_Move.
+*/
+struct CFEAttackMove
+{
+    bool IsOn;
+    TARGET Destination;
+
+    CFEAttackMove()
+        : IsOn(false)
+        , Destination(TARGET_NONE)
+    {
+    }
+};
+
+bool CFE_Save_Attack_Move(FileClass& file);
+void CFE_Load_Attack_Move(FileClass& file);
+
 class FootClass : public TechnoClass
 {
 public:
@@ -309,6 +327,15 @@ public:
     **	CFE Patch Redux A* pathing.
     */
     virtual BuildingClass* Find_Docking_Bay(StructType b, bool friendly) const;
+
+    /*
+    **	CFE attack-move.
+    */
+    virtual void AI(void);
+    CFEAttackMove& Attack_Move(void) const;
+    void Reset_Attack_Move(void);
+    void Attack_Move_Enter_Move_Mode(void);
+    void Attack_Move_Enter_Attack_Mode(void);
 
     /*
     **	CFE smarter AI commandos.

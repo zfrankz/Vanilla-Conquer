@@ -276,6 +276,7 @@ InfantryClass::InfantryClass(InfantryType classid, HousesType house)
 
     StopDriverFrame = -1;
     Reset_Veterancy();
+    Reset_Attack_Move();
 }
 
 /***********************************************************************************************
@@ -2226,6 +2227,20 @@ void InfantryClass::Enter_Idle_Mode(bool)
                 }
 #endif
             }
+        }
+    }
+    if (order == MISSION_GUARD && Attack_Move().IsOn) {
+
+        /*
+        **	CFE: infantry ends a move through here rather than through Mission_Move.
+        */
+        TARGET destination = Attack_Move().Destination;
+        if (!Target_Legal(destination) || Distance(destination) <= 3 * CELL_LEPTON_W
+            || !Find_Path_AStar(nullptr, Coord_Cell(Coord), As_Cell(destination), 1, MOVE_MOVING_BLOCK, -1)) {
+            Reset_Attack_Move();
+        } else {
+            Attack_Move_Enter_Move_Mode();
+            return;
         }
     }
     Assign_Mission(order);

@@ -1438,6 +1438,7 @@ int RadarClass::TacticalClass::Action(unsigned flags, KeyNumType& key)
                 ** anything.
                 */
                 switch (action) {
+                case ACTION_ATTACKMOVE:
                 case ACTION_MOVE:
                 case ACTION_NOMOVE:
                 case ACTION_ATTACK:

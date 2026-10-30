@@ -259,7 +259,7 @@ bool Save_Game(const char* file_name, const char* descr)
     /*
     **	CFE veterancy, appended so that older saves stay loadable.
     */
-    if (!CFE_Save_Veterancy(file)) {
+    if (!CFE_Save_Veterancy(file) || !CFE_Save_Attack_Move(file)) {
         file.Close();
         Decode_All_Pointers();
         return (false);
@@ -495,6 +495,7 @@ bool Load_Game(const char* file_name)
     }
 
     CFE_Load_Veterancy(file);
+    CFE_Load_Attack_Move(file);
 
     file.Close();
     Decode_All_Pointers();

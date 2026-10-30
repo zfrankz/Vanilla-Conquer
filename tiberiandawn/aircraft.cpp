@@ -251,6 +251,7 @@ AircraftClass::AircraftClass(AircraftType classid, HousesType house)
     House->Tracking_Add(this);
 #endif
     Reset_Veterancy();
+    Reset_Attack_Move();
 }
 
 /***********************************************************************************************
@@ -1760,7 +1761,10 @@ int AircraftClass::Mission_Move(void)
     **	Double check and change LZ if necessary.
     */
     case VALIDATE_LZ:
-        if (!Target_Legal(NavCom)) {
+        if (Attack_Move().IsOn && ActiveCFEPatchConfig.EnableSmarterAircraft && !IsALoaner && !Ammo) {
+            Reset_Attack_Move();
+            Enter_Idle_Mode();
+        } else if (!Target_Legal(NavCom)) {
             Enter_Idle_Mode();
         } else {
             if (!Is_LZ_Clear(NavCom) || !Cell_Seems_Ok(As_Cell(NavCom))) {
@@ -1801,6 +1805,17 @@ int AircraftClass::Mission_Move(void)
             int distance = Process_Fly_To(true);
 
             if (distance < 0x0080) {
+
+                /*
+                **	CFE: helicopters go home at the end of an attack-move instead of landing.
+                */
+                if (Attack_Move().IsOn) {
+                    Assign_Target(TARGET_NONE);
+                    Assign_Destination(TARGET_NONE);
+                    Reset_Attack_Move();
+                    Enter_Idle_Mode();
+                    return (1);
+                }
                 if (Target_Legal(TarCom)) {
                     SecondaryFacing.Set_Desired(Direction(TarCom));
                 } else {
@@ -1860,6 +1875,18 @@ int AircraftClass::Mission_Move(void)
 void AircraftClass::Enter_Idle_Mode(bool)
 {
     Validate();
+
+    /*
+    **	CFE: an attack-move carries on while there is ammo left.
+    */
+    if (Attack_Move().IsOn) {
+        if (Ammo) {
+            Attack_Move_Enter_Move_Mode();
+            return;
+        }
+        Reset_Attack_Move();
+    }
+
     MissionType mission = MISSION_GUARD;
     if (In_Which_Layer() == LAYER_GROUND) {
         if (IsALoaner) {
@@ -2224,7 +2251,8 @@ ActionType AircraftClass::What_Action(CELL cell) const
     ActionType action = FootClass::What_Action(cell);
 
     // using function for IsVisible so we have different results for different players - JAS 2019/09/30
-    if ((action == ACTION_MOVE || action == ACTION_ATTACK) && !Map[cell].Is_Visible(PlayerPtr)) {
+    if ((action == ACTION_MOVE || action == ACTION_ATTACK || action == ACTION_ATTACKMOVE)
+        && !Map[cell].Is_Visible(PlayerPtr)) {
         action = ACTION_NOMOVE;
     }
 
