@@ -570,7 +570,11 @@ int FootClass::Mission_Move(void)
             TARGET destination = Attack_Move().Destination;
             if (!Target_Legal(destination) || Distance(destination) <= 3 * CELL_LEPTON_W
                 || !Find_Path_AStar(nullptr, Coord_Cell(Coord), As_Cell(destination), 1, MOVE_MOVING_BLOCK, -1)) {
-                Reset_Attack_Move();
+                if (Has_Nav_Queue()) {
+                    Enter_Idle_Mode();
+                } else {
+                    Reset_Attack_Move();
+                }
             } else {
                 Attack_Move_Enter_Move_Mode();
             }
@@ -1827,6 +1831,15 @@ z * FootClass::Assign_Destination -- Assigns specified destination to NavCom.   
 void FootClass::Assign_Destination(TARGET target)
 {
     NavCom = target;
+
+    if (ActiveCFEPatchConfig.EnableQMove) {
+        CFENavQueue& queue = Nav_Queue();
+        if (queue.JustModifiedNavCom) {
+            queue.JustModifiedNavCom = false;
+        } else {
+            queue.UnmodifiedNavCom = target;
+        }
+    }
 }
 
 /***********************************************************************************************
@@ -2056,6 +2069,42 @@ TARGET FootClass::Greatest_Threat(ThreatType method) const
 void FootClass::Detach(TARGET target, bool all)
 {
     TechnoClass::Detach(target, all);
+
+    /*
+    **	CFE: remove the target from the navigation lists as well.
+    */
+    if (ActiveCFEPatchConfig.EnableQMove) {
+        CFENavQueue& queue = Nav_Queue();
+        bool removed = false;
+        bool removedmemorized = false;
+        for (int index = MAX_NAVQUEUE_INDEX; index >= 0; index--) {
+            if (queue.Queue[index] == target) {
+                removed = true;
+                memmove(&queue.Queue[index], &queue.Queue[index + 1], (MAX_NAVQUEUE_INDEX - index) * sizeof(TARGET));
+                queue.Queue[MAX_NAVQUEUE_INDEX] = TARGET_NONE;
+                if (index > 0 && index <= queue.Index) {
+                    queue.Index--;
+                }
+                queue.Size--;
+            }
+            if (queue.Memorized[index] == target) {
+                removedmemorized = true;
+                memmove(
+                    &queue.Memorized[index], &queue.Memorized[index + 1], (MAX_NAVQUEUE_INDEX - index) * sizeof(TARGET));
+                queue.Memorized[MAX_NAVQUEUE_INDEX] = TARGET_NONE;
+                queue.MemorizedSize--;
+            }
+        }
+        if (removed && queue.Size == 0) {
+            Clear_Navigation_List();
+        }
+        if (removedmemorized && queue.MemorizedSize == 0) {
+            Clear_Memorized_Navigation_List();
+        }
+        if (queue.UnmodifiedNavCom == target) {
+            queue.UnmodifiedNavCom = TARGET_NONE;
+        }
+    }
 
     if (!SpecialFlag) {
         if (ArchiveTarget == target) {
@@ -2661,6 +2710,436 @@ void CFE_Load_Attack_Move(FileClass& file)
         int count;
         CFEAttackMove* table = CFE_Attack_Move_Table((RTTIType)rtti, count);
         if (ActiveCFEPatchConfig.EnableAttackMove && table && id >= 0 && id < count) {
+            table[id] = record;
+        }
+    }
+}
+
+/*
+**	CFE Q-move state. As with attack-move, it lives outside the objects.
+*/
+static CFENavQueue _cfe_nav_units[UNIT_MAX];
+static CFENavQueue _cfe_nav_infantry[INFANTRY_MAX];
+static CFENavQueue _cfe_nav_aircraft[AIRCRAFT_MAX];
+
+static CFENavQueue* CFE_Nav_Queue_Table(RTTIType rtti, int& count)
+{
+    switch (rtti) {
+    case RTTI_UNIT:
+        count = UNIT_MAX;
+        return (_cfe_nav_units);
+    case RTTI_INFANTRY:
+        count = INFANTRY_MAX;
+        return (_cfe_nav_infantry);
+    case RTTI_AIRCRAFT:
+        count = AIRCRAFT_MAX;
+        return (_cfe_nav_aircraft);
+    default:
+        count = 0;
+        return (NULL);
+    }
+}
+
+/***********************************************************************************************
+ * FootClass::Nav_Queue -- Fetches this object's navigation queue.                             *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Returns with a reference to the navigation queue.                                  *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+CFENavQueue& FootClass::Nav_Queue(void) const
+{
+    static CFENavQueue _none;
+    int id = -1;
+    int count = 0;
+    CFENavQueue* table = CFE_Nav_Queue_Table(What_Am_I(), count);
+    switch (What_Am_I()) {
+    case RTTI_UNIT:
+        id = Units.ID((UnitClass const*)this);
+        break;
+    case RTTI_INFANTRY:
+        id = Infantry.ID((InfantryClass const*)this);
+        break;
+    case RTTI_AIRCRAFT:
+        id = Aircraft.ID((AircraftClass const*)this);
+        break;
+    default:
+        break;
+    }
+    return ((id >= 0 && id < count) ? table[id] : _none);
+}
+
+/***********************************************************************************************
+ * FootClass::Has_Nav_Queue -- Are there waypoints in the navigation queue?                    *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Is there anything queued?                                                          *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool FootClass::Has_Nav_Queue(void) const
+{
+    return (Nav_Queue().Size > 0);
+}
+
+/***********************************************************************************************
+ * FootClass::Handle_Navigation_List -- Moves on to the next waypoint.                         *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Was a new destination assigned?                                                    *
+ *                                                                                             *
+ * WARNINGS:   This routine might end up assigning a movement destination.                     *
+ *=============================================================================================*/
+bool FootClass::Handle_Navigation_List(void)
+{
+    CFENavQueue& queue = Nav_Queue();
+
+    if (Target_Legal(NavCom)) {
+        return (false);
+    }
+
+    if (queue.Size == 0) {
+        queue.IsLoop = false;
+        return (false);
+    }
+
+    /*
+    **	Don't skip ahead while an attack-move hasn't reached its current waypoint.
+    */
+    CFEAttackMove const& attackmove = Attack_Move();
+    if (attackmove.IsOn && Target_Legal(attackmove.Destination)
+        && Distance(attackmove.Destination) > 3 * CELL_LEPTON_W
+        && (What_Am_I() == RTTI_AIRCRAFT
+            || Find_Path_AStar(nullptr, Coord_Cell(Coord), As_Cell(attackmove.Destination), 1, MOVE_MOVING_BLOCK, -1)
+                   != 0)) {
+        return (false);
+    }
+
+    /*
+    **	Dequeue until there is a good destination, or everything was tried.
+    */
+    bool consumed = false;
+    int failcount = 0;
+    while (true) {
+        TARGET target = queue.Queue[queue.Index];
+        queue.Index++;
+        if (queue.Index >= queue.Size || queue.Index > MAX_NAVQUEUE_INDEX) {
+            if (queue.IsLoop) {
+                queue.Index = 0;
+            } else {
+                Clear_Navigation_List();
+                consumed = true;
+            }
+        }
+        if (Target_Legal(target)) {
+            bool isgood = false;
+            if (What_Am_I() == RTTI_AIRCRAFT) {
+                COORDINATE coord = Is_Target_Building(target) ? As_Building(target)->Docking_Coord() : As_Coord(target);
+                isgood = Distance(coord) > 3 * CELL_LEPTON_W;
+            } else {
+                isgood = As_Cell(target) != Coord_Cell(Coord)
+                         && (Distance(target) > 3 * CELL_LEPTON_W || Can_Enter_Cell(As_Cell(target)) == MOVE_OK);
+            }
+            if (isgood) {
+                Assign_Destination(target);
+                if (attackmove.IsOn) {
+                    Attack_Move().Destination = target;
+                }
+                return (true);
+            }
+        }
+        failcount++;
+        if (consumed || failcount >= queue.Size || failcount > MAX_NAVQUEUE_INDEX) {
+            Clear_Navigation_List();
+            Assign_Destination(TARGET_NONE);
+            return (false);
+        }
+    }
+}
+
+/***********************************************************************************************
+ * FootClass::Queue_Navigation_List -- Adds a waypoint to the navigation list.                 *
+ *                                                                                             *
+ *    A click on the current destination or on a waypoint makes the list a loop. A full list   *
+ *    drops its oldest waypoint.                                                               *
+ *                                                                                             *
+ * INPUT:   target   -- The waypoint to add.                                                   *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   An idle object starts on the waypoint at once.                                  *
+ *=============================================================================================*/
+void FootClass::Queue_Navigation_List(TARGET target)
+{
+    if (!Target_Legal(target)) {
+        return;
+    }
+
+    CFENavQueue& queue = Nav_Queue();
+
+    /*
+    **	Shuffle out the expired entries.
+    */
+    if (!queue.IsLoop && queue.Index > 0) {
+        memmove(&queue.Queue[0], &queue.Queue[queue.Index], sizeof(TARGET) * (MAX_NAVQUEUE - queue.Index));
+        for (int index = 0; index < queue.Index; index++) {
+            queue.Queue[MAX_NAVQUEUE_INDEX - index] = TARGET_NONE;
+        }
+        queue.Size -= queue.Index;
+        queue.Index = 0;
+    }
+
+    /*
+    **	In the attack phase of an attack-move, NavCom isn't the real destination.
+    */
+    CFEAttackMove const& attackmove = Attack_Move();
+    TARGET current = (attackmove.IsOn && Target_Legal(TarCom) && Target_Legal(attackmove.Destination))
+                         ? attackmove.Destination
+                         : NavCom;
+
+    bool isloop = (target == current || target == queue.UnmodifiedNavCom);
+    if (!isloop) {
+        CELL cell = As_Cell(target);
+        for (int index = 0; index < queue.Size; index++) {
+            if (cell == As_Cell(queue.Queue[index])) {
+                isloop = true;
+                break;
+            }
+        }
+    }
+
+    if (isloop) {
+
+        /*
+        **	The current destination goes to the front, so that later waypoints come just before it.
+        */
+        if (!queue.IsLoop && Target_Legal(current) && queue.Size < MAX_NAVQUEUE) {
+            if (queue.Size > 0) {
+                memmove(&queue.Queue[1], &queue.Queue[0], sizeof(queue.Queue) - sizeof(TARGET));
+                queue.Index++;
+            }
+            queue.Queue[0] = current;
+            queue.Size++;
+        }
+        if (queue.Size > 0) {
+            queue.IsLoop = true;
+        }
+    } else {
+        if (queue.IsLoop && queue.Size == 0) {
+            queue.IsLoop = false;
+        }
+        if (queue.Size < MAX_NAVQUEUE) {
+            if (queue.IsLoop && queue.Size == 1 && queue.Queue[0] == current) {
+                queue.Index++;
+            }
+            queue.Queue[queue.Size] = target;
+            queue.Size++;
+        } else {
+            memmove(&queue.Queue[0], &queue.Queue[1], sizeof(queue.Queue) - sizeof(TARGET));
+            if (queue.Index > 0) {
+                queue.Index--;
+            }
+            queue.Queue[MAX_NAVQUEUE_INDEX] = target;
+        }
+    }
+
+    if (!Target_Legal(NavCom) && Mission == MISSION_GUARD) {
+        Enter_Idle_Mode();
+    }
+}
+
+/***********************************************************************************************
+ * FootClass::Clear_Navigation_List -- Clears out the navigation queue.                        *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   The object still travels to its current immediate destination.                 *
+ *=============================================================================================*/
+void FootClass::Clear_Navigation_List(void)
+{
+    CFENavQueue& queue = Nav_Queue();
+    for (int index = 0; index < MAX_NAVQUEUE; index++) {
+        queue.Queue[index] = TARGET_NONE;
+    }
+    queue.IsLoop = false;
+    queue.UnmodifiedNavCom = TARGET_NONE;
+    queue.Index = 0;
+    queue.Size = 0;
+}
+
+/***********************************************************************************************
+ * FootClass::Memorize_Navigation_List -- Saves an attack-move loop for after a reload.        *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   Does nothing unless this is an attack-move loop.                                *
+ *=============================================================================================*/
+void FootClass::Memorize_Navigation_List(void)
+{
+    CFENavQueue& queue = Nav_Queue();
+    if (!Attack_Move().IsOn || !queue.IsLoop || queue.Size < 2 || !Target_Legal(queue.Queue[0])
+        || !Target_Legal(queue.Queue[1])) {
+        return;
+    }
+    memcpy(&queue.Memorized[0], &queue.Queue[0], sizeof(queue.Memorized));
+    queue.MemorizedSize = queue.Size;
+    queue.HasMemorized = true;
+}
+
+/***********************************************************************************************
+ * FootClass::Recall_Navigation_List -- Restarts a memorized attack-move loop.                 *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void FootClass::Recall_Navigation_List(void)
+{
+    CFENavQueue& queue = Nav_Queue();
+    if (!queue.HasMemorized || queue.MemorizedSize < 2) {
+        Clear_Memorized_Navigation_List();
+        return;
+    }
+
+    CFEAttackMove& attackmove = Attack_Move();
+    attackmove.IsOn = true;
+    attackmove.Destination = queue.Memorized[0];
+
+    queue.IsLoop = true;
+    memcpy(&queue.Queue[0], &queue.Memorized[0], sizeof(queue.Queue));
+    queue.Size = queue.MemorizedSize;
+    queue.Index = queue.Size > 1 ? 1 : 0;
+
+    Clear_Memorized_Navigation_List();
+
+    Assign_Target(TARGET_NONE);
+    Assign_Mission(MISSION_MOVE);
+    Assign_Destination(attackmove.Destination);
+}
+
+/***********************************************************************************************
+ * FootClass::Clear_Memorized_Navigation_List -- Forgets a memorized attack-move loop.         *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void FootClass::Clear_Memorized_Navigation_List(void)
+{
+    CFENavQueue& queue = Nav_Queue();
+    for (int index = 0; index < MAX_NAVQUEUE; index++) {
+        queue.Memorized[index] = TARGET_NONE;
+    }
+    queue.MemorizedSize = 0;
+    queue.HasMemorized = false;
+}
+
+/*
+**	Navigation queue block at the end of the save file, after the rally one: a marker, the size of
+**	a record and the number of records, then the records. Older saves end before the marker.
+*/
+static const unsigned int _cfe_nav_marker = 0x56414E43; // "CNAV"
+
+/***********************************************************************************************
+ * CFE_Save_Nav_Queues -- Writes the navigation queue block to the end of a save file.         *
+ *                                                                                             *
+ * INPUT:   file -- The save file.                                                             *
+ *                                                                                             *
+ * OUTPUT:  Was the block written?                                                             *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool CFE_Save_Nav_Queues(FileClass& file)
+{
+    static RTTIType const _types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_AIRCRAFT};
+    int records = 0;
+
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFENavQueue const* table = CFE_Nav_Queue_Table(_types[t], count);
+        for (int id = 0; id < count; id++) {
+            if (table[id].Size || table[id].HasMemorized) {
+                records++;
+            }
+        }
+    }
+
+    int size = sizeof(CFENavQueue);
+    if (file.Write(&_cfe_nav_marker, sizeof(_cfe_nav_marker)) != sizeof(_cfe_nav_marker)
+        || file.Write(&size, sizeof(size)) != sizeof(size) || file.Write(&records, sizeof(records)) != sizeof(records)) {
+        return (false);
+    }
+
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFENavQueue const* table = CFE_Nav_Queue_Table(_types[t], count);
+        int rtti = _types[t];
+        for (int id = 0; id < count; id++) {
+            if (table[id].Size || table[id].HasMemorized) {
+                if (file.Write(&rtti, sizeof(rtti)) != sizeof(rtti) || file.Write(&id, sizeof(id)) != sizeof(id)
+                    || file.Write(&table[id], sizeof(CFENavQueue)) != sizeof(CFENavQueue)) {
+                    return (false);
+                }
+            }
+        }
+    }
+    return (true);
+}
+
+/***********************************************************************************************
+ * CFE_Load_Nav_Queues -- Reads the navigation queue block from the end of a save file.        *
+ *                                                                                             *
+ *    Clears all queues first, so a save without the block loads with none.                    *
+ *                                                                                             *
+ * INPUT:   file -- The save file, positioned after the rally block.                           *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void CFE_Load_Nav_Queues(FileClass& file)
+{
+    static RTTIType const _types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_AIRCRAFT};
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFENavQueue* table = CFE_Nav_Queue_Table(_types[t], count);
+        for (int id = 0; id < count; id++) {
+            table[id] = CFENavQueue();
+        }
+    }
+
+    unsigned int marker = 0;
+    int size = 0;
+    int records = 0;
+    if (file.Read(&marker, sizeof(marker)) != sizeof(marker) || marker != _cfe_nav_marker
+        || file.Read(&size, sizeof(size)) != sizeof(size) || size != sizeof(CFENavQueue)
+        || file.Read(&records, sizeof(records)) != sizeof(records)) {
+        return;
+    }
+
+    for (int i = 0; i < records; i++) {
+        int rtti;
+        int id;
+        CFENavQueue record;
+        if (file.Read(&rtti, sizeof(rtti)) != sizeof(rtti) || file.Read(&id, sizeof(id)) != sizeof(id)
+            || file.Read(&record, sizeof(record)) != sizeof(record)) {
+            return;
+        }
+        int count;
+        CFENavQueue* table = CFE_Nav_Queue_Table((RTTIType)rtti, count);
+        if (ActiveCFEPatchConfig.EnableQMove && table && id >= 0 && id < count) {
             table[id] = record;
         }
     }

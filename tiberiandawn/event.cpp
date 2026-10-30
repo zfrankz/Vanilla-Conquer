@@ -597,20 +597,43 @@ void EventClass::Execute(void)
                     object->Clicked_As_Target((HousesType)ID);
                 }
             }
-            if (ActiveCFEPatchConfig.EnableAttackMove && Data.MegaMission.Mission == MISSION_ATTACKMOVE) {
+            bool isfoot = techno->What_Am_I() == RTTI_INFANTRY || techno->What_Am_I() == RTTI_UNIT
+                          || techno->What_Am_I() == RTTI_AIRCRAFT;
+            FootClass* foot = isfoot ? (FootClass*)techno : NULL;
+            MissionType mission = Data.MegaMission.Mission;
+            bool queued = mission == MISSION_QMOVE || mission == MISSION_QATTACKMOVE;
+
+            if (ActiveCFEPatchConfig.EnableAttackMove
+                && (mission == MISSION_ATTACKMOVE || mission == MISSION_QATTACKMOVE)) {
                 techno->Assign_Mission(MISSION_MOVE);
-                if (techno->What_Am_I() == RTTI_INFANTRY || techno->What_Am_I() == RTTI_UNIT
-                    || techno->What_Am_I() == RTTI_AIRCRAFT) {
-                    CFEAttackMove& attackmove = ((FootClass*)techno)->Attack_Move();
+                if (isfoot) {
+                    CFEAttackMove& attackmove = foot->Attack_Move();
                     attackmove.IsOn = true;
-                    attackmove.Destination = Data.MegaMission.Destination;
+                    if (mission == MISSION_ATTACKMOVE) {
+                        attackmove.Destination = Data.MegaMission.Destination;
+                    } else if (!Target_Legal(attackmove.Destination)) {
+
+                        /*
+                        **	A queued attack-move keeps the current destination, if there is one.
+                        */
+                        attackmove.Destination =
+                            Target_Legal(foot->NavCom) ? foot->NavCom : Data.MegaMission.Destination;
+                    }
                 }
             } else {
-                techno->Assign_Mission(Data.MegaMission.Mission);
-                if (ActiveCFEPatchConfig.EnableAttackMove
-                    && (techno->What_Am_I() == RTTI_INFANTRY || techno->What_Am_I() == RTTI_UNIT
-                        || techno->What_Am_I() == RTTI_AIRCRAFT)) {
-                    ((FootClass*)techno)->Reset_Attack_Move();
+
+                /*
+                **	A plain waypoint in the attack phase of an attack-move goes back to the real
+                **	destination first.
+                */
+                if (isfoot && foot->Attack_Move().IsOn && techno->Mission == MISSION_ATTACK
+                    && Target_Legal(foot->NavCom) && mission == MISSION_QMOVE
+                    && Target_Legal(foot->Attack_Move().Destination)) {
+                    techno->Assign_Destination(foot->Attack_Move().Destination);
+                }
+                techno->Assign_Mission(mission);
+                if (ActiveCFEPatchConfig.EnableAttackMove && isfoot) {
+                    foot->Reset_Attack_Move();
                 }
             }
 
@@ -631,9 +654,18 @@ void EventClass::Execute(void)
                        && object->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)object) == STRUCT_REFINERY) {
                 techno->Transmit_Message(RADIO_HELLO, (BuildingClass*)object);
                 techno->Assign_Destination(TARGET_NONE);
+            } else if (queued && isfoot) {
+                foot->Queue_Navigation_List(Data.MegaMission.Destination);
             } else {
+                if (ActiveCFEPatchConfig.EnableQMove && isfoot) {
+                    foot->Clear_Navigation_List();
+                }
                 techno->Assign_Target(Data.MegaMission.Target);
                 techno->Assign_Destination(Data.MegaMission.Destination);
+            }
+
+            if (ActiveCFEPatchConfig.EnableQMove && isfoot) {
+                foot->Clear_Memorized_Navigation_List();
             }
 
 #ifdef NEVER
@@ -659,6 +691,12 @@ void EventClass::Execute(void)
         if (techno && techno->IsActive && !techno->IsInLimbo && !techno->IsTethered) {
             techno->Assign_Destination(TARGET_NONE);
             techno->Assign_Target(TARGET_NONE);
+            if (ActiveCFEPatchConfig.EnableQMove
+                && (techno->What_Am_I() == RTTI_INFANTRY || techno->What_Am_I() == RTTI_UNIT
+                    || techno->What_Am_I() == RTTI_AIRCRAFT)) {
+                ((FootClass*)techno)->Clear_Navigation_List();
+                ((FootClass*)techno)->Clear_Memorized_Navigation_List();
+            }
             techno->Enter_Idle_Mode();
         }
         if (techno && techno->What_Am_I() == RTTI_BUILDING && ((BuildingClass*)techno)->Can_Have_Rally_Point()) {

@@ -272,6 +272,7 @@ void MissionClass::AI(void)
             Timer = Mission_Capture();
             break;
 
+        case MISSION_QMOVE:
         case MISSION_MOVE:
             Timer = Mission_Move();
             break;
@@ -382,6 +383,9 @@ bool MissionClass::Commence(void)
  *=============================================================================================*/
 void MissionClass::Assign_Mission(MissionType order)
 {
+    if (order == MISSION_QMOVE)
+        order = MISSION_MOVE;
+
     if (order == MISSION_NONE || Mission == order)
         return;
 
@@ -499,5 +503,5 @@ bool MissionClass::Restore_Mission(void)
 char const* MissionClass::Missions[MISSION_COUNT] = {
     "Sleep",    "Attack",       "Move",    "Retreat", "Guard",  "Sticky",  "Enter",      "Capture",
     "Harvest",  "Area Guard",   "Return",  "Stop",    "Ambush", "Hunt",    "Timed Hunt", "Unload",
-    "Sabotage", "Construction", "Selling", "Repair",  "Rescue", "Missile", "Attack-Move",
+    "Sabotage", "Construction", "Selling", "Repair",  "Rescue", "Missile", "Attack-Move", "QMove", "Attack-QMove",
 };

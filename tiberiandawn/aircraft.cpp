@@ -252,6 +252,7 @@ AircraftClass::AircraftClass(AircraftType classid, HousesType house)
 #endif
     Reset_Veterancy();
     Reset_Attack_Move();
+    Nav_Queue() = CFENavQueue();
 }
 
 /***********************************************************************************************
@@ -734,6 +735,15 @@ void AircraftClass::AI(void)
                 Strength = MIN((int)Strength + Class->Repair_Step(), (int)Class_Of().MaxStrength);
             }
         }
+    }
+
+    /*
+    **	CFE: with the ammo back, restart a memorized attack-move loop.
+    */
+    if (Nav_Queue().HasMemorized && Class->Primary != WEAPON_NONE && Class->MaxAmmo > 0 && Ammo == Class->MaxAmmo
+        && Altitude == 0 && !IsLanding && !IsTakingOff
+        && (Vet().Rank < 3 || Strength >= Class_Of().MaxStrength)) {
+        Recall_Navigation_List();
     }
 
     /*
@@ -1766,7 +1776,9 @@ int AircraftClass::Mission_Move(void)
     */
     case VALIDATE_LZ:
         if (Attack_Move().IsOn && ActiveCFEPatchConfig.EnableSmarterAircraft && !IsALoaner && !Ammo) {
+            Memorize_Navigation_List();
             Reset_Attack_Move();
+            Clear_Navigation_List();
             Enter_Idle_Mode();
         } else if (!Target_Legal(NavCom)) {
             Enter_Idle_Mode();
@@ -1811,8 +1823,15 @@ int AircraftClass::Mission_Move(void)
             if (distance < 0x0080) {
 
                 /*
-                **	CFE: helicopters go home at the end of an attack-move instead of landing.
+                **	CFE: helicopters go on to the next waypoint, or go home at the end of an
+                **	attack-move instead of landing.
                 */
+                if (Has_Nav_Queue()) {
+                    Assign_Destination(TARGET_NONE);
+                    Assign_Target(TARGET_NONE);
+                    Enter_Idle_Mode();
+                    return (1);
+                }
                 if (Attack_Move().IsOn) {
                     Assign_Target(TARGET_NONE);
                     Assign_Destination(TARGET_NONE);
@@ -1881,6 +1900,17 @@ void AircraftClass::Enter_Idle_Mode(bool)
     Validate();
 
     /*
+    **	CFE: go on to the next waypoint. An attack-move without ammo doesn't.
+    */
+    if (!Target_Legal(NavCom) && (!Attack_Move().IsOn || Ammo) && Handle_Navigation_List()) {
+        Assign_Mission(MISSION_MOVE);
+        if (!IsLanding && !IsTakingOff) {
+            Commence();
+        }
+        return;
+    }
+
+    /*
     **	CFE: an attack-move carries on while there is ammo left.
     */
     if (Attack_Move().IsOn) {
@@ -1888,7 +1918,9 @@ void AircraftClass::Enter_Idle_Mode(bool)
             Attack_Move_Enter_Move_Mode();
             return;
         }
+        Memorize_Navigation_List();
         Reset_Attack_Move();
+        Clear_Navigation_List();
     }
 
     MissionType mission = MISSION_GUARD;
@@ -2189,7 +2221,7 @@ void AircraftClass::Player_Assign_Mission(MissionType mission, TARGET target, TA
             Response_Move();
         }
     }
-    Queue_Mission(As_Target(), mission, target, destination);
+    Queue_Mission(As_Target(), CFE_Queued_Mission(mission), target, destination);
 }
 
 /***********************************************************************************************
@@ -2563,6 +2595,16 @@ TARGET AircraftClass::New_LZ(TARGET oldlz, bool stable) const
                     TARGET newtarget = ::As_Target(newcell);
 
                     if (newcell != lastcell && Is_LZ_Clear(newtarget) && Cell_Seems_Ok(newcell)) {
+
+                        /*
+                        **	CFE: Q-move compares against the destination the player gave, and
+                        **	attack-move's distance checks must follow the new landing zone.
+                        */
+                        Nav_Queue().JustModifiedNavCom = true;
+                        Nav_Queue().UnmodifiedNavCom = oldlz;
+                        if (Attack_Move().Destination == oldlz) {
+                            Attack_Move().Destination = newtarget;
+                        }
                         return (newtarget);
                     }
                     lastcell = newcell;

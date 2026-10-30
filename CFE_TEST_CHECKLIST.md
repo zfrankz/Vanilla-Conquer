@@ -234,3 +234,13 @@ Any mission with a weapons factory and barracks.
 - Press Stop with the building selected: the point goes away.
 - Save, load: the point is still there.
 - Sell or lose the building, or have it captured: no stray line.
+
+## 2q. Q-move (`Q_MOVE=1` under `[FEATURES]`)
+
+Any mission with a few units; `ATTACK_MOVE=1` as well for the last items.
+- Select units, hold Q and click three spots: they go through them in order.
+- Hold Q and click the first spot again: they keep looping.
+- Press Stop, or give a plain click: the route is dropped.
+- Save with a route under way, load: they carry on.
+- Hold Q + Shift and click: same route, fighting on the way.
+- Helicopters on a Q + Shift loop: out of ammo they go home, reload and restart it.

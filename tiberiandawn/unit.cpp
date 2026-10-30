@@ -1277,6 +1277,7 @@ UnitClass::UnitClass(UnitType classid, HousesType house)
 #endif // USE_RA_AI
     Reset_Veterancy();
     Reset_Attack_Move();
+    Nav_Queue() = CFENavQueue();
 }
 
 /***********************************************************************************************
@@ -1370,6 +1371,11 @@ void UnitClass::Enter_Idle_Mode(bool initial)
     */
     if (Mission == MISSION_MOVE && !Target_Legal(NavCom)) {
         Transmit_Message(RADIO_OVER_OUT);
+    }
+
+    if (Handle_Navigation_List()) {
+        Assign_Mission(MISSION_MOVE);
+        return;
     }
 
     if (Class->Primary == WEAPON_NONE) {

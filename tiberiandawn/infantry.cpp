@@ -277,6 +277,7 @@ InfantryClass::InfantryClass(InfantryType classid, HousesType house)
     StopDriverFrame = -1;
     Reset_Veterancy();
     Reset_Attack_Move();
+    Nav_Queue() = CFENavQueue();
 }
 
 /***********************************************************************************************
@@ -2196,6 +2197,7 @@ void InfantryClass::Enter_Idle_Mode(bool)
     if (Target_Legal(TarCom)) {
         order = MISSION_ATTACK;
     } else {
+        Handle_Navigation_List();
         if (Target_Legal(NavCom)) {
             order = MISSION_MOVE;
         } else {

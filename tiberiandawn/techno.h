@@ -304,6 +304,7 @@ public:
     virtual void Record_The_Kill(TechnoClass* source);
     virtual bool Target_Something_Nearby(ThreatType threat = THREAT_NORMAL);
     bool Target_Something_Nearby_Hunt(ThreatType threat);
+    MissionType CFE_Queued_Mission(MissionType mission) const;
     TARGET Greatest_Threat_Wall(ThreatType method, bool adjacent) const;
     bool Evaluate_Cell_For_Wall(CELL cell) const;
     bool Verify_Attack_Walls(bool speedcheck) const;

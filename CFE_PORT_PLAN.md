@@ -348,6 +348,16 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      factory and barracks: the new jeep and rifleman reach the rally cell (`dist=0`, guard); off: the jeep stays by the
      factory; Stop clears it; saved and loaded, it still works. Not verified: real clicks, the line on screen, repair bay,
      helipad, hand of Nod, rally on an object, reinforcement by Chinook, capture, AI.
+   - 7c `Q_MOVE`: hold Q (`KeyQueueMove1/2`) and click to add waypoints, up to 10; a click on the current destination or a
+     waypoint makes a loop; a full list drops the oldest. With Shift the waypoints are attack-move. Stop or a plain
+     order clears the list. Helicopters on an attack-move loop go home when out of ammo and restart it once reloaded.
+   - Differences from CFE: Q is held while clicking, in place of the GlyphX toggle with its 45-frame timeout; state in side
+     tables, saved in a block after the rally one; `SkipNavQueueUpdate` left out (never set in CFE).
+   - Verified: builds. Instrumented runs (temporary code, removed) on save 2, `MISSION_QMOVE`/`MISSION_QATTACKMOVE` through
+     the real event queue: jeep visits 3 waypoints in order and the list empties; loop goes round for 900 frames; Stop and
+     a plain move clear the list; queued attack-move fights on the way (15 targets killed by the harness) and ends at the
+     last waypoint; saved with 2 waypoints left and loaded: it goes on. Not verified: the Q key, loops with helicopters,
+     the out-of-ammo restart, a full list, a waypoint on an object, real play, AI.
 8. Balance patch, JD's adjustments
 
 VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be

@@ -513,6 +513,8 @@ typedef enum MissionType : signed char
     MISSION_RESCUE,
     MISSION_MISSILE,
     MISSION_ATTACKMOVE, // CFE: travels in the event queue, becomes MISSION_MOVE on arrival.
+    MISSION_QMOVE,       // CFE: adds a waypoint; same as above.
+    MISSION_QATTACKMOVE, // CFE: adds an attack-move waypoint; same as above.
 
     MISSION_COUNT,
     MISSION_FIRST = 0

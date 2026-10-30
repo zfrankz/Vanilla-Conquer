@@ -65,6 +65,43 @@ struct CellBlockerPair
 /*
 **	CFE attack-move state of one foot object; see FootClass::Attack_Move.
 */
+#define MAX_NAVQUEUE 10
+#define MAX_NAVQUEUE_INDEX (MAX_NAVQUEUE - 1)
+
+/*
+**	CFE Q-move state of one foot object; see FootClass::Nav_Queue.
+*/
+struct CFENavQueue
+{
+    TARGET Queue[MAX_NAVQUEUE];
+    TARGET Memorized[MAX_NAVQUEUE];
+    TARGET UnmodifiedNavCom;
+    unsigned char Index;
+    unsigned char Size;
+    unsigned char MemorizedSize;
+    bool IsLoop;
+    bool HasMemorized;
+    bool JustModifiedNavCom;
+
+    CFENavQueue()
+        : UnmodifiedNavCom(TARGET_NONE)
+        , Index(0)
+        , Size(0)
+        , MemorizedSize(0)
+        , IsLoop(false)
+        , HasMemorized(false)
+        , JustModifiedNavCom(false)
+    {
+        for (int index = 0; index < MAX_NAVQUEUE; index++) {
+            Queue[index] = TARGET_NONE;
+            Memorized[index] = TARGET_NONE;
+        }
+    }
+};
+
+bool CFE_Save_Nav_Queues(FileClass& file);
+void CFE_Load_Nav_Queues(FileClass& file);
+
 struct CFEAttackMove
 {
     bool IsOn;
@@ -336,6 +373,18 @@ public:
     void Reset_Attack_Move(void);
     void Attack_Move_Enter_Move_Mode(void);
     void Attack_Move_Enter_Attack_Mode(void);
+
+    /*
+    **	CFE Q-move.
+    */
+    CFENavQueue& Nav_Queue(void) const;
+    bool Has_Nav_Queue(void) const;
+    bool Handle_Navigation_List(void);
+    void Queue_Navigation_List(TARGET target);
+    void Clear_Navigation_List(void);
+    void Memorize_Navigation_List(void);
+    void Recall_Navigation_List(void);
+    void Clear_Memorized_Navigation_List(void);
 
     /*
     **	CFE smarter AI commandos.

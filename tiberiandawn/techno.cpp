@@ -2945,7 +2945,30 @@ void TechnoClass::Player_Assign_Mission(MissionType mission, TARGET target, TARG
             Response_Move();
         }
     }
-    Queue_Mission(As_Target(), mission, target, destination);
+    Queue_Mission(As_Target(), CFE_Queued_Mission(mission), target, destination);
+}
+
+/***********************************************************************************************
+ * TechnoClass::CFE_Queued_Mission -- Turns a move into a waypoint if the queue key is held.   *
+ *                                                                                             *
+ * INPUT:   mission  -- The mission the player is giving.                                      *
+ *                                                                                             *
+ * OUTPUT:  Returns with the mission to send.                                                  *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+MissionType TechnoClass::CFE_Queued_Mission(MissionType mission) const
+{
+    if (ActiveCFEPatchConfig.EnableQMove && House == PlayerPtr
+        && (Keyboard->Down(Options.KeyQueueMove1) || Keyboard->Down(Options.KeyQueueMove2))) {
+        if (mission == MISSION_MOVE) {
+            return (MISSION_QMOVE);
+        }
+        if (mission == MISSION_ATTACKMOVE) {
+            return (MISSION_QATTACKMOVE);
+        }
+    }
+    return (mission);
 }
 
 /***********************************************************************************************
