@@ -513,6 +513,21 @@ void TeamClass::AI(void)
         **	mission in the list or disband the team.
         */
         TeamMissionStruct const* mission = &Class->MissionList[CurrentMission];
+
+        /*
+        **	CFE smarter AI commandos: a team with a commando only picks targets it can deal with.
+        */
+        bool teamhascommandos = false;
+        if (ActiveCFEPatchConfig.SmarterCPUCommandos) {
+            for (FootClass* member = Member; member; member = member->Member) {
+                if (member->IsActive && !member->IsInLimbo && member->Strength && member->What_Am_I() == RTTI_INFANTRY
+                    && *((InfantryClass*)member) == INFANTRY_RAMBO) {
+                    teamhascommandos = true;
+                    break;
+                }
+            }
+        }
+
         switch (mission->Mission) {
         case TMISSION_ATTACKBASE:
             if (!Target_Legal(MissionTarget)) {
@@ -525,7 +540,8 @@ void TeamClass::AI(void)
 
         case TMISSION_ATTACKUNITS:
             if (!Target_Legal(MissionTarget)) {
-                Assign_Mission_Target(Member->Greatest_Threat(THREAT_VEHICLES | THREAT_INFANTRY));
+                Assign_Mission_Target(
+                    Member->Greatest_Threat(teamhascommandos ? THREAT_INFANTRY : (THREAT_VEHICLES | THREAT_INFANTRY)));
                 if (!Target_Legal(MissionTarget))
                     IsNextMission = true;
             }
@@ -544,7 +560,8 @@ void TeamClass::AI(void)
         case TMISSION_ATTACKTARCOM:
         case TMISSION_RAMPAGE:
             if (!Target_Legal(MissionTarget)) {
-                Assign_Mission_Target(Member->Greatest_Threat(THREAT_NORMAL));
+                Assign_Mission_Target(
+                    Member->Greatest_Threat(teamhascommandos ? (THREAT_BUILDINGS | THREAT_INFANTRY) : THREAT_NORMAL));
                 if (!Target_Legal(MissionTarget))
                     IsNextMission = true;
             }
@@ -1071,6 +1088,17 @@ void TeamClass::Took_Damage(FootClass*, ResultType result, TechnoClass* source)
                             }
                         }
                     }
+
+                    // CFE: a team with a commando doesn't turn on something a commando can't deal with.
+                    if (ActiveCFEPatchConfig.SmarterCPUCommandos && source->What_Am_I() != RTTI_BUILDING
+                        && source->What_Am_I() != RTTI_INFANTRY) {
+                        for (FootClass* unit = Member; unit; unit = unit->Member) {
+                            if (unit->IsActive && unit->What_Am_I() == RTTI_INFANTRY
+                                && *((InfantryClass*)unit) == INFANTRY_RAMBO) {
+                                return;
+                            }
+                        }
+                    }
                     Target = source->As_Target();
                 }
             }
@@ -1108,12 +1136,24 @@ void TeamClass::Coordinate_Attack(void)
         FootClass* unit = Member;
         while (unit) {
 
+            /*
+            **	CFE: leave a commando alone if it's already on its way to sabotage the target.
+            */
+            bool smart_commando = ActiveCFEPatchConfig.SmarterCPUCommandos && !House->IsHuman
+                                  && unit->What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)unit) == INFANTRY_RAMBO;
+            if (smart_commando && (unit->Mission == MISSION_SABOTAGE || unit->Mission == MISSION_MOVE)
+                && unit->NavCom == Target) {
+                unit = unit->Member;
+                continue;
+            }
+
             Coordinate_Conscript(unit);
 
             if (unit->IsInitiated && !unit->IsInLimbo) {
 
                 if (unit->Mission != MISSION_ATTACK && unit->Mission != MISSION_ENTER
-                    && unit->Mission != MISSION_CAPTURE) {
+                    && unit->Mission != MISSION_CAPTURE
+                    && !(ActiveCFEPatchConfig.SmarterCPUCommandos && unit->Mission == MISSION_SABOTAGE)) {
                     unit->Assign_Mission(MISSION_ATTACK);
                     unit->Assign_Target(TARGET_NONE);
                     unit->Assign_Destination(TARGET_NONE);

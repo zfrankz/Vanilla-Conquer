@@ -141,6 +141,14 @@ Add under `[FEATURES]`: `SMARTER_AIRCRAFT=1`.
   flying off to the target.
 - [ ] **Moving targets:** send a helicopter after a moving vehicle far away: it turns to follow as it flies.
 
+## 2i. Smarter AI commandos (Phase 3 step 5d)
+Add under `[FEATURES]`: `SMARTER_CPU_COMMANDOS=1`. Use a mission where Nod or GDI sends a commando at you, or play
+against one in skirmish.
+
+- [ ] **Bombs:** an enemy commando runs to your buildings and blows them up instead of shooting them.
+- [ ] **Vehicles:** it ignores your vehicles.
+- [ ] **Your commando:** yours still works as usual when told to destroy a building.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

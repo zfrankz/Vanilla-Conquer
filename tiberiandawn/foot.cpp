@@ -644,7 +644,77 @@ int FootClass::Mission_Guard(void)
     if (!Target_Something_Nearby(THREAT_RANGE)) {
         Random_Animate();
     }
+
+    /*
+    **	CFE: computer controlled engineers and commandos go after buildings they have picked.
+    */
+    if (What_Am_I() == RTTI_INFANTRY && !House->IsHuman && ActiveCFEPatchConfig.SmarterCPUCommandos
+        && CFE_Send_After_Building()) {
+        return (TICKS_PER_SECOND + 5);
+    }
     return (TICKS_PER_SECOND + Random_Pick(0, 4));
+}
+
+/***********************************************************************************************
+ * FootClass::CFE_Commando_Go_Sabotage -- Sends a commando to blow up a building.              *
+ *                                                                                             *
+ *    A commando that is far from the building moves there first, then switches to sabotage   *
+ *    when it gets close (see InfantryClass::AI).                                              *
+ *                                                                                             *
+ * INPUT:   target -- The building to blow up.                                                 *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void FootClass::CFE_Commando_Go_Sabotage(TARGET target)
+{
+    if (Distance(target) > AI_COMMANDO_CROSSOVER_DIST) {
+        Assign_Mission(MISSION_MOVE);
+    } else {
+        Assign_Mission(MISSION_SABOTAGE);
+    }
+    Assign_Target(TARGET_NONE);
+    Assign_Destination(target);
+}
+
+/***********************************************************************************************
+ * FootClass::CFE_Send_After_Building -- Turns an engineer's or commando's target into a job.  *
+ *                                                                                             *
+ *    An engineer whose target can be captured is sent to capture it, and a commando whose     *
+ *    target is an enemy building is sent to blow it up.                                       *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Was a new mission assigned?                                                        *
+ *                                                                                             *
+ * WARNINGS:   Only call for infantry.                                                         *
+ *=============================================================================================*/
+bool FootClass::CFE_Send_After_Building(void)
+{
+    TechnoClass* techno = As_Techno(TarCom);
+    if (!techno || !techno->IsActive || techno->IsInLimbo || !techno->Strength || Owner() == techno->Owner()) {
+        return (false);
+    }
+
+    if (*((InfantryClass*)this) == INFANTRY_E7) {
+        bool capturable = false;
+        if (techno->What_Am_I() == RTTI_BUILDING) {
+            capturable = ((BuildingClass*)techno)->Can_Capture();
+        } else if (techno->What_Am_I() == RTTI_AIRCRAFT) {
+            AircraftClass* air = (AircraftClass*)techno;
+            capturable = *air == AIRCRAFT_TRANSPORT && air->Pip_Count() == 0 && air->Altitude == 0;
+        }
+        if (capturable) {
+            Assign_Destination(TarCom);
+            Assign_Mission(MISSION_CAPTURE);
+            return (true);
+        }
+    } else if (*((InfantryClass*)this) == INFANTRY_RAMBO && techno->What_Am_I() == RTTI_BUILDING) {
+        CFE_Commando_Go_Sabotage(TarCom);
+        return (true);
+    }
+    return (false);
 }
 
 /***********************************************************************************************
@@ -665,8 +735,23 @@ int FootClass::Mission_Guard(void)
  *=============================================================================================*/
 int FootClass::Mission_Hunt(void)
 {
+    /*
+    **	CFE: a hunting commando drops a vehicle or aircraft target so that a better one gets picked.
+    */
+    if (ActiveCFEPatchConfig.SmarterCPUCommandos && What_Am_I() == RTTI_INFANTRY
+        && *((InfantryClass*)this) == INFANTRY_RAMBO && Target_Legal(TarCom)) {
+        TechnoClass* techno = As_Techno(TarCom);
+        if (techno && (techno->What_Am_I() == RTTI_AIRCRAFT || techno->What_Am_I() == RTTI_UNIT)) {
+            Assign_Target(TARGET_NONE);
+        }
+    }
+
     if (!Target_Something_Nearby(THREAT_NORMAL)) {
         Random_Animate();
+    } else if (ActiveCFEPatchConfig.SmarterCPUCommandos && What_Am_I() == RTTI_INFANTRY) {
+        if (!CFE_Send_After_Building()) {
+            Approach_Target();
+        }
     } else {
         if (What_Am_I() == RTTI_INFANTRY && ((InfantryTypeClass const&)Class_Of()).Type == INFANTRY_E7) {
             Assign_Destination(TarCom);
@@ -1030,6 +1115,10 @@ int FootClass::Mission_Guard_Area(void)
             return (1);
         Random_Animate();
     } else {
+        if (What_Am_I() == RTTI_INFANTRY && !House->IsHuman && ActiveCFEPatchConfig.SmarterCPUCommandos
+            && CFE_Send_After_Building()) {
+            return (TICKS_PER_SECOND + 5);
+        }
         Approach_Target();
     }
     return (TICKS_PER_SECOND + Random_Pick(0, 4));
@@ -1197,7 +1286,10 @@ ResultType FootClass::Take_Damage(int& damage, int distance, WarheadType warhead
                 &&
                 //				!Target_Legal(NavCom) &&
                 (Mission == MISSION_AMBUSH || Mission == MISSION_GUARD || Mission == MISSION_RESCUE
-                 || Mission == MISSION_GUARD_AREA || Mission == MISSION_ATTACK || Mission == MISSION_TIMED_HUNT)) {
+                 || Mission == MISSION_GUARD_AREA || Mission == MISSION_ATTACK || Mission == MISSION_TIMED_HUNT
+                 // CFE: computer controlled commandos break off sabotage to shoot back at infantry.
+                 || (Mission == MISSION_SABOTAGE && ActiveCFEPatchConfig.SmarterCPUCommandos && !House->IsHuman
+                     && source->What_Am_I() == RTTI_INFANTRY))) {
 
                 /*
                 **	Assign the source of the damage as the new target. This occurs for the computer

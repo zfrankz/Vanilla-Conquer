@@ -56,6 +56,12 @@ struct CellBlockerPair
 **	Movable objects are handled by this class definition. Moveable objects
 **	cover everything except buildings.
 */
+/*
+**	CFE smarter AI commandos: range at which a commando heading for a building switches from
+**	moving to sabotaging it.
+*/
+#define AI_COMMANDO_CROSSOVER_DIST (8 * CELL_LEPTON_W)
+
 class FootClass : public TechnoClass
 {
 public:
@@ -303,6 +309,12 @@ public:
     **	CFE Patch Redux A* pathing.
     */
     virtual BuildingClass* Find_Docking_Bay(StructType b, bool friendly) const;
+
+    /*
+    **	CFE smarter AI commandos.
+    */
+    void CFE_Commando_Go_Sabotage(TARGET target);
+    bool CFE_Send_After_Building(void);
     int Find_Path_AStar(PathType* const resultPath,
                         const CELL source,
                         CELL dest,

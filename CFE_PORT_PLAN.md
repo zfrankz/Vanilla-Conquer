@@ -199,7 +199,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      A* off, 4000 frames: 39 choices, all in leptons, 1 queue jump. No crash.
      Not verified: real play; an unreachable refinery (no test map had one); the AI's harvesters (CFE limits
      these features to human players in single player).
-5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a–5c ported, play-test pending; 5d and 5e to do
+5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a–5d ported, play-test pending; 5e to do
    - Split: 5a small switches, 5b `SMARTER_SAMS`, 5c `SMARTER_AIRCRAFT`, 5d `SMARTER_CPU_COMMANDOS`, 5e veterancy.
    - 5a: `DISABLE_COMMANDO_AIRSTRIKES` (no enemy A10 reinforcements in single player until the player has a
      discovered building), `SMARTER_MAMMOTHS` (mammoths use missiles on infantry), `COMMANDO_GUARD` (0 off,
@@ -238,6 +238,21 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      jeep on the move: off flies to the old position and first fires on frame 229 from 3759 leptons; on
      re-picks on frame 138 and first fires on frame 170 from 1240 leptons.
      Not verified: real play; the helicopter's firing accuracy; AI aircraft behaviour.
+   - 5d `SMARTER_CPU_COMMANDOS` (CFE `ecd1725`, `78a81f0`): AI commandos target infantry and buildings only,
+     blow buildings up instead of shooting them, break off sabotage to shoot back at infantry; AI engineers
+     in guard go after what they target; teams with a commando pick targets it can deal with.
+   - Differences from CFE: the repeated shunt code is one function, `FootClass::CFE_Send_After_Building`; CFE
+     changes `Mission_Hunt`, `Coordinate_Attack` and the team threat masks with the switch off too, here
+     they keep the original code then; the engineer half of `Took_Damage` and of the team target choice
+     belongs to CFE's MinorAIFixes (general bugfix bucket, not ported); the `SAFE_SABOTAGE` change is
+     not ported, as that setting isn't. As in CFE, `Can_Fire` stops human commandos shooting buildings too.
+   - Verified: builds, no warnings on changed lines. Instrumented runs (temporary code, removed) on save 2,
+     an enemy commando hunting by the player's base, kept alive, 1200 frames: off it shoots one building for
+     all 1200 frames and 7 buildings stay 7; on it goes to sabotage and buildings fall to 2, targeting
+     infantry on 308 frames. An enemy engineer hunting captures on the same frames either way.
+     Two runs ended with a 0-byte log and exit 142 (one here, one in 4b); reruns were normal, cause unknown.
+     Not verified: real play; team behaviour (`team.cpp` changes never ran in a test); an AI engineer in guard
+     or guard area with a target (none picked one); shooting back during sabotage.
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments

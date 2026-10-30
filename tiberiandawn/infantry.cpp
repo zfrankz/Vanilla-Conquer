@@ -1028,6 +1028,52 @@ void InfantryClass::Assign_Target(TARGET target)
  *=============================================================================================*/
 void InfantryClass::AI(void)
 {
+    /*
+    **	CFE: keep computer controlled commandos going for buildings with their bombs, and stop
+    **	them shooting at buildings and vehicles.
+    */
+    if (*this == INFANTRY_RAMBO && !House->IsHuman && ActiveCFEPatchConfig.SmarterCPUCommandos) {
+        if (Target_Legal(TarCom)) {
+            TechnoClass* techno = As_Techno(TarCom);
+            if (techno && techno->IsActive && !techno->IsInLimbo && techno->Strength && Owner() != techno->Owner()) {
+                if (techno->What_Am_I() == RTTI_BUILDING) {
+                    TARGET building = TarCom;
+                    if (Distance(building) > AI_COMMANDO_CROSSOVER_DIST && Mission != MISSION_SABOTAGE) {
+                        Assign_Mission(MISSION_MOVE);
+                    } else if (Mission != MISSION_SABOTAGE || NavCom != building) {
+                        Assign_Mission(MISSION_SABOTAGE);
+                    }
+                    Assign_Target(TARGET_NONE);
+                    if (NavCom != building) {
+                        Assign_Destination(building);
+                    }
+                } else if (techno->What_Am_I() == RTTI_UNIT || techno->What_Am_I() == RTTI_AIRCRAFT) {
+                    TechnoClass* nav = Target_Legal(NavCom) ? As_Techno(NavCom) : NULL;
+                    if (nav && nav->IsActive && !nav->IsInLimbo && nav->Strength && Owner() != nav->Owner()
+                        && nav->What_Am_I() == RTTI_BUILDING) {
+                        if (Distance(NavCom) > AI_COMMANDO_CROSSOVER_DIST && Mission != MISSION_SABOTAGE) {
+                            Assign_Mission(MISSION_MOVE);
+                        } else if (Mission != MISSION_SABOTAGE) {
+                            Assign_Mission(MISSION_SABOTAGE);
+                        }
+                    } else {
+                        Assign_Mission(MISSION_HUNT);
+                    }
+                    Assign_Target(TARGET_NONE);
+                }
+            }
+        }
+
+        // Switch from moving to sabotage when close enough.
+        if (Mission == MISSION_MOVE && Target_Legal(NavCom) && Distance(NavCom) <= AI_COMMANDO_CROSSOVER_DIST) {
+            TechnoClass* techno = As_Techno(NavCom);
+            if (techno && techno->IsActive && !techno->IsInLimbo && techno->Strength && Owner() != techno->Owner()
+                && techno->What_Am_I() == RTTI_BUILDING) {
+                Assign_Mission(MISSION_SABOTAGE);
+            }
+        }
+    }
+
     Validate();
     FootClass::AI();
 
@@ -2078,6 +2124,17 @@ FireErrorType InfantryClass::Can_Fire(TARGET target, int which) const
         }
     }
 
+    /*
+    **	CFE: commandos don't shoot at buildings.
+    */
+    if (*this == INFANTRY_RAMBO && ActiveCFEPatchConfig.SmarterCPUCommandos) {
+        TechnoClass* techno = As_Techno(TarCom);
+        if (techno && techno->IsActive && !techno->IsInLimbo && techno->Strength
+            && techno->What_Am_I() == RTTI_BUILDING && Owner() != techno->Owner()) {
+            return (FIRE_RANGE);
+        }
+    }
+
     return (FootClass::Can_Fire(target, which));
 }
 
@@ -2752,6 +2809,15 @@ TARGET InfantryClass::Greatest_Threat(ThreatType threat) const
     **	unless specifically in hunt mode.
     */
     case WEAPON_RIFLE:
+        /*
+        **	CFE: computer controlled commandos only target infantry or buildings. Elsewhere they
+        **	are sent to sabotage a building they pick.
+        */
+        if (!House->IsHuman && ActiveCFEPatchConfig.SmarterCPUCommandos) {
+            return (TechnoClass::Greatest_Threat((threat & (THREAT_RANGE | THREAT_AREA)) | THREAT_INFANTRY
+                                                 | THREAT_BUILDINGS));
+        }
+
         /*
         **	CFE commando guard: a guarding commando shoots infantry only, since the rifle is no
         **	use against anything else and it doesn't switch to bombs for buildings.
@@ -3492,6 +3558,16 @@ int InfantryClass::Mission_Attack(void)
         Assign_Destination(TarCom);
         Assign_Mission(MISSION_CAPTURE);
         return (1);
+    }
+
+    // CFE: a computer controlled commando in attack mode goes to blow up a building target.
+    if (*this == INFANTRY_RAMBO && !House->IsHuman && ActiveCFEPatchConfig.SmarterCPUCommandos) {
+        TechnoClass* techno = As_Techno(TarCom);
+        if (techno && techno->IsActive && !techno->IsInLimbo && techno->Strength
+            && techno->What_Am_I() == RTTI_BUILDING && Owner() != techno->Owner()) {
+            CFE_Commando_Go_Sabotage(TarCom);
+            return (1);
+        }
     }
     return (FootClass::Mission_Attack());
 }
