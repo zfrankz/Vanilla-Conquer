@@ -37,6 +37,40 @@
 
 #include "function.h"
 
+/*
+**	CFE: does the house have a building on the map? Some missions give the player buildings that
+**	are owned but not yet discovered, and those don't count.
+*/
+static bool CFE_House_Has_Any_Buildings_In_Map(HouseClass& house)
+{
+    if (house.ActiveBScan) {
+        if (house.IsHuman && GameToPlay == GAME_NORMAL) {
+            for (int index = 0; index < Buildings.Count(); index++) {
+                BuildingClass const* building = Buildings.Ptr(index);
+                if (building->House == &house && building->Is_Discovered_By_Player(&house)) {
+                    return (true);
+                }
+            }
+        } else {
+            return (true);
+        }
+    }
+    return (false);
+}
+
+/*
+**	CFE: enemy A10s are not sent in single player while the player has no base.
+*/
+static bool CFE_A10_Allowed(TechnoTypeClass const& object, HousesType house)
+{
+    if (ActiveCFEPatchConfig.DisableCommandoAirstrikes && GameToPlay == GAME_NORMAL
+        && house != PlayerPtr->Class->House && object.What_Am_I() == RTTI_AIRCRAFTTYPE
+        && ((AircraftTypeClass const&)object).Type == AIRCRAFT_A10) {
+        return (CFE_House_Has_Any_Buildings_In_Map(*PlayerPtr));
+    }
+    return (true);
+}
+
 /***********************************************************************************************
  * Do_Reinforcements -- Create and place a reinforcement team.                                 *
  *                                                                                             *
@@ -149,7 +183,9 @@ bool Do_Reinforcements(TeamTypeClass* teamtype)
 
         for (int sub = 0; sub < teamtype->DesiredNum[index]; sub++) {
             ScenarioInit++;
-            FootClass* temp = (FootClass*)tclass->Create_One_Of(HouseClass::As_Pointer(teamtype->House));
+            FootClass* temp = CFE_A10_Allowed(*tclass, teamtype->House)
+                                  ? (FootClass*)tclass->Create_One_Of(HouseClass::As_Pointer(teamtype->House))
+                                  : NULL;
             ScenarioInit--;
 
             if (temp) {

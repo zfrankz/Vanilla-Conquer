@@ -2153,6 +2153,15 @@ FireErrorType TechnoClass::Can_Fire(TARGET target, int which) const
     }
 
     /*
+    **	CFE: mammoths always use their missiles on infantry.
+    */
+    if (ActiveCFEPatchConfig.EnableSmarterMammoths && object && object->IsActive
+        && object->What_Am_I() == RTTI_INFANTRY && What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_HTANK
+        && weap == WEAPON_120MM) {
+        return (In_Range(target, 1, false) ? FIRE_FACING : FIRE_RANGE);
+    }
+
+    /*
     **	Don't allow firing if still rearming.
     */
     if (Arm)

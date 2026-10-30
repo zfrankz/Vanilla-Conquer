@@ -199,7 +199,22 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      A* off, 4000 frames: 39 choices, all in leptons, 1 queue jump. No crash.
      Not verified: real play; an unreachable refinery (no test map had one); the AI's harvesters (CFE limits
      these features to human players in single player).
-5. Veterancy, smarter SAMs/mammoths/aircraft/commandos
+5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a ported, play-test pending; 5b–5e to do
+   - Split: 5a small switches, 5b `SMARTER_SAMS`, 5c `SMARTER_AIRCRAFT`, 5d `SMARTER_CPU_COMMANDOS`, 5e veterancy.
+   - 5a: `DISABLE_COMMANDO_AIRSTRIKES` (no enemy A10 reinforcements in single player until the player has a
+     discovered building), `SMARTER_MAMMOTHS` (mammoths use missiles on infantry), `COMMANDO_GUARD` (0 off,
+     1 multiplayer only, 2 always: a guarding human commando shoots infantry only).
+   - Differences from CFE: with `COMMANDO_GUARD` not applying, the commando's threat code stays the original.
+     CFE dropped the original line `TechnoClass::Greatest_Threat(threat | THREAT_INFANTRY | THREAT_BUILDINGS)`
+     for all non-guarding commandos, unconditionally; here that only happens when the switch applies.
+   - Verified: builds, no warnings on changed lines. Instrumented runs (temporary code, removed):
+     Mammoth vs an enemy rifleman, 800 frames: off 14 cannon shots, 0 missiles; on 0 cannon shots, 14 missiles.
+     Commando in guard next to an enemy light tank, 800 frames, riflemen added from frame 300: mode 0 never
+     takes a target; mode 2 targets infantry on 375 frames and the tank on 0.
+     Two A10s sent as an enemy reinforcement: switch on with player buildings, sent (saves 1, 2); on with no
+     buildings, not sent (saves 3, 5, 6); off, sent on all four saves tried.
+     Not verified: real play; a mission with owned but undiscovered buildings; mammoths against non-infantry
+     (the new code only acts on infantry targets); `COMMANDO_GUARD=1` in multiplayer.
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments

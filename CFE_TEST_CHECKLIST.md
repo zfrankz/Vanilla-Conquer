@@ -109,6 +109,17 @@ clearest gain with both on.
 - [ ] **No stuck units:** units shouldn't freeze in place waiting for a cell nobody is using.
 - [ ] With it on: save, load, and keep playing (traffic should carry on normally after the load).
 
+## 2f. Mammoths and commandos (Phase 3 step 5a)
+Add under `[FEATURES]`: `SMARTER_MAMMOTHS=1`, `DISABLE_COMMANDO_AIRSTRIKES=1`; and under `[SETTINGS]`:
+`COMMANDO_GUARD=2` (2 = also in single player).
+
+- [ ] **Mammoths:** a Mammoth Tank attacking infantry fires only its missiles, and vehicles and buildings still
+  get the cannon.
+- [ ] **Commando guard:** a commando left standing shoots enemy soldiers that come near, and ignores vehicles
+  and buildings. Told to attack something, it does so as usual.
+- [ ] **Airstrikes:** in a mission that starts without a base (commando missions), no enemy A10s arrive until
+  you own a base. Missions with a base still get them.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

@@ -2752,6 +2752,17 @@ TARGET InfantryClass::Greatest_Threat(ThreatType threat) const
     **	unless specifically in hunt mode.
     */
     case WEAPON_RIFLE:
+        /*
+        **	CFE commando guard: a guarding commando shoots infantry only, since the rifle is no
+        **	use against anything else and it doesn't switch to bombs for buildings.
+        */
+        if (ActiveCFEPatchConfig.EnableCommandoGuard == 2
+            || (ActiveCFEPatchConfig.EnableCommandoGuard == 1 && GameToPlay != GAME_NORMAL)) {
+            if (House->IsHuman && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA)) {
+                return (TechnoClass::Greatest_Threat((threat & (THREAT_RANGE | THREAT_AREA)) | THREAT_INFANTRY));
+            }
+            break;
+        }
         if (House->IsHuman && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA)) {
             return (TARGET_NONE);
         }
