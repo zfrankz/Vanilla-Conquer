@@ -149,6 +149,15 @@ against one in skirmish.
 - [ ] **Vehicles:** it ignores your vehicles.
 - [ ] **Your commando:** yours still works as usual when told to destroy a building.
 
+## 2j. Veterancy (Phase 3 step 5e)
+Add under `[SETTINGS]`: `VETERANCY=2` (2 = also in single player).
+
+- [ ] **Promotion:** a unit that keeps killing things gets promoted (a click sound and a flash), and selecting
+  it shows 1–3 small yellow dots in the bottom-right corner of its selection box.
+- [ ] **Harvesters:** a harvester also gets promoted after about 10 loads.
+- [ ] **Healing:** a damaged rank 2 or 3 unit slowly heals on its own.
+- [ ] **Save and load:** a promoted unit keeps its rank after save and load. An old save still loads.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

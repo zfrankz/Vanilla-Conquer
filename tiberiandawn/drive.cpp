@@ -254,6 +254,12 @@ void DriveClass::Overrun_Square(CELL cell, bool threaten)
                     ObjectClass* next = object->Next;
                     crushed = true;
 
+                    // CFE veterancy: squishing infantry earns XP.
+                    if (object->IsActive && object->What_Am_I() == RTTI_INFANTRY) {
+                        Gain_Veterancy_XP((object->Strength * object->Class_Of().Cost_Of())
+                                          / object->Class_Of().MaxStrength);
+                    }
+
                     /*
                     ** Record credit for the kill(s)
                     */
@@ -597,7 +603,8 @@ bool DriveClass::While_Moving(void)
     **	visibly move on the map, then process accordingly.
     ** Slow the unit down if he's carrying a flag.
     */
-    MPHType maxspeed = MPHType(min((int)(Class->MaxSpeed * House->GroundspeedBias), (int)MPH_LIGHT_SPEED));
+    MPHType maxspeed =
+        MPHType(min((int)((int)(Class->MaxSpeed * Vet().SpeedBias) * House->GroundspeedBias), (int)MPH_LIGHT_SPEED));
     if (((UnitClass*)this)->Flagged != HOUSE_NONE) {
         actual = SpeedAccum + Fixed_To_Cardinal(maxspeed / 2, Speed);
     } else {

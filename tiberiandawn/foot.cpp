@@ -2284,17 +2284,20 @@ int FootClass::LeptonsPerTickSpeed(LandType landtype) const
                 mythrottle /= 2;
             }
         }
-        myMPH = MPHType(min((unsigned)(meguy->Class->MaxSpeed * House->GroundspeedBias), MPH_LIGHT_SPEED));
+        myMPH = MPHType(
+            min((unsigned)((int)(meguy->Class->MaxSpeed * Vet().SpeedBias) * House->GroundspeedBias), MPH_LIGHT_SPEED));
     } else if (iamunit) {
         UnitClass const* meunit = (UnitClass const*)this;
         mythrottle = Ground[landtype].Cost[meunit->Class->Speed]; // from DriveClass::Start_Of_Move()
         if (Health_Ratio() < 0x0080) {
             mythrottle *= 0.75;
         }
-        myMPH = MPHType(min((int)(meunit->Class->MaxSpeed * House->GroundspeedBias), (int)MPH_LIGHT_SPEED));
+        myMPH = MPHType(
+            min((int)((int)(meunit->Class->MaxSpeed * Vet().SpeedBias) * House->GroundspeedBias), (int)MPH_LIGHT_SPEED));
     } else if (iamaircraft) {
         AircraftClass const* meair = (AircraftClass const*)this;
-        myMPH = MPHType(min((unsigned)(meair->Class->MaxSpeed * House->AirspeedBias), MPH_LIGHT_SPEED));
+        myMPH = MPHType(
+            min((unsigned)((int)(meair->Class->MaxSpeed * Vet().SpeedBias) * House->AirspeedBias), MPH_LIGHT_SPEED));
     }
 
     return Fixed_To_Cardinal(myMPH, mythrottle);

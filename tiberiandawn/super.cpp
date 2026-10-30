@@ -372,3 +372,41 @@ void SuperClass::Forced_Charge(bool player)
         }
     }
 }
+
+/***********************************************************************************************
+ * SuperClass::Adjust_Cooldown -- Adjusts the recharge time for the rank of its building.      *
+ *                                                                                             *
+ *    CFE veterancy: each rank of the building shortens the recharge time. A recharge that is  *
+ *    under way changes by the same amount.                                                    *
+ *                                                                                             *
+ * INPUT:   basetime -- The normal recharge time.                                              *
+ *                                                                                             *
+ *          vetlevel -- The highest rank among the buildings that give this super weapon.      *
+ *                                                                                             *
+ * OUTPUT:  Was the recharge time changed?                                                     *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool SuperClass::Adjust_Cooldown(int basetime, int vetlevel)
+{
+    if (!IsPresent || IsOneTime) {
+        return (false);
+    }
+
+    int newtime = basetime;
+    if (vetlevel) {
+        newtime = (int)((newtime / (1.0 + (0.1 * vetlevel))) + 0.5);
+    }
+    if (RechargeTime == newtime) {
+        return (false);
+    }
+
+    int delta = newtime - RechargeTime;
+    RechargeTime = newtime;
+    if (IsSuspended) {
+        SuspendTime = MAX(SuspendTime + delta, 1);
+    } else if (!IsReady) {
+        Control = MAX((int)Control + delta, 1);
+    }
+    return (true);
+}

@@ -1960,6 +1960,7 @@ BuildingClass::BuildingClass(StructType type, HousesType house)
     //
     House->Tracking_Add(this);
 #endif // USE_RA_AI
+    Reset_Veterancy();
 }
 
 /***********************************************************************************************

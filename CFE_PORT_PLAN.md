@@ -199,7 +199,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      A* off, 4000 frames: 39 choices, all in leptons, 1 queue jump. No crash.
      Not verified: real play; an unreachable refinery (no test map had one); the AI's harvesters (CFE limits
      these features to human players in single player).
-5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a–5d ported, play-test pending; 5e to do
+5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a–5d and the core of 5e ported, play-test pending; 5e rank-3 specials to do
    - Split: 5a small switches, 5b `SMARTER_SAMS`, 5c `SMARTER_AIRCRAFT`, 5d `SMARTER_CPU_COMMANDOS`, 5e veterancy.
    - 5a: `DISABLE_COMMANDO_AIRSTRIKES` (no enemy A10 reinforcements in single player until the player has a
      discovered building), `SMARTER_MAMMOTHS` (mammoths use missiles on infantry), `COMMANDO_GUARD` (0 off,
@@ -253,6 +253,21 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      Two runs ended with a 0-byte log and exit 142 (one here, one in 4b); reruns were normal, cause unknown.
      Not verified: real play; team behaviour (`team.cpp` changes never ran in a test); an AI engineer in guard
      or guard area with a target (none picked one); shooting back during sabotage.
+   - 5e core `VETERANCY` (0 off, 1 multiplayer only, 2 always): XP from damage to non-allies (visceroids count
+     as costing 5000), passengers killed, squished infantry and harvesting; ranks at 1×, 3× and 6× cost; each
+     rank +5 % firepower, +5 % rate of fire, 10 % less damage, +10 % speed for things that move; healing from
+     rank 2; advanced comm center and temple ranks shorten super weapon recharge.
+   - Differences from CFE: state is in tables by heap index (saved in the object in CFE), written as an extra
+     block after the normal save data, so older saves still load (with no veterancy). Rank pips are 2×2 yellow
+     dots because CFE's `ZVTRN.SHP` and promotion sound aren't in VC (uses `VOC_TARGET`). Multiplayer sync of
+     the side tables isn't handled specially.
+   - Verified: builds. Instrumented runs (temporary code, removed) on save 2: a light tank (cost 600) killing
+     rocket soldiers reached rank 1 at 612 XP on frame 2065; firepower 1.05, armor 0.90, rearm 92→88. Forced XP:
+     rank 2 at 1844 (1.10/0.80, rearm 83), rank 3 at 4268 (1.15/0.70, rearm 80, two-shooter flag). Healing at
+     rank 2: 19 points in 600 frames, as computed. `VETERANCY=1` does nothing in single player. Saved to a test
+     slot and loaded: rank and XP restored; with `VETERANCY=0` the same save shows no ranks; old save 2 loads.
+     Not verified: real play; the pips on screen; super weapon recharge; XP from harvesting, squishing or
+     passengers; multiplayer.
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments

@@ -484,6 +484,7 @@ public:
             Make_Enemy(object->Owner());
     };
     bool Is_Ally(HousesType house) const;
+    void Veterancy_Adjust_Super_Cooldown(void);
     bool Is_Ally(HouseClass const* house) const;
     bool Is_Ally(ObjectClass const* object) const;
     unsigned int Get_Allies(void) const

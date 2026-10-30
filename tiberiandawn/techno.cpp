@@ -1126,6 +1126,23 @@ void TechnoClass::Draw_It(int x, int y, WindowNumberType window)
     if ((window == WINDOW_VIRTUAL) || (selected && House->Is_Ally(PlayerPtr))) {
         Draw_Pips((x - lx) + 5, y + ly - 3, window);
     }
+
+    /*
+    **	CFE veterancy: one yellow pip per rank in the corner of the selection box, shown only to the
+    **	owner. (CFE draws a graphic from its own mix file, which VC doesn't have.)
+    */
+    if (window != WINDOW_VIRTUAL && Vet().Rank > 0 && Is_Selected_By_Player(House) && House->Is_Ally(PlayerPtr)) {
+        GraphicViewPortClass draw_window(LogicPage->Get_Graphic_Buffer(),
+                                         WindowList[window][WINDOWX] + LogicPage->Get_XPos(),
+                                         WindowList[window][WINDOWY] + LogicPage->Get_YPos(),
+                                         WindowList[window][WINDOWWIDTH],
+                                         WindowList[window][WINDOWHEIGHT]);
+        for (int rank = 0; rank < (int)Vet().Rank; rank++) {
+            int pipx = x + lx - 3;
+            int pipy = y + ly - 3 - (rank * 3);
+            draw_window.Fill_Rect(pipx, pipy, pipx + 1, pipy + 1, YELLOW);
+        }
+    }
 }
 
 /***********************************************************************************************
@@ -1906,6 +1923,34 @@ void TechnoClass::AI(void)
     DoorClass::AI();
 
     /*
+    **	CFE veterancy: heal from rank 2, at 1/600th of full strength every 16 frames. Things that
+    **	already heal to 50% without veterancy heal to 100%, as do buildings at rank 3.
+    */
+    if (Vet().Rank > 1 && Strength) {
+        bool harvester = What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_HARVESTER;
+        int healcycle = 9600 / Class_Of().MaxStrength;
+        if (harvester && Vet().Rank == 3) {
+            healcycle = healcycle / 2;
+        }
+        if (healcycle == 0) {
+            healcycle = 1;
+        }
+        if ((Frame % healcycle) == 0) {
+            unsigned int threshold = 0x0080;
+            if ((What_Am_I() == RTTI_UNIT
+                 && (*((UnitClass*)this) == UNIT_HTANK
+                     || (harvester && (ActiveCFEPatchConfig.EnableHarvySelfRepair || Vet().Rank == 3))))
+                || (What_Am_I() == RTTI_BUILDING && Vet().Rank == 3)) {
+                threshold = 0x0100;
+            }
+            if (Health_Ratio() < threshold) {
+                Strength++;
+                Mark(MARK_CHANGE);
+            }
+        }
+    }
+
+    /*
     ** Handle decision to re-cloak here. Process the cloaking/decloaking operation.
     */
     if (IsCloakable) {
@@ -2265,6 +2310,301 @@ void TechnoClass::Assign_Target(TARGET target)
     TarCom = target;
 }
 
+/*
+**	CFE veterancy tables, by heap index. CFE_No_Veterancy_XP is set around damage that shouldn't
+**	earn XP.
+*/
+static CFEVeterancy _cfe_unit_vet[UNIT_MAX];
+static CFEVeterancy _cfe_infantry_vet[INFANTRY_MAX];
+static CFEVeterancy _cfe_building_vet[BUILDING_MAX];
+static CFEVeterancy _cfe_aircraft_vet[AIRCRAFT_MAX];
+bool CFE_No_Veterancy_XP = false;
+
+static CFEVeterancy* CFE_Vet_Table(RTTIType rtti, int& count)
+{
+    switch (rtti) {
+    case RTTI_UNIT:
+        count = UNIT_MAX;
+        return (_cfe_unit_vet);
+    case RTTI_INFANTRY:
+        count = INFANTRY_MAX;
+        return (_cfe_infantry_vet);
+    case RTTI_BUILDING:
+        count = BUILDING_MAX;
+        return (_cfe_building_vet);
+    case RTTI_AIRCRAFT:
+        count = AIRCRAFT_MAX;
+        return (_cfe_aircraft_vet);
+    default:
+        count = 0;
+        return (NULL);
+    }
+}
+
+static CFEVeterancy& CFE_Vet_Entry(TechnoClass const* object)
+{
+    static CFEVeterancy _none;
+    int id = -1;
+    int count = 0;
+    CFEVeterancy* table = CFE_Vet_Table(object->What_Am_I(), count);
+    switch (object->What_Am_I()) {
+    case RTTI_UNIT:
+        id = Units.ID((UnitClass const*)object);
+        break;
+    case RTTI_INFANTRY:
+        id = Infantry.ID((InfantryClass const*)object);
+        break;
+    case RTTI_BUILDING:
+        id = Buildings.ID((BuildingClass const*)object);
+        break;
+    case RTTI_AIRCRAFT:
+        id = Aircraft.ID((AircraftClass const*)object);
+        break;
+    default:
+        break;
+    }
+    return ((id >= 0 && id < count) ? table[id] : _none);
+}
+
+/***********************************************************************************************
+ * TechnoClass::Vet -- Fetches this object's veterancy state.                                  *
+ *                                                                                             *
+ *    With veterancy off this is always the default state: rank 0 and no bonuses.              *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Returns with a reference to the veterancy state.                                   *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+CFEVeterancy const& TechnoClass::Vet(void) const
+{
+    static CFEVeterancy const _off;
+    if (ActiveCFEPatchConfig.EnableVeterancy == 2
+        || (ActiveCFEPatchConfig.EnableVeterancy == 1 && GameToPlay != GAME_NORMAL)) {
+        return (CFE_Vet_Entry(this));
+    }
+    return (_off);
+}
+
+/***********************************************************************************************
+ * TechnoClass::Reset_Veterancy -- Clears the veterancy state of a new object.                 *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   Call from the constructor of the final class, since it needs What_Am_I().       *
+ *=============================================================================================*/
+void TechnoClass::Reset_Veterancy(void)
+{
+    CFE_Vet_Entry(this) = CFEVeterancy();
+}
+
+/***********************************************************************************************
+ * TechnoClass::Gain_Veterancy_XP -- Adds experience and handles promotion.                    *
+ *                                                                                             *
+ *    Rank 1 takes the cost of the object in XP, rank 2 three times that and rank 3 six times. *
+ *    Each rank gives +5% firepower, +5% rate of fire, 10% less damage taken and, for things   *
+ *    that move, +10% speed. Rank 3 also gives a bonus particular to the type of object.       *
+ *                                                                                             *
+ * INPUT:   xp -- The experience gained.                                                       *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void TechnoClass::Gain_Veterancy_XP(unsigned short xp)
+{
+    if (!(ActiveCFEPatchConfig.EnableVeterancy == 2
+          || (ActiveCFEPatchConfig.EnableVeterancy == 1 && GameToPlay != GAME_NORMAL))) {
+        return;
+    }
+
+    CFEVeterancy& vet = CFE_Vet_Entry(this);
+    if (vet.Rank >= 3) {
+        return;
+    }
+
+    unsigned short oldxp = vet.XP;
+    vet.XP += xp;
+    int oldrank = vet.Rank;
+    bool rolledover = oldxp > vet.XP;
+    unsigned int cost = Class_Of().Cost_Of();
+
+    if (vet.XP >= 6 * cost || rolledover) {
+        vet.Rank = 3;
+
+        if (What_Am_I() == RTTI_INFANTRY) {
+            InfantryClass* infantry = (InfantryClass*)this;
+            if (*infantry == INFANTRY_E3) {
+                vet.SpeedBias += 0.87f;
+            } else if (*infantry == INFANTRY_RAMBO) {
+                // A cloak from a crate takes precedence.
+                if (!IsCloakable) {
+                    vet.Cloak = true;
+                }
+                IsCloakable = true;
+            }
+        } else if (What_Am_I() == RTTI_UNIT) {
+            UnitClass* unit = (UnitClass*)this;
+            if (*unit == UNIT_HTANK) {
+                vet.QuadShooter = true;
+                vet.ReadyQuadShot = true;
+            } else if (*unit == UNIT_MTANK || *unit == UNIT_LTANK) {
+                vet.TwoShooter = true;
+                IsSecondShot = false;
+            } else if (*unit == UNIT_APC && (Owner() == HOUSE_BAD || House->ActLike == HOUSE_BAD)) {
+                if (!IsCloakable) {
+                    vet.Cloak = true;
+                }
+                IsCloakable = true;
+            } else if (*unit == UNIT_MLRS) {
+                vet.ArmorBias = MAX(vet.ArmorBias - 0.2f, 0.1f);
+            } else if (*unit == UNIT_HARVESTER) {
+                vet.ArmorBias = MAX(vet.ArmorBias - 0.3f, 0.1f);
+            }
+        } else if (What_Am_I() == RTTI_BUILDING) {
+            if (*((BuildingClass*)this) == STRUCT_TURRET) {
+                vet.TwoShooter = true;
+                IsSecondShot = false;
+            } else if (*((BuildingClass*)this) == STRUCT_ATOWER) {
+                vet.QuadShooter = true;
+                vet.ReadyQuadShot = true;
+            }
+        }
+    } else if (vet.Rank < 2 && vet.XP >= 3 * cost) {
+        vet.Rank = 2;
+    } else if (vet.Rank < 1 && vet.XP >= cost) {
+        vet.Rank = 1;
+    }
+
+    if (vet.Rank != oldrank) {
+        for (int i = oldrank; i < vet.Rank; i++) {
+            vet.FirepowerBias += 0.05f;
+            vet.ArmorBias = MAX(vet.ArmorBias - 0.1f, 0.1f);
+            if (What_Am_I() == RTTI_INFANTRY || What_Am_I() == RTTI_UNIT || What_Am_I() == RTTI_AIRCRAFT) {
+                vet.SpeedBias += 0.1f;
+            }
+        }
+        vet.ROFBias = 1.0f / (1.0f + (0.05f * vet.Rank));
+
+        if (What_Am_I() == RTTI_BUILDING
+            && (*((BuildingClass*)this) == STRUCT_EYE || *((BuildingClass*)this) == STRUCT_TEMPLE)) {
+            House->Veterancy_Adjust_Super_Cooldown();
+        }
+
+        // Tell the owner. (CFE plays a sound of its own, which VC doesn't have.)
+        if (House == PlayerPtr) {
+            Sound_Effect(VOC_TARGET, Coord);
+        }
+        Clicked_As_Target(Owner(), 18);
+        if (Is_Selected_By_Player(House)) {
+            Mark(MARK_CHANGE);
+        }
+    }
+}
+
+/*
+**	Veterancy block at the end of the save file: a marker, the size of a record and the number of
+**	records, then the records. Older saves simply end before the marker.
+*/
+static const unsigned int _cfe_vet_marker = 0x56455643; // "CVEV"
+
+/***********************************************************************************************
+ * CFE_Save_Veterancy -- Writes the veterancy block to the end of a save file.                 *
+ *                                                                                             *
+ * INPUT:   file -- The save file.                                                             *
+ *                                                                                             *
+ * OUTPUT:  Was the block written?                                                             *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool CFE_Save_Veterancy(FileClass& file)
+{
+    static RTTIType const _types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_BUILDING, RTTI_AIRCRAFT};
+    CFEVeterancy const blank;
+    int records = 0;
+
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFEVeterancy const* table = CFE_Vet_Table(_types[t], count);
+        for (int id = 0; id < count; id++) {
+            if (table[id].XP != blank.XP || table[id].Rank != blank.Rank) {
+                records++;
+            }
+        }
+    }
+
+    int size = sizeof(CFEVeterancy);
+    if (file.Write(&_cfe_vet_marker, sizeof(_cfe_vet_marker)) != sizeof(_cfe_vet_marker)
+        || file.Write(&size, sizeof(size)) != sizeof(size) || file.Write(&records, sizeof(records)) != sizeof(records)) {
+        return (false);
+    }
+
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFEVeterancy const* table = CFE_Vet_Table(_types[t], count);
+        int rtti = _types[t];
+        for (int id = 0; id < count; id++) {
+            if (table[id].XP != blank.XP || table[id].Rank != blank.Rank) {
+                if (file.Write(&rtti, sizeof(rtti)) != sizeof(rtti) || file.Write(&id, sizeof(id)) != sizeof(id)
+                    || file.Write(&table[id], sizeof(CFEVeterancy)) != sizeof(CFEVeterancy)) {
+                    return (false);
+                }
+            }
+        }
+    }
+    return (true);
+}
+
+/***********************************************************************************************
+ * CFE_Load_Veterancy -- Reads the veterancy block from the end of a save file.                *
+ *                                                                                             *
+ *    Clears all veterancy first, so a save without the block loads with no veterancy.         *
+ *                                                                                             *
+ * INPUT:   file -- The save file, positioned at the end of the normal save data.              *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void CFE_Load_Veterancy(FileClass& file)
+{
+    static RTTIType const _types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_BUILDING, RTTI_AIRCRAFT};
+    for (int t = 0; t < ARRAY_SIZE(_types); t++) {
+        int count;
+        CFEVeterancy* table = CFE_Vet_Table(_types[t], count);
+        for (int id = 0; id < count; id++) {
+            table[id] = CFEVeterancy();
+        }
+    }
+
+    unsigned int marker = 0;
+    int size = 0;
+    int records = 0;
+    if (file.Read(&marker, sizeof(marker)) != sizeof(marker) || marker != _cfe_vet_marker
+        || file.Read(&size, sizeof(size)) != sizeof(size) || size != sizeof(CFEVeterancy)
+        || file.Read(&records, sizeof(records)) != sizeof(records)) {
+        return;
+    }
+
+    for (int i = 0; i < records; i++) {
+        int rtti;
+        int id;
+        CFEVeterancy record;
+        if (file.Read(&rtti, sizeof(rtti)) != sizeof(rtti) || file.Read(&id, sizeof(id)) != sizeof(id)
+            || file.Read(&record, sizeof(record)) != sizeof(record)) {
+            return;
+        }
+        int count;
+        CFEVeterancy* table = CFE_Vet_Table((RTTIType)rtti, count);
+        if (table && id >= 0 && id < count) {
+            table[id] = record;
+        }
+    }
+}
+
 /***********************************************************************************************
  * TechnoClass::Rearm_Delay -- Calculates the delay before firing can occur.                   *
  *                                                                                             *
@@ -2286,7 +2626,7 @@ void TechnoClass::Assign_Target(TARGET target)
 int TechnoClass::Rearm_Delay(bool second) const
 {
     if (second) {
-        return (((int)Weapons[Techno_Type_Class()->Primary].ROF * House->ROFBias) + 3);
+        return (((int)(Weapons[Techno_Type_Class()->Primary].ROF * Vet().ROFBias) * House->ROFBias) + 3);
     }
     return (9);
 }
@@ -2366,7 +2706,7 @@ BulletClass* TechnoClass::Fire_At(TARGET target, int which)
     **	need to be performed according to the style of projectile
     **	created.
     */
-    int firepower = (weapon->Attack > 0) ? ((int)weapon->Attack * House->FirepowerBias) : 0;
+    int firepower = (weapon->Attack > 0) ? ((int)(weapon->Attack * Vet().FirepowerBias) * House->FirepowerBias) : 0;
     bullet = new BulletClass(weapon->Fires);
     if (bullet) {
         bullet->Assign_Target(target);
@@ -3060,9 +3400,10 @@ ResultType TechnoClass::Take_Damage(int& damage, int distance, WarheadType warhe
     **	Adjust damage according to house override armor value.
     */
     if (damage > 0) {
-        damage = damage * House->ArmorBias;
+        damage = (int)(damage * Vet().ArmorBias) * House->ArmorBias;
     }
 
+    int oldstrength = Strength;
     ResultType result = ObjectClass::Take_Damage(damage, distance, warhead, source);
 
     switch (result) {
@@ -3098,6 +3439,18 @@ ResultType TechnoClass::Take_Damage(int& damage, int distance, WarheadType warhe
 
     case RESULT_NONE:
         break;
+    }
+
+    /*
+    **	CFE veterancy: damage dealt to a non-ally earns the attacker XP in proportion to the part of
+    **	the victim's cost it destroyed. Visceroids count as costing 5000.
+    */
+    if (!CFE_No_Veterancy_XP && source && source->IsActive && !House->Is_Ally(source)) {
+        int cost = Class_Of().Cost_Of();
+        if (What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_VICE) {
+            cost = 5000;
+        }
+        source->Gain_Veterancy_XP(((oldstrength - Strength) * cost) / Class_Of().MaxStrength);
     }
     return (result);
 }
@@ -3707,6 +4060,9 @@ void TechnoClass::Kill_Cargo(TechnoClass* source)
     while (Is_Something_Attached()) {
         FootClass* foot = Detach_Object();
         if (foot) {
+            if (source && source->IsActive && !House->Is_Ally(source)) {
+                source->Gain_Veterancy_XP((foot->Strength * foot->Class_Of().Cost_Of()) / foot->Class_Of().MaxStrength);
+            }
             foot->Record_The_Kill(source);
             delete foot;
         }

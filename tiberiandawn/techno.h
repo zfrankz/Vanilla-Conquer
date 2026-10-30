@@ -48,6 +48,28 @@
 /****************************************************************************
 **	This is the common data between building and units.
 */
+/*
+**	CFE veterancy: the state of one object. Kept in tables indexed by the object's heap index rather
+**	than in TechnoClass, so that the save-game format stays the same; it is written as a separate
+**	block at the end of the save file (see CFE_Save_Veterancy).
+*/
+struct CFEVeterancy
+{
+    unsigned short XP = 0;
+    unsigned char Rank = 0;
+    bool TwoShooter = false;
+    bool QuadShooter = false;
+    bool ReadyQuadShot = false;
+    bool Cloak = false; // Cloaked because of veterancy rather than a crate or the unit type.
+    float ArmorBias = 1.0f;
+    float FirepowerBias = 1.0f;
+    float ROFBias = 1.0f;
+    float SpeedBias = 1.0f;
+};
+
+bool CFE_Save_Veterancy(FileClass& file);
+void CFE_Load_Veterancy(FileClass& file);
+
 class TechnoClass : public RadioClass,
                     public FlasherClass,
                     public StageClass,
@@ -345,6 +367,13 @@ public:
     virtual void Do_Uncloak(void);
     virtual void Do_Cloak(void);
     virtual void Do_Shimmer(void);
+
+    /*
+    **	CFE veterancy.
+    */
+    CFEVeterancy const& Vet(void) const;
+    void Reset_Veterancy(void);
+    void Gain_Veterancy_XP(unsigned short xp);
 
     /*
     **	Movement and animation.

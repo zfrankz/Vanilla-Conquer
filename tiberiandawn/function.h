@@ -298,6 +298,7 @@ bool Is_Speaking(void);
 */
 int Modify_Damage(int damage, WarheadType warhead, ArmorType armor, int distance);
 void Explosion_Damage(COORDINATE coord, unsigned strength, TechnoClass* source, WarheadType warhead);
+extern bool CFE_No_Veterancy_XP;
 
 /*
 **	CONQUER.CPP

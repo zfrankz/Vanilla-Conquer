@@ -275,6 +275,7 @@ InfantryClass::InfantryClass(InfantryType classid, HousesType house)
 #endif // USE_RA_AI
 
     StopDriverFrame = -1;
+    Reset_Veterancy();
 }
 
 /***********************************************************************************************
@@ -404,9 +405,11 @@ ResultType InfantryClass::Take_Damage(int& damage, int distance, WarheadType war
     **	Flame thrower guys take more damage because of the exposed pilot light
     **	on their flame gun.
     */
-    if (damage && res != RESULT_DESTROYED && *this == INFANTRY_E4) {
+    if (damage && res != RESULT_DESTROYED && *this == INFANTRY_E4 && Vet().Rank == 0) {
         damage = 5;
+        CFE_No_Veterancy_XP = true;
         ResultType newres = FootClass::Take_Damage(damage, distance, warhead, source);
+        CFE_No_Veterancy_XP = false;
         res = MAX(res, newres);
     }
 
@@ -1563,7 +1566,8 @@ void InfantryClass::AI(void)
                 /*
                 **	Advance the infantry as far as it should go.
                 */
-                MPHType maxspeed = MPHType(min((unsigned)(Class->MaxSpeed * House->GroundspeedBias), MPH_LIGHT_SPEED));
+                MPHType maxspeed = MPHType(
+                    min((unsigned)((int)(Class->MaxSpeed * Vet().SpeedBias) * House->GroundspeedBias), MPH_LIGHT_SPEED));
                 Coord = Coord_Move(Coord, Direction(Head_To_Coord()), Fixed_To_Cardinal(maxspeed, movespeed));
             }
             Mark(MARK_DOWN);

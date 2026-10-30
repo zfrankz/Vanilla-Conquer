@@ -8287,3 +8287,41 @@ unsigned HouseClass::Get_Ally_Flags()
 }
 
 #endif
+
+/***********************************************************************************************
+ * HouseClass::Veterancy_Adjust_Super_Cooldown -- Applies building ranks to super weapons.     *
+ *                                                                                             *
+ *    CFE veterancy: the recharge times of the ion cannon and nuclear strike follow the        *
+ *    highest rank among this house's advanced communications centers and temples.             *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void HouseClass::Veterancy_Adjust_Super_Cooldown(void)
+{
+    if (!IsHuman && GameToPlay == GAME_NORMAL) {
+        return;
+    }
+
+    int ionrank = 0;
+    int nukerank = 0;
+    for (int index = 0; index < Buildings.Count(); index++) {
+        BuildingClass const* building = Buildings.Ptr(index);
+        if (building && building->IsActive && !building->IsInLimbo && building->Strength && building->House == this) {
+            if (*building == STRUCT_EYE) {
+                ionrank = MAX(ionrank, (int)building->Vet().Rank);
+            } else if (*building == STRUCT_TEMPLE) {
+                nukerank = MAX(nukerank, (int)building->Vet().Rank);
+            }
+        }
+    }
+    if (IonCannon.Is_Present()) {
+        IonCannon.Adjust_Cooldown(ION_CANNON_GONE_TIME, ionrank);
+    }
+    if (NukeStrike.Is_Present()) {
+        NukeStrike.Adjust_Cooldown(NUKE_GONE_TIME, nukerank);
+    }
+}

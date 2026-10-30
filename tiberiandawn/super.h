@@ -51,6 +51,7 @@ public:
     }
 
     bool Suspend(bool on);
+    bool Adjust_Cooldown(int basetime, int vetlevel);
     bool Enable(bool onetime = false, bool player = false, bool quiet = false);
     void Forced_Charge(bool player = false);
     bool AI(bool player = false);

@@ -382,7 +382,7 @@ void UnitClass::AI(void)
     **	If this is a vehicle that heals itself (e.g., Mammoth Tank), then it will perform
     **	the heal logic here.
     */
-    if (*this == UNIT_HTANK && (Frame % 16) == 0 && Health_Ratio() < 0x0080) {
+    if (*this == UNIT_HTANK && (Frame % 16) == 0 && Health_Ratio() < 0x0080 && Vet().Rank < 2) {
         Strength++;
         Mark(MARK_CHANGE);
     }
@@ -395,7 +395,7 @@ void UnitClass::AI(void)
     /*
     **	CFE: harvesters repair themselves to half strength, like the Mammoth Tank.
     */
-    if (ActiveCFEPatchConfig.EnableHarvySelfRepair && *this == UNIT_HARVESTER && (Frame % 16) == 0
+    if (ActiveCFEPatchConfig.EnableHarvySelfRepair && *this == UNIT_HARVESTER && Vet().Rank < 2 && (Frame % 16) == 0
         && Health_Ratio() < 0x0080) {
         Strength++;
         Mark(MARK_CHANGE);
@@ -990,6 +990,10 @@ ResultType UnitClass::Take_Damage(int& damage, int distance, WarheadType warhead
                         if (select)
                             object->Select();
                     } else {
+                        if (source && source->IsActive && !House->Is_Ally(source)) {
+                            source->Gain_Veterancy_XP((object->Strength * object->Class_Of().Cost_Of())
+                                                      / object->Class_Of().MaxStrength);
+                        }
                         object->Record_The_Kill(source);
                         delete object;
                     }
@@ -1235,6 +1239,7 @@ UnitClass::UnitClass(UnitType classid, HousesType house)
     //
     House->Tracking_Add(this);
 #endif // USE_RA_AI
+    Reset_Veterancy();
 }
 
 /***********************************************************************************************
@@ -2737,6 +2742,9 @@ bool UnitClass::Harvesting(void)
             reducer = ptr->Reduce_Tiberium(MIN(reducer, emptyspace));
         }
         Tiberium += reducer;
+
+        // CFE veterancy: harvesting earns XP, enough for rank 1 after about 10 loads.
+        Gain_Veterancy_XP(5 * reducer);
         Set_Stage(0);
         Set_Rate(2);
 
