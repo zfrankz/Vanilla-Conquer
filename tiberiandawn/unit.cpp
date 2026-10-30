@@ -3547,11 +3547,15 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
 
         if (optr->IsWall) {
 
+            // CFE AI vs walls: neutral walls are left alone unless ADV_WALL_OWN says otherwise.
+            bool neutral = cellptr->Owner == HOUSE_NONE && ActiveCFEPatchConfig.AIvsWalls
+                           && !ActiveCFEPatchConfig.EnableAdvancedWallOwnership;
+
             /*
             **	CFE: a crushing vehicle can drive through a wall it doesn't like and can crush.
             */
             if (ActiveCFEPatchConfig.EnableWallCrush && Can_Crush() && CFE_Wall_Crushable(optr)
-                && !House->Is_Ally(cellptr->Owner)) {
+                && !House->Is_Ally(cellptr->Owner) && !neutral) {
                 crushablewall = true;
             } else if (Class->Primary != WEAPON_NONE) {
                 WarheadTypeClass const* whead =
@@ -3559,9 +3563,6 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
 
                 if (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden)) {
 
-                    // CFE AI vs walls: neutral walls are left alone unless ADV_WALL_OWN says otherwise.
-                    bool neutral = cellptr->Owner == HOUSE_NONE && ActiveCFEPatchConfig.AIvsWalls
-                                   && !ActiveCFEPatchConfig.EnableAdvancedWallOwnership;
                     if (!House->IsHuman && !House->Is_Ally(cellptr->Owner) && !neutral) {
                         if (retval < MOVE_DESTROYABLE)
                             retval = MOVE_DESTROYABLE;

@@ -319,6 +319,12 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      length 1 and no ini entry: proximity fails, cursor 1 cell, 1 piece placed. Length 5: proximity passes, cursor 3
      cells, gap filled (4 walls in all), the extra cells owned; full cost charges 100 for the 2 extras, otherwise
      free. Length 2: out of reach, so as length 1. Not verified: real play; the cursor on screen; Ctrl; refunds.
+   - Audit after step 6 (final code, instrumented runs, temporary code removed): 6a-6d rerun, same results. Found and
+     fixed: with `AI_VS_WALLS` on and `ADV_WALL_OWN` off, `WALL_CRUSH` let vehicles crush neutral walls; CFE doesn't.
+     Now neutral sandbag `enter=5` in that case, `enter=0` with `ADV_WALL_OWN` on or `AI_VS_WALLS` off. All wall
+     switches + A* on together, 3000 frames target: saves 1-6 ran 75 s (shared CPU) with no crash text; saves 2 and 5
+     reached 2100 frames, exit 0. Difference kept on purpose: with `AI_VS_WALLS` off CFE skips the terrain check
+     for AI units with wall-destroying weapons; here off stays vanilla (`MOVE_NO`).
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments
 
