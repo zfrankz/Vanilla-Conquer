@@ -103,6 +103,14 @@
 */
 #include "sidebarglyphx.h"
 
+/*
+**	CFE smarter SAMs: shots left and lowering delay of each SAM site, by building index. Not saved,
+**	because saving would change the save format: both are reset when the launcher next goes
+**	underground, and a SAM caught mid-volley by a load just fires its next shot and reloads.
+*/
+static int _cfe_sam_ammo[BUILDING_MAX];
+static int _cfe_sam_lowering_delay[BUILDING_MAX];
+
 enum SAMState
 {
     SAM_NONE = -1,   // Used for non SAM site buildings.
@@ -4366,6 +4374,10 @@ int BuildingClass::Mission_Attack(void)
         */
         case SAM_UNDERGROUND:
             IsReadyToCommence = true;
+            if (ActiveCFEPatchConfig.EnableSmarterSAMs) {
+                _cfe_sam_ammo[Buildings.ID(this)] = ActiveCFEPatchConfig.SmarterSAMAmmo;
+                _cfe_sam_lowering_delay[Buildings.ID(this)] = 0;
+            }
             if (Target_Legal(TarCom)) {
                 Set_Rate(2);
                 Set_Stage(0);
@@ -4408,6 +4420,11 @@ int BuildingClass::Mission_Attack(void)
                         PrimaryFacing.Set_Desired(facing);
                     } else {
                         Status = SAM_FIRING;
+
+                        // CFE: go straight to the long-delay SAM_FIRING2 if the number of shots left is odd.
+                        if (ActiveCFEPatchConfig.EnableSmarterSAMs && _cfe_sam_ammo[Buildings.ID(this)] % 2 == 1) {
+                            Status = SAM_FIRING2;
+                        }
                     }
                 }
             }
@@ -4432,6 +4449,15 @@ int BuildingClass::Mission_Attack(void)
                         if (error == FIRE_OK) {
                             Fire_At(TarCom, 0);
                             Status = SAM_READY2;
+                            if (ActiveCFEPatchConfig.EnableSmarterSAMs) {
+                                int& ammo = _cfe_sam_ammo[Buildings.ID(this)];
+                                if (ammo > 0) {
+                                    ammo--;
+                                }
+                                if (!ammo) {
+                                    Status = SAM_LOCKING;
+                                }
+                            }
                             return (1);
                         }
                     }
@@ -4451,6 +4477,11 @@ int BuildingClass::Mission_Attack(void)
                         PrimaryFacing.Set_Desired(facing);
                     } else {
                         Status = SAM_FIRING2;
+
+                        // CFE: go straight to the short-delay SAM_FIRING if the number of shots left is even.
+                        if (ActiveCFEPatchConfig.EnableSmarterSAMs && _cfe_sam_ammo[Buildings.ID(this)] % 2 == 0) {
+                            Status = SAM_FIRING;
+                        }
                     }
                 }
             }
@@ -4472,6 +4503,19 @@ int BuildingClass::Mission_Attack(void)
                         if (error == FIRE_OK) {
                             Fire_At(TarCom, 0);
                             Status = SAM_LOCKING;
+                            if (ActiveCFEPatchConfig.EnableSmarterSAMs) {
+                                int& ammo = _cfe_sam_ammo[Buildings.ID(this)];
+                                if (ammo > 0) {
+                                    ammo--;
+                                }
+
+                                // Loop back while there is ammo left, skipping the reload.
+                                if (ammo) {
+                                    Status = SAM_READY;
+                                    return (
+                                        MAX(1, (TICKS_PER_SECOND * 3) + ActiveCFEPatchConfig.SmarterSAMBalanceDelay));
+                                }
+                            }
                             return (TICKS_PER_SECOND * 3);
                         }
                     }
@@ -4483,6 +4527,29 @@ int BuildingClass::Mission_Attack(void)
         **	Rotating to face north in preparation for lowering to reload.
         */
         case SAM_LOCKING:
+            /*
+            **	CFE smarter SAMs: with shots left, look for a new target for two seconds before
+            **	going down to reload. A delay of 0 means the wait hasn't started, -1 that it's over.
+            */
+            if (ActiveCFEPatchConfig.EnableSmarterSAMs) {
+                int& delay = _cfe_sam_lowering_delay[Buildings.ID(this)];
+                if (delay == 0) {
+                    delay = (2 * TICKS_PER_SECOND) + 1;
+                }
+                if (delay > 0) {
+                    delay--;
+                }
+                if (delay > 0 && _cfe_sam_ammo[Buildings.ID(this)]) {
+                    Assign_Target(Greatest_Threat(THREAT_RANGE));
+                    if (Target_Legal(TarCom)) {
+                        Status = SAM_READY;
+                        delay = 0;
+                    }
+                    return (1);
+                }
+                delay = -1;
+            }
+
             if (!PrimaryFacing.Is_Rotating()) {
                 if (PrimaryFacing == DIR_N) {
                     Set_Rate(2);

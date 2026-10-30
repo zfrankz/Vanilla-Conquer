@@ -199,7 +199,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      A* off, 4000 frames: 39 choices, all in leptons, 1 queue jump. No crash.
      Not verified: real play; an unreachable refinery (no test map had one); the AI's harvesters (CFE limits
      these features to human players in single player).
-5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a ported, play-test pending; 5b–5e to do
+5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a and 5b ported, play-test pending; 5c–5e to do
    - Split: 5a small switches, 5b `SMARTER_SAMS`, 5c `SMARTER_AIRCRAFT`, 5d `SMARTER_CPU_COMMANDOS`, 5e veterancy.
    - 5a: `DISABLE_COMMANDO_AIRSTRIKES` (no enemy A10 reinforcements in single player until the player has a
      discovered building), `SMARTER_MAMMOTHS` (mammoths use missiles on infantry), `COMMANDO_GUARD` (0 off,
@@ -215,6 +215,17 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      buildings, not sent (saves 3, 5, 6); off, sent on all four saves tried.
      Not verified: real play; a mission with owned but undiscovered buildings; mammoths against non-infantry
      (the new code only acts on infantry targets); `COMMANDO_GUARD=1` in multiplayer.
+   - 5b `SMARTER_SAMS` + `SMARTER_SAM_AMMO` + `SMARTER_SAM_BALANCE_DELAY`: a SAM keeps firing until its ammo is
+     out instead of reloading after 2 shots, and with shots left it looks for a new target for 2 seconds
+     before going down.
+   - Differences from CFE: ammo and lowering delay are in unsaved side tables (`SAMAmmo` and
+     `SAMLoweringDelay` are saved in CFE); the ammo count stops at 0, so a SAM caught mid-volley by a load
+     fires its next shot and reloads. The rank-3 quad-shot and `LocalROFBias` parts come with veterancy (5e).
+   - Verified: builds, no warnings on changed lines. Instrumented runs (temporary code, removed) on save 2,
+     one player SAM against up to 4 enemy Orcas, 1500 frames: off 2 shots; ammo 2, 4 shots in volleys of 2;
+     ammo 6, a volley of 6 about 90 frames apart per pair, a new target for each pair; with one-hit Orcas
+     the same, then a reload and a new volley.
+     Not verified: real play; a load during a volley; `SMARTER_SAM_BALANCE_DELAY` other than 0.
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments

@@ -120,6 +120,16 @@ Add under `[FEATURES]`: `SMARTER_MAMMOTHS=1`, `DISABLE_COMMANDO_AIRSTRIKES=1`; a
 - [ ] **Airstrikes:** in a mission that starts without a base (commando missions), no enemy A10s arrive until
   you own a base. Missions with a base still get them.
 
+## 2g. Smarter SAMs (Phase 3 step 5b)
+Add under `[FEATURES]`: `SMARTER_SAMS=1`; and under `[SETTINGS]`: `SMARTER_SAM_AMMO=6`.
+`SMARTER_SAM_AMMO` is the number of shots between reloads (default 2).
+
+- [ ] **Volleys:** with `SMARTER_SAM_AMMO=6`, a SAM site under air attack fires 6 missiles before going back down.
+- [ ] **Retargeting:** when its target dies and it has shots left, the SAM stays up for about 2 seconds and
+  turns to the next aircraft instead of going down.
+- [ ] **Balance:** `SMARTER_SAM_BALANCE_DELAY` adds game frames between pairs of shots (0 = 3 seconds, as in CFE).
+- [ ] Save during an air attack, load, and keep playing.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.
