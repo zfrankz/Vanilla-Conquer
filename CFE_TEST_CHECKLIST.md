@@ -163,6 +163,12 @@ Add under `[SETTINGS]`: `VETERANCY=2` (2 = also in single player).
   towers, obelisks, grenadiers and artillery reach a cell further; a commando or Nod APC turns stealthy when
   standing still; buggies run infantry over; a GDI APC heals its passengers; helicopters repair on the pad.
 
+## 2k. Wall crushing (Phase 3 step 6a)
+Add under `[FEATURES]`: `WALL_CRUSH=1`.
+
+- [ ] **Crushing:** a Mammoth or other tracked vehicle drives straight through enemy sandbags, chain-link, barbed
+  wire and wooden fences, flattening them. Concrete walls and your own walls still stop it.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

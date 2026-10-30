@@ -284,7 +284,15 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      armor-piercing vs steel 3→8. Shots in 500 frames: light tank 6→12, mammoth 8→16, with the quad gap of 12 frames.
      Not verified: real play; SAM, advanced tower and turret volleys; attack cycle ammunition; helicopter repair
      and reload; APC medic; SSM reload; stealth tank cloak timing and detection; commando firing while cloaked.
-6. Walls (TS-style building, crushing, ownership, AI wall shooting)
+6. Walls (TS-style building, crushing, ownership, AI wall shooting) – in progress: 6a ported, play-test pending
+   - Split: 6a `WALL_CRUSH`, 6b `AI_VS_WALLS`, 6c `ADV_WALL_OWN`, 6d TS-style building.
+   - 6a `WALL_CRUSH`: crushing vehicles (including rank 3 buggies) drive through and flatten crushable walls
+     that aren't an ally's. `Reduce_Wall(-1)` destroys a wall outright, as in RA.
+   - Differences from CFE: sandbags count as crushable only with the switch on (CFE changes the overlay data
+     for everyone); `VOC_CRUMBLE` instead of CFE's sounds, which VC doesn't have.
+   - Verified: builds. Instrumented run (temporary code, removed) on save 2, Mammoth: off, it can't enter
+     any wall and drives around; on, it can enter an enemy sandbag cell but not brick or its own sandbags,
+     drives through and the sandbags are gone. Not verified: real play; AI vehicles; rank 3 buggies.
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments
 

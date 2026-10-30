@@ -97,6 +97,14 @@
 #include "ccini.h"
 #include <climits>
 
+/*
+**	CFE: sandbags aren't marked crushable in the overlay data, but can be crushed with WALL_CRUSH on.
+*/
+static bool CFE_Wall_Crushable(OverlayTypeClass const* optr)
+{
+    return (optr->IsCrushable || optr->Type == OVERLAY_SANDBAG_WALL);
+}
+
 /***********************************************************************************************
  * UnitClass::Validate -- validates unit pointer.															  *
  *                                                                                             *
@@ -2056,6 +2064,20 @@ void UnitClass::Per_Cell_Process(bool center)
 #endif
 
     /*
+    **	CFE: crushing vehicles flatten crushable walls they drive over.
+    */
+    if (ActiveCFEPatchConfig.EnableWallCrush && Can_Crush()) {
+        CellClass* wallcell = &Map[cell];
+        if (wallcell->Overlay != OVERLAY_NONE) {
+            OverlayTypeClass const* optr = &OverlayTypeClass::As_Reference(wallcell->Overlay);
+            if (optr->IsWall && CFE_Wall_Crushable(optr)) {
+                Sound_Effect(VOC_CRUMBLE, Center_Coord());
+                wallcell->Reduce_Wall(-1);
+            }
+        }
+    }
+
+    /*
     **	Check to see if crushing of any unfortunate infantry is warranted.
     */
     Overrun_Square(Coord_Cell(Coord), false);
@@ -3509,6 +3531,7 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
     }
 
     MoveType retval = MOVE_OK;
+    bool crushablewall = false;
 
     /*
     **	Certain vehicles can drive over walls. Check for this case and
@@ -3522,7 +3545,14 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
         }
 
         if (optr->IsWall) {
-            if (Class->Primary != WEAPON_NONE) {
+
+            /*
+            **	CFE: a crushing vehicle can drive through a wall it doesn't like and can crush.
+            */
+            if (ActiveCFEPatchConfig.EnableWallCrush && Can_Crush() && CFE_Wall_Crushable(optr)
+                && !House->Is_Ally(cellptr->Owner)) {
+                crushablewall = true;
+            } else if (Class->Primary != WEAPON_NONE) {
                 WarheadTypeClass const* whead =
                     &Warheads[BulletTypeClass::As_Reference(Weapons[Class->Primary].Fires).Warhead];
 
@@ -3549,7 +3579,7 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
 #ifdef ADVANCED
     if (retval != MOVE_DESTROYABLE && !Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
 #else
-    if (!Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
+    if (!crushablewall && !Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
 #endif
         return (MOVE_NO);
     }
