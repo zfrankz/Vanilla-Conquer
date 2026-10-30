@@ -720,6 +720,21 @@ int AircraftClass::Mission_Hunt(void)
 void AircraftClass::AI(void)
 {
     Validate();
+
+    /*
+    **	CFE veterancy: rank 3 helicopters repair for free on a helipad, at half the repair bay's rate.
+    */
+    if (Vet().Rank == 3 && Altitude == 0 && !IsLanding && !IsTakingOff && Health_Ratio() < 0x0100) {
+        TechnoClass* tech = Contact_With_Whom();
+        if (tech && tech->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)tech) == STRUCT_HELIPAD
+            && ::Distance(Center_Coord(), tech->Docking_Coord()) < 0x0040) {
+            int repaircycle = 42 - (int)(Saturate(House->Power_Fraction(), 1) * 14);
+            if ((Frame % repaircycle) == 0) {
+                Strength = MIN((int)Strength + Class->Repair_Step(), (int)Class_Of().MaxStrength);
+            }
+        }
+    }
+
     /*
     **	A Mission change can always occur if the aircraft is landed or flying.
     */

@@ -2748,6 +2748,13 @@ bool BuildingClass::Limbo(void)
 
         House->IsRecalcNeeded = true;
 
+        // CFE veterancy: losing a veteran super weapon building can change the recharge time.
+        if (!ScenarioInit) {
+            IsInLimbo = true; // So that this building isn't counted.
+            House->Veterancy_Adjust_Super_Cooldown();
+            IsInLimbo = false;
+        }
+
 #ifdef USE_RA_AI
         //
         // Added for RA AI in TD. ST - 7/26/2019 9:25AM
@@ -4382,8 +4389,11 @@ int BuildingClass::Mission_Attack(void)
         case SAM_UNDERGROUND:
             IsReadyToCommence = true;
             if (ActiveCFEPatchConfig.EnableSmarterSAMs) {
-                _cfe_sam_ammo[Buildings.ID(this)] = ActiveCFEPatchConfig.SmarterSAMAmmo;
+                _cfe_sam_ammo[Buildings.ID(this)] =
+                    ActiveCFEPatchConfig.SmarterSAMAmmo * (Vet().Rank == 3 ? 2 : 1); // Rank 3: four shots to the volley.
                 _cfe_sam_lowering_delay[Buildings.ID(this)] = 0;
+            } else if (Vet().Rank == 3) {
+                _cfe_sam_ammo[Buildings.ID(this)] = 4;
             }
             if (Target_Legal(TarCom)) {
                 Set_Rate(2);
@@ -4429,7 +4439,8 @@ int BuildingClass::Mission_Attack(void)
                         Status = SAM_FIRING;
 
                         // CFE: go straight to the long-delay SAM_FIRING2 if the number of shots left is odd.
-                        if (ActiveCFEPatchConfig.EnableSmarterSAMs && _cfe_sam_ammo[Buildings.ID(this)] % 2 == 1) {
+                        if ((ActiveCFEPatchConfig.EnableSmarterSAMs || Vet().Rank == 3)
+                            && _cfe_sam_ammo[Buildings.ID(this)] % 2 == 1) {
                             Status = SAM_FIRING2;
                         }
                     }
@@ -4456,7 +4467,7 @@ int BuildingClass::Mission_Attack(void)
                         if (error == FIRE_OK) {
                             Fire_At(TarCom, 0);
                             Status = SAM_READY2;
-                            if (ActiveCFEPatchConfig.EnableSmarterSAMs) {
+                            if (ActiveCFEPatchConfig.EnableSmarterSAMs || Vet().Rank == 3) {
                                 int& ammo = _cfe_sam_ammo[Buildings.ID(this)];
                                 if (ammo > 0) {
                                     ammo--;
@@ -4486,7 +4497,8 @@ int BuildingClass::Mission_Attack(void)
                         Status = SAM_FIRING2;
 
                         // CFE: go straight to the short-delay SAM_FIRING if the number of shots left is even.
-                        if (ActiveCFEPatchConfig.EnableSmarterSAMs && _cfe_sam_ammo[Buildings.ID(this)] % 2 == 0) {
+                        if ((ActiveCFEPatchConfig.EnableSmarterSAMs || Vet().Rank == 3)
+                            && _cfe_sam_ammo[Buildings.ID(this)] % 2 == 0) {
                             Status = SAM_FIRING;
                         }
                     }
@@ -4510,7 +4522,7 @@ int BuildingClass::Mission_Attack(void)
                         if (error == FIRE_OK) {
                             Fire_At(TarCom, 0);
                             Status = SAM_LOCKING;
-                            if (ActiveCFEPatchConfig.EnableSmarterSAMs) {
+                            if (ActiveCFEPatchConfig.EnableSmarterSAMs || Vet().Rank == 3) {
                                 int& ammo = _cfe_sam_ammo[Buildings.ID(this)];
                                 if (ammo > 0) {
                                     ammo--;
@@ -4519,11 +4531,23 @@ int BuildingClass::Mission_Attack(void)
                                 // Loop back while there is ammo left, skipping the reload.
                                 if (ammo) {
                                     Status = SAM_READY;
-                                    return (
-                                        MAX(1, (TICKS_PER_SECOND * 3) + ActiveCFEPatchConfig.SmarterSAMBalanceDelay));
+
+                                    // CFE veterancy: quad shots at rank 3, with a short delay within the quad.
+                                    if (Vet().Rank == 3) {
+                                        int volley = ActiveCFEPatchConfig.EnableSmarterSAMs
+                                                         ? 2 * ActiveCFEPatchConfig.SmarterSAMAmmo
+                                                         : 4;
+                                        if ((volley - ammo) % 4 != 0) {
+                                            return (2);
+                                        }
+                                    }
+                                    int adjustment = ActiveCFEPatchConfig.EnableSmarterSAMs
+                                                         ? ActiveCFEPatchConfig.SmarterSAMBalanceDelay
+                                                         : 0;
+                                    return (MAX(1, (int)(((TICKS_PER_SECOND * 3) + adjustment) * Vet().ROFBias)));
                                 }
                             }
-                            return (TICKS_PER_SECOND * 3);
+                            return (MAX(1, (int)((TICKS_PER_SECOND * 3) * Vet().ROFBias)));
                         }
                     }
                 }
@@ -4864,6 +4888,11 @@ int BuildingClass::Mission_Repair(void)
                         pfrac = fixed::_1_2;
                     /* fixed(1, 60) reload rate of 1/60 of a minute, should be Rule.ReloadRate when ported from RA.*/
                     int time = Inverse(pfrac) * fixed(1, 60) * TICKS_PER_MINUTE;
+
+                    // CFE veterancy: rank 3 helicopters reload twice as fast.
+                    if (Contact_With_Whom()->Vet().Rank == 3) {
+                        time = time / 2;
+                    }
                     IsReadyToCommence = false;
                     return (time);
                 }

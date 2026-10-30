@@ -80,6 +80,13 @@ int BulletClass::Validate(void) const
 #define Validate()
 #endif
 
+/*
+**	CFE veterancy: special ammunition of each bullet, by heap index. Not saved; a bullet in flight
+**	during a load loses it.
+*/
+unsigned char CFE_Bullet_Pen[BULLET_MAX];
+int CFE_Armor_Pen = ARMORPEN_NONE;
+
 /***********************************************************************************************
  * BulletClass::BulletClass -- Default constructor for bullet objects.                         *
  *                                                                                             *
@@ -180,6 +187,7 @@ void BulletClass::operator delete(void* ptr)
 BulletClass::BulletClass(BulletType id)
     : Class(&BulletTypeClass::As_Reference(id))
 {
+    CFE_Bullet_Pen[Bullets.ID(this)] = ARMORPEN_NONE;
     Altitude = 0;
     IsInaccurate = false;
     IsLocked = true;
@@ -426,6 +434,7 @@ void BulletClass::AI(void)
             **	Non-aircraft targets apply damage to the ground.
             */
             if (!Is_Target_Aircraft(TarCom) || As_Aircraft(TarCom)->In_Which_Layer() == LAYER_GROUND) {
+                CFE_Armor_Pen = CFE_Bullet_Pen[Bullets.ID(this)];
                 Explosion_Damage(Coord, Strength, Payback, Class->Warhead);
             } else {
 
@@ -438,6 +447,7 @@ void BulletClass::AI(void)
 
                     int str = Strength;
                     if (object)
+                        CFE_Armor_Pen = CFE_Bullet_Pen[Bullets.ID(this)];
                         object->Take_Damage(str, 0, Class->Warhead, Payback);
                 }
             }

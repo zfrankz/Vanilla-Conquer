@@ -1829,7 +1829,7 @@ int CellClass::Clear_Icon(void) const
  * HISTORY:                                                                                    *
  *   01/10/1995 JLB : Created.                                                                 *
  *=============================================================================================*/
-void CellClass::Incoming(COORDINATE threat, bool forced, bool nokidding)
+void CellClass::Incoming(COORDINATE threat, bool forced, bool nokidding, bool veteransonly)
 {
     Validate();
     ObjectClass* object = NULL;
@@ -1837,12 +1837,16 @@ void CellClass::Incoming(COORDINATE threat, bool forced, bool nokidding)
     object = Cell_Occupier();
     while (object) {
 
+        // CFE veterancy: veteran infantry always get out of the way.
+        bool imavet = object->What_Am_I() == RTTI_INFANTRY && ((TechnoClass*)object)->Vet().Rank > 0;
+
         /*
         **	Special check to make sure that friendly units never scatter.
         */
-        if (nokidding || Special.IsScatter || (object->Is_Techno() && !((TechnoClass*)object)->House->IsHuman)) {
+        if ((nokidding || Special.IsScatter || (object->Is_Techno() && !((TechnoClass*)object)->House->IsHuman) || imavet)
+            && (!veteransonly || imavet)) {
             if (object->What_Am_I() == RTTI_INFANTRY) {
-                object->Scatter(threat, forced, nokidding);
+                object->Scatter(threat, forced, nokidding || imavet);
             } else {
                 object->Scatter(threat, forced, nokidding);
                 //				object->Scatter(threat, false);
@@ -2439,6 +2443,7 @@ bool CellClass::Goodie_Check(FootClass* object, bool check_steel)
 
                     if (obj && obj->Is_Techno() && Distance(Cell_Coord(), obj->Center_Coord()) < 0x0300) {
                         ((TechnoClass*)obj)->IsCloakable = true;
+                        ((TechnoClass*)obj)->Clear_Veteran_Cloak();
                     }
                 }
                 break;

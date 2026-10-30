@@ -157,6 +157,9 @@ Add under `[SETTINGS]`: `VETERANCY=2` (2 = also in single player).
 - [ ] **Harvesters:** a harvester also gets promoted after about 10 loads.
 - [ ] **Healing:** a damaged rank 2 or 3 unit slowly heals on its own.
 - [ ] **Save and load:** a promoted unit keeps its rank after save and load. An old save still loads.
+- [ ] **Rank 3 specials** (three yellow dots): light and medium tanks fire twice; mammoths fire four shots; guard
+  towers, obelisks, grenadiers and artillery reach a cell further; a commando or Nod APC turns stealthy when
+  standing still; buggies run infantry over; a GDI APC heals its passengers; helicopters repair on the pad.
 
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.

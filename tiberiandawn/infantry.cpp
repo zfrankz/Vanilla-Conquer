@@ -429,7 +429,7 @@ ResultType InfantryClass::Take_Damage(int& damage, int distance, WarheadType war
         */
         if (*this == INFANTRY_E4) {
             new AnimClass(ANIM_NAPALM1, Coord);
-            Explosion_Damage(Coord, 80, 0, WARHEAD_FIRE);
+            Explosion_Damage(Coord, 80 * (1.0 - (0.3 * Vet().Rank)), 0, WARHEAD_FIRE);
         }
 
         if (*this == INFANTRY_E2) {
@@ -439,7 +439,7 @@ ResultType InfantryClass::Take_Damage(int& damage, int distance, WarheadType war
 
         if (*this == INFANTRY_E5) {
             new AnimClass(ANIM_CHEM_BALL, Coord);
-            Explosion_Damage(Coord, 80, 0, WARHEAD_HE);
+            Explosion_Damage(Coord, 80 * (1.0 - (0.3 * Vet().Rank)), 0, WARHEAD_HE);
         }
 
         VocType sound;
@@ -1204,6 +1204,12 @@ void InfantryClass::AI(void)
     switch (Can_Fire(TarCom, 0)) {
     case FIRE_CLOAKED:
         Do_Uncloak();
+
+        // CFE veterancy: commandos decloak quickly.
+        if (Vet().Cloak) {
+            CloakingDevice.Graphic_Logic();
+            CloakingDevice.Graphic_Logic();
+        }
         break;
 
     case FIRE_OK:
@@ -1573,6 +1579,12 @@ void InfantryClass::AI(void)
             Mark(MARK_DOWN);
         }
         IsNewNavCom = false;
+    }
+
+    // CFE veterancy: a commando's cloak from veterancy only works while standing still.
+    if (Vet().Cloak
+        && (IsDriving || Path[0] != FACING_NONE || Target_Legal(NavCom) || (Target_Legal(TarCom) && !In_Range(TarCom)))) {
+        Do_Uncloak();
     }
 }
 

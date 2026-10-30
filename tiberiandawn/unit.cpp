@@ -361,7 +361,7 @@ void UnitClass::AI(void)
             if (Reload.Expired()) {
                 Ammo++;
                 if (Ammo < Class->MaxAmmo) {
-                    Reload = TICKS_PER_SECOND * 30;
+                    Reload = (int)(TICKS_PER_SECOND * (Vet().Rank == 3 ? 20 : 30) * Vet().ROFBias);
                 }
                 Mark(MARK_CHANGE);
             }
@@ -385,6 +385,19 @@ void UnitClass::AI(void)
     if (*this == UNIT_HTANK && (Frame % 16) == 0 && Health_Ratio() < 0x0080 && Vet().Rank < 2) {
         Strength++;
         Mark(MARK_CHANGE);
+    }
+
+    /*
+    **	CFE veterancy: rank 3 GDI APCs have a medic on board who heals the passengers.
+    */
+    if (*this == UNIT_APC && Vet().Rank == 3 && (Owner() == HOUSE_GOOD || House->ActLike == HOUSE_GOOD)
+        && (Frame % 16) == 0) {
+        ObjectClass* passenger = Attached_Object();
+        for (; passenger; passenger = passenger->Next) {
+            if (passenger->What_Am_I() == RTTI_INFANTRY && ((InfantryClass*)passenger)->Health_Ratio() < 0x0100) {
+                ((InfantryClass*)passenger)->Strength++;
+            }
+        }
     }
     if (*this == UNIT_VICE && Map[Coord_Cell(Coord)].Land_Type() == LAND_TIBERIUM && Health_Ratio() < 0x0100
         && (Frame % 16) == 0) {
@@ -897,6 +910,21 @@ ResultType UnitClass::Take_Damage(int& damage, int distance, WarheadType warhead
         (Is_Selected_By_Player() && Is_Owned_By_Player()); // Fox for GlyphX multiplayer. ST - 4/16/2019 9:46AM
 
     /*
+    **	CFE veterancy: rank 3 stealth tanks take up to 50% less damage, depending on how far cloaked.
+    */
+    if (*this == UNIT_STANK && Vet().Rank == 3) {
+        float cloakmultiplier = 1.0f;
+        if (Cloak == CLOAKED) {
+            cloakmultiplier = 0.5f;
+        } else if (Cloak == CLOAKING) {
+            cloakmultiplier = 1.0f - (0.5f * ((float)CloakingDevice.Fetch_Stage() / 38.0f));
+        } else if (Cloak == UNCLOAKING) {
+            cloakmultiplier = 0.5f + (0.5f * ((float)CloakingDevice.Fetch_Stage() / 38.0f));
+        }
+        damage = MAX((int)(damage * cloakmultiplier), 1);
+    }
+
+    /*
     **	In order for a this to be damaged, it must either be a unit
     **	with a crew or a sandworm.
     */
@@ -1065,7 +1093,7 @@ ResultType UnitClass::Take_Damage(int& damage, int distance, WarheadType warhead
                      && BulletTypeClass::As_Reference(Weapons[Class->Primary].Fires).Warhead != WARHEAD_FIRE))
                 && (GameToPlay != GAME_NORMAL || *this != UNIT_HARVESTER || BuildLevel > 8
                     || PlayerPtr->Difficulty == DIFF_HARD)
-                && !(GameToPlay == GAME_NORMAL && PlayerPtr->Difficulty == DIFF_EASY) && Class->IsCrusher
+                && !(GameToPlay == GAME_NORMAL && PlayerPtr->Difficulty == DIFF_EASY) && Can_Crush()
                 && source->Is_Techno() && ((TechnoTypeClass const&)source->Class_Of()).IsCrushable) {
 
                 Assign_Destination(source->As_Target());
@@ -3401,7 +3429,7 @@ MoveBitType UnitClass::Blocking_Object(TechnoClass const* techno, CELL cell) con
             /*
             ** Can we just run it over?
             */
-            if (techno->Class_Of().IsCrushable && (cellptr->Flag.Composite & 0xE0) == 0 && Class->IsCrusher) {
+            if (techno->Class_Of().IsCrushable && (cellptr->Flag.Composite & 0xE0) == 0 && Can_Crush()) {
 
                 /*
                 ** Now lets run it over.
@@ -3708,10 +3736,7 @@ MoveType UnitClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveTyp
 {
     CellClass const* cellptr = &Map[cell];
 
-    /*
-    **	CFE also lets rank 3 veteran buggies crush; veterancy isn't ported yet.
-    */
-    bool cancrush = Class->IsCrusher;
+    bool cancrush = Can_Crush();
 
     if (retval == MOVE_OK) {
 
@@ -4198,7 +4223,7 @@ ActionType UnitClass::What_Action(ObjectClass* object) const
     **	the object as a movable location.
     */
     if (action == ACTION_ATTACK && !Can_Player_Fire()) {
-        if (Class->IsCrusher && object->Class_Of().IsCrushable) {
+        if (Can_Crush() && object->Class_Of().IsCrushable) {
             action = ACTION_MOVE;
         } else {
             action = ACTION_SELECT;

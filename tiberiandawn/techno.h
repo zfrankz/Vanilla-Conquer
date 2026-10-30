@@ -374,6 +374,7 @@ public:
     CFEVeterancy const& Vet(void) const;
     void Reset_Veterancy(void);
     void Gain_Veterancy_XP(unsigned short xp);
+    void Clear_Veteran_Cloak(void);
 
     /*
     **	Movement and animation.

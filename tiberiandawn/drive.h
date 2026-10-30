@@ -116,6 +116,7 @@ public:
     virtual ObjectTypeClass const& Class_Of(void) const;
     virtual void Overrun_Square(CELL cell, bool threaten = true);
     virtual void Assign_Destination(TARGET target);
+    bool Can_Crush(void) const;
     virtual void Per_Cell_Process(bool center);
     virtual bool Ok_To_Move(DirType) const;
     virtual void AI(void);

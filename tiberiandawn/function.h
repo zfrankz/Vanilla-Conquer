@@ -301,6 +301,19 @@ void Explosion_Damage(COORDINATE coord, unsigned strength, TechnoClass* source, 
 extern bool CFE_No_Veterancy_XP;
 
 /*
+**	CFE veterancy: special ammunition. It travels with the bullet and is handed to the next
+**	Take_Damage() call through CFE_Armor_Pen, which uses it up.
+*/
+enum CFEArmorPenType
+{
+    ARMORPEN_NONE,
+    ARMORPEN_PSEUDO_AP, // Does slightly more damage vs wood and a lot more vs steel.
+    ARMORPEN_PSEUDO_HE  // Does more damage vs no armor and concrete, and can break walls.
+};
+extern unsigned char CFE_Bullet_Pen[];
+extern int CFE_Armor_Pen;
+
+/*
 **	CONQUER.CPP
 */
 void Center_About_Objects(void);

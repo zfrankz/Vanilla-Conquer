@@ -199,7 +199,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      A* off, 4000 frames: 39 choices, all in leptons, 1 queue jump. No crash.
      Not verified: real play; an unreachable refinery (no test map had one); the AI's harvesters (CFE limits
      these features to human players in single player).
-5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – in progress: 5a–5d and the core of 5e ported, play-test pending; 5e rank-3 specials to do
+5. Veterancy, smarter SAMs/mammoths/aircraft/commandos – 5a–5e ported, play-test pending
    - Split: 5a small switches, 5b `SMARTER_SAMS`, 5c `SMARTER_AIRCRAFT`, 5d `SMARTER_CPU_COMMANDOS`, 5e veterancy.
    - 5a: `DISABLE_COMMANDO_AIRSTRIKES` (no enemy A10 reinforcements in single player until the player has a
      discovered building), `SMARTER_MAMMOTHS` (mammoths use missiles on infantry), `COMMANDO_GUARD` (0 off,
@@ -268,6 +268,22 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      slot and loaded: rank and XP restored; with `VETERANCY=0` the same save shows no ranks; old save 2 loads.
      Not verified: real play; the pips on screen; super weapon recharge; XP from harvesting, squishing or
      passengers; multiplayer.
+   - 5e rank 3 specials: two-shot light/medium tanks and turrets, quad-shot mammoths, advanced guard towers and
+     SAMs, +1 cell range (grenadier, artillery, guard tower, obelisk), armor-piercing minigunners and jeeps,
+     high-explosive attack cycles, friendly-fire reduction for flame and chem weapons, better stealth tank
+     cloak and damage reduction, commando and Nod APC stealth, GDI APC medic, buggies that crush, faster SSM
+     reload, helicopter pad repair and faster reload, MLRS and harvester armor; ranks 1+ infantry always
+     scatter from vehicles, and flame and chem death explosions shrink with rank.
+   - Differences from CFE: special ammunition reaches `Take_Damage` through the global `CFE_Armor_Pen` and a
+     per-bullet table (CFE adds parameters to every `Take_Damage`), so a bullet in flight during a load loses it;
+     the XP-free pilot-light damage keeps VC's warhead and distance; no commando wind-gust sound (not in VC).
+     Not ported: wall crushing by veteran buggies (walls, step 6), `DeathByTiberium` chem bonus (balance, step 8).
+   - Verified: builds. Instrumented runs (temporary code, removed) on save 2, rank 0 against forced rank 3:
+     range artillery 1536→1792, grenadier 832→1088; buggy crush 0→1; Nod APC and commando cloak; armor MLRS 0.50,
+     harvester 0.40; rocket soldier speed 2.17; ally flame hit 37→4; cloaked stealth tank hit 75→26;
+     armor-piercing vs steel 3→8. Shots in 500 frames: light tank 6→12, mammoth 8→16, with the quad gap of 12 frames.
+     Not verified: real play; SAM, advanced tower and turret volleys; attack cycle ammunition; helicopter repair
+     and reload; APC medic; SSM reload; stealth tank cloak timing and detection; commando firing while cloaked.
 6. Walls (TS-style building, crushing, ownership, AI wall shooting)
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments

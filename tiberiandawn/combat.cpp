@@ -127,6 +127,9 @@ int Modify_Damage(int damage, WarheadType warhead, ArmorType armor, int distance
  *=============================================================================================*/
 void Explosion_Damage(COORDINATE coord, unsigned strength, TechnoClass* source, WarheadType warhead)
 {
+    int armorpen = CFE_Armor_Pen;
+    CFE_Armor_Pen = ARMORPEN_NONE;
+
     CELL cell;                // Cell number under explosion.
     ObjectClass* object;      // Working object pointer.
     ObjectClass* objects[32]; // Maximum number of objects that can be damaged.
@@ -214,7 +217,9 @@ void Explosion_Damage(COORDINATE coord, unsigned strength, TechnoClass* source, 
             **	Apply the damage to the object.
             */
             if (damage) {
+                CFE_Armor_Pen = armorpen;
                 object->Take_Damage(damage, distance, warhead, source);
+                CFE_Armor_Pen = ARMORPEN_NONE;
             }
         }
     }
@@ -223,13 +228,19 @@ void Explosion_Damage(COORDINATE coord, unsigned strength, TechnoClass* source, 
     **	If there is a wall present at this location, it may be destroyed. Check to
     **	make sure that the warhead is of the kind that can destroy walls.
     */
+    // CFE veterancy: high explosive ammunition is twice as strong against the ground and walls.
+    if (armorpen == ARMORPEN_PSEUDO_HE) {
+        strength *= 2;
+    }
+
     cellptr = &Map[cell];
     cellptr->Reduce_Tiberium(strength / 10);
     if (cellptr->Overlay != OVERLAY_NONE) {
         OverlayTypeClass const* optr = &OverlayTypeClass::As_Reference(cellptr->Overlay);
 
         if (optr->IsWall) {
-            if (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden)) {
+            if (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden)
+                || armorpen == ARMORPEN_PSEUDO_HE) {
                 Map[cell].Reduce_Wall(strength);
             }
         }

@@ -59,6 +59,14 @@ DriveClass::DriveClass(void)
     , SimLeptonX(0)
     , SimLeptonY(0){}; // Added SimLeptonX and Y. ST - 4/30/2019 8:06AM
 
+/*
+**	CFE veterancy: rank 3 buggies can crush infantry too.
+*/
+bool DriveClass::Can_Crush(void) const
+{
+    return (Class->IsCrusher || (Vet().Rank == 3 && What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_BUGGY));
+}
+
 /***********************************************************************************************
  * DriveClass::Do_Turn -- Tries to turn the vehicle to the specified direction.                *
  *                                                                                             *
@@ -189,7 +197,7 @@ void DriveClass::Approach_Target(void)
         **	to drive over the infantry instead of firing on it.
         */
         TechnoClass* target = As_Techno(TarCom);
-        if (Class->Primary != WEAPON_FLAME_TONGUE && Class->IsCrusher && Distance(TarCom) < 0x0180 && target
+        if (Class->Primary != WEAPON_FLAME_TONGUE && Can_Crush() && Distance(TarCom) < 0x0180 && target
             && ((TechnoTypeClass const&)(target->Class_Of())).IsCrushable) {
             Assign_Destination(TarCom);
             return;
@@ -227,7 +235,7 @@ void DriveClass::Overrun_Square(CELL cell, bool threaten)
 {
     CellClass* cellptr = &Map[cell];
 
-    if (Class->IsCrusher) {
+    if (Can_Crush()) {
         if (threaten) {
 
             /*
@@ -243,6 +251,8 @@ void DriveClass::Overrun_Square(CELL cell, bool threaten)
                      || Scen.Scenario > 8)
                     && !(GameToPlay == GAME_NORMAL && PlayerPtr->Difficulty == DIFF_EASY)) {
                     cellptr->Incoming(0, true);
+                } else {
+                    cellptr->Incoming(0, true, false, true);
                 }
             }
         } else {
@@ -275,8 +285,17 @@ void DriveClass::Overrun_Square(CELL cell, bool threaten)
                     object = object->Next;
                 }
             }
-            if (crushed)
-                Do_Uncloak();
+            if (crushed) {
+
+                // CFE veterancy: a rank 3 stealth tank stays hidden half the time and otherwise only shimmers.
+                if (Vet().Rank == 3 && What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_STANK) {
+                    if (Random_Pick(0, 1) == 0) {
+                        Do_Shimmer();
+                    }
+                } else {
+                    Do_Uncloak();
+                }
+            }
         }
     }
 }

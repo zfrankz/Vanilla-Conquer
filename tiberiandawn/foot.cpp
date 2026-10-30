@@ -1497,7 +1497,11 @@ void FootClass::Per_Cell_Process(bool center)
             if (Map.In_Radar(cell)) {
                 TechnoClass const* techno = Map[cell].Cell_Techno();
 
-                if (techno && !House->Is_Ally(techno) && techno->Techno_Type_Class()->IsScanner) {
+                // CFE veterancy: rank 3 stealth tanks stay invisible 90% of the time.
+                bool bettercloak = Vet().Rank == 3 && What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_STANK;
+
+                if (techno && !House->Is_Ally(techno) && techno->Techno_Type_Class()->IsScanner
+                    && (!bettercloak || Random_Pick(0, 9) == 0)) {
                     Do_Shimmer();
                     break;
                 }
@@ -1533,7 +1537,7 @@ void FootClass::Per_Cell_Process(bool center)
     **	Trigger event associated with the player entering the cell.
     */
     TriggerClass* trigger = Map[Coord_Cell(Coord)].Get_Trigger();
-    if (Cloak != CLOAKED && trigger && trigger->House == Owner()) {
+    if ((Cloak != CLOAKED || Vet().Cloak) && trigger && trigger->House == Owner()) {
         trigger->Spring(EVENT_PLAYER_ENTERED, Coord_Cell(Coord));
     }
     //	}

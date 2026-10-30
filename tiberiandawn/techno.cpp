@@ -1959,15 +1959,24 @@ void TechnoClass::AI(void)
         **	If this object is uncloaked, but it can be cloaked and it thinks that it
         **	is a good time do so, then begin cloaking.
         */
-        if (Cloak == UNCLOAKED) {
+        // CFE veterancy: rank 3 stealth tanks cloak sooner and despite damage. Commandos only cloak standing still.
+        bool bettercloak = Vet().Rank == 3 && What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_STANK;
+        bool movingcommando = Vet().Cloak && What_Am_I() == RTTI_INFANTRY
+                              && (((FootClass*)this)->IsDriving || ((FootClass*)this)->Path[0] != FACING_NONE
+                                  || Target_Legal(((FootClass*)this)->NavCom)
+                                  || (Target_Legal(TarCom) && !In_Range(TarCom)));
+        if (Cloak == UNCLOAKED && !movingcommando) {
             // Changed for multiplayer so we can visually see the different players in the original renderer. ST -
             // 3/13/2019 5:40PM
             if (Is_Owned_By_Player())
                 Mark(MARK_CHANGE);
             // if (IsOwnedByPlayer) Mark(MARK_CHANGE);
             CloakingDevice.Graphic_Logic();
-            if (!Arm && CloakingDevice.Fetch_Stage()) {
-                if (Health_Ratio() > 0x0040) {
+            if (bettercloak && Arm < 27 && CloakingDevice.Fetch_Stage()
+                && (!Target_Legal(TarCom) || !In_Range(TarCom))) {
+                Do_Cloak();
+            } else if (!Arm && CloakingDevice.Fetch_Stage()) {
+                if (Health_Ratio() > 0x0040 || bettercloak) {
                     Do_Cloak();
                 } else {
                     if (Random_Pick(0, 25) == 1) {
@@ -2230,6 +2239,12 @@ FireErrorType TechnoClass::Can_Fire(TARGET target, int which) const
     **	If cloaked, then firing is disabled.
     */
     if (Cloak != UNCLOAKED) {
+
+        // CFE veterancy: a cloaked rank 3 commando can fire once it has darkened.
+        if (Vet().Rank == 3 && What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)this) == INFANTRY_RAMBO
+            && (const_cast<TechnoClass*>(this))->Visual_Character(true) <= VISUAL_DARKEN) {
+            return (FIRE_OK);
+        }
         return (FIRE_CLOAKED);
     }
 
@@ -2399,6 +2414,14 @@ CFEVeterancy const& TechnoClass::Vet(void) const
 void TechnoClass::Reset_Veterancy(void)
 {
     CFE_Vet_Entry(this) = CFEVeterancy();
+}
+
+/*
+**	A cloak from a crate takes precedence over one from veterancy.
+*/
+void TechnoClass::Clear_Veteran_Cloak(void)
+{
+    CFE_Vet_Entry(this).Cloak = false;
 }
 
 /***********************************************************************************************
@@ -2710,6 +2733,19 @@ BulletClass* TechnoClass::Fire_At(TARGET target, int which)
     bullet = new BulletClass(weapon->Fires);
     if (bullet) {
         bullet->Assign_Target(target);
+
+        /*
+        **	CFE veterancy: rank 3 minigunners and jeeps get armor piercing ammunition and rank 3
+        **	attack cycles high explosive missiles.
+        */
+        if (Vet().Rank == 3) {
+            if ((What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)this) == INFANTRY_E1)
+                || (What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_JEEP)) {
+                CFE_Bullet_Pen[Bullets.ID(bullet)] = ARMORPEN_PSEUDO_AP;
+            } else if (What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_BIKE) {
+                CFE_Bullet_Pen[Bullets.ID(bullet)] = ARMORPEN_PSEUDO_HE;
+            }
+        }
         bullet->Payback = this;
         bullet->Strength = (short)firepower;
 
@@ -2736,8 +2772,19 @@ BulletClass* TechnoClass::Fire_At(TARGET target, int which)
             IsInRecoilState = true;
         }
         Arm = Rearm_Delay(IsSecondShot);
-        if (tclass.IsTwoShooter) {
+
+        /*
+        **	CFE veterancy: some rank 3 objects become two or four shooters.
+        */
+        CFEVeterancy& vet = CFE_Vet_Entry(this);
+        if (tclass.IsTwoShooter || Vet().TwoShooter) {
             IsSecondShot = (IsSecondShot == false);
+            if (Vet().QuadShooter && !IsSecondShot) {
+                if (vet.ReadyQuadShot) {
+                    Arm = 12;
+                }
+                vet.ReadyQuadShot = !vet.ReadyQuadShot;
+            }
         }
 
         /*
@@ -3227,6 +3274,18 @@ int TechnoClass::Weapon_Range(int which) const
     WeaponType weapon = WEAPON_NONE;
     TechnoTypeClass const& ttype = *Techno_Type_Class();
 
+    /*
+    **	CFE veterancy: grenadiers, artillery, guard towers and obelisks get a cell more range at rank 3.
+    */
+    int bonus = 0;
+    if (Vet().Rank == 3
+        && ((What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)this) == INFANTRY_E2)
+            || (What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_ARTY)
+            || (What_Am_I() == RTTI_BUILDING
+                && (*((BuildingClass*)this) == STRUCT_GTOWER || *((BuildingClass*)this) == STRUCT_OBELISK)))) {
+        bonus = 256;
+    }
+
     switch (which) {
     case 0:
         weapon = ttype.Primary;
@@ -3238,9 +3297,9 @@ int TechnoClass::Weapon_Range(int which) const
     }
     if (weapon != WEAPON_NONE) {
         if (weapon == WEAPON_NIKE && GameToPlay == GAME_NORMAL) {
-            return (Weapons[weapon].Range * 2);
+            return ((Weapons[weapon].Range * 2) + bonus);
         }
-        return (Weapons[weapon].Range);
+        return (Weapons[weapon].Range + bonus);
     }
     return (0);
 }
@@ -3399,8 +3458,40 @@ ResultType TechnoClass::Take_Damage(int& damage, int distance, WarheadType warhe
     /*
     **	Adjust damage according to house override armor value.
     */
+    int armorpen = CFE_Armor_Pen;
+    CFE_Armor_Pen = ARMORPEN_NONE;
     if (damage > 0) {
+
+        /*
+        **	CFE veterancy: the special ammunition of some rank 3 objects.
+        */
+        ArmorType armor = Class_Of().Armor;
+        if (armorpen == ARMORPEN_PSEUDO_HE) {
+            if (armor == ARMOR_NONE) {
+                damage *= 3.5;
+            } else if (armor == ARMOR_CONCRETE) {
+                damage *= 2;
+            }
+        } else if (armorpen == ARMORPEN_PSEUDO_AP) {
+            if (armor == ARMOR_WOOD) {
+                damage *= 1.125;
+            } else if (armor == ARMOR_STEEL) {
+                damage *= 3;
+            }
+        }
+
         damage = (int)(damage * Vet().ArmorBias) * House->ArmorBias;
+
+        /*
+        **	CFE veterancy: rank 3 flame and chem weapons do little harm to allies unless aimed at them.
+        */
+        if (source && source->IsActive && House->Is_Ally(source) && source->TarCom != As_Target()
+            && source->Vet().Rank == 3
+            && ((source->What_Am_I() == RTTI_INFANTRY
+                 && (*((InfantryClass*)source) == INFANTRY_E4 || *((InfantryClass*)source) == INFANTRY_E5))
+                || (source->What_Am_I() == RTTI_UNIT && *((UnitClass*)source) == UNIT_FTANK))) {
+            damage = MAX((int)(0.1 * damage), 1);
+        }
     }
 
     int oldstrength = Strength;
