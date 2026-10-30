@@ -2644,7 +2644,7 @@ void CFE_Load_Attack_Move(FileClass& file)
     unsigned int marker = 0;
     int size = 0;
     int records = 0;
-    if (!ActiveCFEPatchConfig.EnableAttackMove || file.Read(&marker, sizeof(marker)) != sizeof(marker)
+    if (file.Read(&marker, sizeof(marker)) != sizeof(marker)
         || marker != _cfe_am_marker || file.Read(&size, sizeof(size)) != sizeof(size) || size != sizeof(CFEAttackMove)
         || file.Read(&records, sizeof(records)) != sizeof(records)) {
         return;
@@ -2660,7 +2660,7 @@ void CFE_Load_Attack_Move(FileClass& file)
         }
         int count;
         CFEAttackMove* table = CFE_Attack_Move_Table((RTTIType)rtti, count);
-        if (table && id >= 0 && id < count) {
+        if (ActiveCFEPatchConfig.EnableAttackMove && table && id >= 0 && id < count) {
             table[id] = record;
         }
     }

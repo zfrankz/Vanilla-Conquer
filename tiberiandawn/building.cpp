@@ -332,7 +332,9 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
             if (Contact_With_Whom() != from) {
                 if (Transmit_Message(RADIO_ON_DEPOT) == RADIO_ROGER) {
                     if (Transmit_Message(RADIO_NEED_REPAIR) == RADIO_NEGATIVE) {
-                        Transmit_Message(RADIO_RUN_AWAY);
+                        if (!Rally_Unit(*Contact_With_Whom())) {
+                            Transmit_Message(RADIO_RUN_AWAY);
+                        }
                         Transmit_Message(RADIO_OVER_OUT);
                         return (RADIO_ROGER);
                     }
@@ -454,7 +456,15 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
         }
 
         TechnoClass::Receive_Message(from, message, param);
-        if (*this == STRUCT_WEAP || *this == STRUCT_AIRSTRIP || *this == STRUCT_REPAIR)
+
+        /*
+        **	CFE: send the unit to the rally point, if there is one.
+        */
+        if (Can_Have_Rally_Point() && Rally_Unit(static_cast<FootClass&>(*from))) {
+            return (RADIO_ROGER);
+        }
+        if (*this == STRUCT_WEAP || *this == STRUCT_AIRSTRIP || *this == STRUCT_REPAIR
+            || Can_Have_Rally_Point())
             return (RADIO_RUN_AWAY);
         return (RADIO_ROGER);
     }
@@ -736,6 +746,16 @@ void BuildingClass::Draw_It(int x, int y, WindowNumberType window)
         if (IsRepairing && IsWrenchVisible) {
             CC_Draw_Shape(ObjectTypeClass::SelectShapes, SELECT_WRENCH, x, y, window, SHAPE_CENTER | SHAPE_WIN_REL);
         }
+    }
+
+    /*
+    **	CFE: show the rally point of a selected building.
+    */
+    if (Can_Have_Rally_Point() && Is_Selected_By_Player(House) && Target_Legal(Rally_Point())) {
+        int startx, starty, endx, endy;
+        Map.Coord_To_Pixel(Center_Coord(), startx, starty);
+        Map.Coord_To_Pixel(As_Coord(Rally_Point()), endx, endy);
+        CC_Draw_Line(startx, starty, endx, endy, LTGREEN, 1, window);
     }
 
     TechnoClass::Draw_It(x, y, window);
@@ -2059,6 +2079,7 @@ BuildingClass::BuildingClass(StructType type, HousesType house)
     House->Tracking_Add(this);
 #endif // USE_RA_AI
     Reset_Veterancy();
+    Rally_Point() = TARGET_NONE;
 }
 
 /***********************************************************************************************
@@ -2253,6 +2274,10 @@ void BuildingClass::Active_Click_With(ActionType action, ObjectClass* object)
     if (action == ACTION_TOGGLE_PRIMARY && Class->IsFactory) {
         OutList.Add(EventClass(EventClass::PRIMARY, As_Target()));
     }
+
+    if (action == ACTION_MOVE && Can_Have_Rally_Point()) {
+        OutList.Add(EventClass(EventClass::SET_RALLY, As_Target(), object->As_Target()));
+    }
 }
 
 /***********************************************************************************************
@@ -2285,6 +2310,8 @@ void BuildingClass::Active_Click_With(ActionType action, CELL cell)
 
         COORDINATE coord = Map.Pixel_To_Coord(Get_Mouse_X(), Get_Mouse_Y());
         OutList.Add(EventClass(ANIM_MOVE_FLASH, PlayerPtr->Class->House, coord, 1 << PlayerPtr->Class->House));
+    } else if (action == ACTION_MOVE && Can_Have_Rally_Point()) {
+        OutList.Add(EventClass(EventClass::SET_RALLY, As_Target(), ::As_Target(cell)));
     }
 }
 
@@ -2311,6 +2338,11 @@ void BuildingClass::Assign_Target(TARGET target)
         target = TARGET_NONE;
     }
 
+    if (Rally_Point() != target && Can_Have_Rally_Point() && (target == TARGET_NONE || Target_Legal(target))) {
+        Rally_Point() = target;
+        Map.Flag_To_Redraw(true);
+        return;
+    }
     TechnoClass::Assign_Target(target);
 }
 
@@ -3386,7 +3418,7 @@ ActionType BuildingClass::What_Action(CELL cell) const
         action = ACTION_MOVE;
     }
 
-    if (action == ACTION_MOVE && (*this != STRUCT_CONST || !Special.IsMCVDeploy)) {
+    if (action == ACTION_MOVE && !Can_Have_Rally_Point() && (*this != STRUCT_CONST || !Special.IsMCVDeploy)) {
         action = ACTION_NONE;
     }
 
@@ -3912,6 +3944,7 @@ bool BuildingClass::Captured(HouseClass* newowner)
 
         IsCaptured = true;
         TechnoClass::Captured(newowner);
+        Rally_Point() = TARGET_NONE;
 
 #ifdef USE_RA_AI
         //
@@ -4043,7 +4076,7 @@ MoveType BuildingClass::Can_Enter_Cell(CELL cell, FacingType) const
 {
     Validate();
 
-    if (*this == STRUCT_CONST && IsDown) {
+    if ((*this == STRUCT_CONST && IsDown) || (IsDown && IsLocked && Can_Have_Rally_Point())) {
         return (Map[cell].Is_Generally_Clear() ? MOVE_OK : MOVE_NO);
     }
 
@@ -5523,6 +5556,9 @@ void BuildingClass::Detach(TARGET target, bool all)
     if (target == WhomToRepay) {
         WhomToRepay = TARGET_NONE;
     }
+    if (target == Rally_Point()) {
+        Rally_Point() = TARGET_NONE;
+    }
 }
 
 /***********************************************************************************************
@@ -5764,7 +5800,7 @@ CELL BuildingClass::Find_Exit_Cell(TechnoClass const* techno) const
 bool BuildingClass::Can_Player_Move(void) const
 {
     Validate();
-    return (*this == STRUCT_CONST && (Mission == MISSION_GUARD) && Special.IsMCVDeploy);
+    return (Can_Have_Rally_Point() || (*this == STRUCT_CONST && (Mission == MISSION_GUARD) && Special.IsMCVDeploy));
 }
 
 /***********************************************************************************************
@@ -5861,6 +5897,202 @@ void BuildingClass::Flush_Refinery_Bib(void)
                 obj = obj->Next;
             }
             cell = Adjacent_Cell(cell, FACING_E);
+        }
+    }
+}
+
+/*
+**	CFE rally points. They live outside the objects so that the layout of the building, and with
+**	it the save version, stays the same.
+*/
+static TARGET _cfe_rally[BUILDING_MAX];
+
+/***********************************************************************************************
+ * BuildingClass::Can_Have_Rally_Point -- Query if a building can have a rally point.          *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Can this building have a rally point?                                              *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool BuildingClass::Can_Have_Rally_Point(void) const
+{
+    switch (Class->Type) {
+    case STRUCT_WEAP:
+    case STRUCT_AIRSTRIP:
+    case STRUCT_BARRACKS:
+    case STRUCT_HAND:
+    case STRUCT_REPAIR:
+        return (ActiveCFEPatchConfig.EnableRallyPoints);
+    default:
+        return (false);
+    }
+}
+
+/***********************************************************************************************
+ * BuildingClass::Rally_Point -- Fetches this building's rally point.                          *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Returns with a reference to the rally point.                                       *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+TARGET& BuildingClass::Rally_Point(void) const
+{
+    static TARGET _none;
+    int id = Buildings.ID(this);
+    if (id >= 0 && id < BUILDING_MAX) {
+        return (_cfe_rally[id]);
+    }
+    _none = TARGET_NONE;
+    return (_none);
+}
+
+/***********************************************************************************************
+ * BuildingClass::Target_For_Rally_Point -- Fetches where a rallied unit should go.            *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Returns with the target to head for.                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+TARGET BuildingClass::Target_For_Rally_Point(void) const
+{
+    TARGET rally = Rally_Point();
+    if (!Target_Legal(rally)) {
+        return (::As_Target(Nearby_Location()));
+    }
+    return (Is_Target_Cell(rally) ? ::As_Target(Map.Nearby_Location(As_Cell(rally))) : rally);
+}
+
+/***********************************************************************************************
+ * BuildingClass::Rally_Unit -- Orders a unit to the building's rally point.                   *
+ *                                                                                             *
+ * INPUT:   unit  -- The unit to send.                                                         *
+ *                                                                                             *
+ * OUTPUT:  Was the unit sent?                                                                 *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool BuildingClass::Rally_Unit(TechnoClass& unit)
+{
+    if (!Can_Have_Rally_Point() || !Target_Legal(Rally_Point())) {
+        return (false);
+    }
+    if (unit.What_Am_I() == RTTI_UNIT && static_cast<UnitClass&>(unit).Class->IsToHarvest) {
+        return (false);
+    }
+
+    /*
+    **	Aircraft leaving a repair bay don't go to its rally point.
+    */
+    if (*this == STRUCT_REPAIR && unit.What_Am_I() == RTTI_AIRCRAFT) {
+        return (false);
+    }
+
+    /*
+    **	Units mustn't rally to themselves, which can happen on repair and reload pads.
+    */
+    TARGET rally = Target_For_Rally_Point();
+    int target = unit.As_Target() != rally ? rally : ::As_Target(Nearby_Location());
+    return (Target_Legal(target) && Transmit_Message(RADIO_MOVE_HERE, target, &unit) == RADIO_ROGER);
+}
+
+/***********************************************************************************************
+ * BuildingClass::Set_Unselected_By_Player -- Unselects the building.                          *
+ *                                                                                             *
+ *    The rally line goes with the selection, so the map needs a redraw.                       *
+ *                                                                                             *
+ * INPUT:   player   -- The player unselecting the building.                                   *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void BuildingClass::Set_Unselected_By_Player(HouseClass* player)
+{
+    TechnoClass::Set_Unselected_By_Player(player);
+
+    if (Can_Have_Rally_Point() && Target_Legal(Rally_Point())) {
+        Map.Flag_To_Redraw(true);
+    }
+}
+
+/*
+**	Rally block at the end of the save file, after the attack-move one: a marker and the number of
+**	records, then the records. Older saves end before the marker.
+*/
+static const unsigned int _cfe_rally_marker = 0x4C4C5243; // "CRLL"
+
+/***********************************************************************************************
+ * CFE_Save_Rally_Points -- Writes the rally block to the end of a save file.                  *
+ *                                                                                             *
+ * INPUT:   file -- The save file.                                                             *
+ *                                                                                             *
+ * OUTPUT:  Was the block written?                                                             *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool CFE_Save_Rally_Points(FileClass& file)
+{
+    int records = 0;
+    for (int id = 0; id < BUILDING_MAX; id++) {
+        if (Target_Legal(_cfe_rally[id])) {
+            records++;
+        }
+    }
+
+    if (file.Write(&_cfe_rally_marker, sizeof(_cfe_rally_marker)) != sizeof(_cfe_rally_marker)
+        || file.Write(&records, sizeof(records)) != sizeof(records)) {
+        return (false);
+    }
+
+    for (int id = 0; id < BUILDING_MAX; id++) {
+        if (Target_Legal(_cfe_rally[id])) {
+            if (file.Write(&id, sizeof(id)) != sizeof(id)
+                || file.Write(&_cfe_rally[id], sizeof(TARGET)) != sizeof(TARGET)) {
+                return (false);
+            }
+        }
+    }
+    return (true);
+}
+
+/***********************************************************************************************
+ * CFE_Load_Rally_Points -- Reads the rally block from the end of a save file.                 *
+ *                                                                                             *
+ *    Clears all rally points first, so a save without the block loads with none.              *
+ *                                                                                             *
+ * INPUT:   file -- The save file, positioned after the attack-move block.                     *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void CFE_Load_Rally_Points(FileClass& file)
+{
+    for (int id = 0; id < BUILDING_MAX; id++) {
+        _cfe_rally[id] = TARGET_NONE;
+    }
+
+    unsigned int marker = 0;
+    int records = 0;
+    if (file.Read(&marker, sizeof(marker)) != sizeof(marker) || marker != _cfe_rally_marker
+        || file.Read(&records, sizeof(records)) != sizeof(records)) {
+        return;
+    }
+
+    for (int i = 0; i < records; i++) {
+        int id;
+        TARGET target;
+        if (file.Read(&id, sizeof(id)) != sizeof(id) || file.Read(&target, sizeof(target)) != sizeof(target)) {
+            return;
+        }
+        if (id >= 0 && id < BUILDING_MAX) {
+            _cfe_rally[id] = target;
         }
     }
 }

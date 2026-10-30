@@ -224,3 +224,13 @@ Any mission or skirmish with a mixed group.
 - Helicopters: Shift+click: they attack on the way, then go home. With `SMARTER_AIRCRAFT=1` and no ammo, they don't leave.
 - Save mid-way, load: units carry on.
 - With the switch off, Shift+click is a forced move, as in the original game.
+
+## 2p. Rally points (`RALLY_POINTS=1` under `[FEATURES]`)
+
+Any mission with a weapons factory and barracks.
+- Select the factory and click the ground: a green line shows the point while it stays selected.
+- Build a unit: it drives there. Harvesters ignore it.
+- Same with barracks / hand of Nod, helipad and repair bay (a repaired vehicle goes to the point).
+- Press Stop with the building selected: the point goes away.
+- Save, load: the point is still there.
+- Sell or lose the building, or have it captured: no stray line.

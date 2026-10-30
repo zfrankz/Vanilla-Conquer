@@ -77,13 +77,14 @@ unsigned char EventClass::EventLength[EventClass::LAST_EVENT] = {
     size_of(EventClass, Data.NavCom),          // ARCHIVE
     size_of(EventClass, Data.Timing),          // TIMING
     size_of(EventClass, Data.ProcessTime),     // PROCESS_TIME
+    size_of(EventClass, Data.NavCom),          // SET_RALLY
 };
 
 const char* EventClass::EventNames[EventClass::LAST_EVENT] = {
     "EMPTY",         "ALLY",          "MEGAMISSION", "IDLE",    "SCATTER", "DESTRUCT",     "DEPLOY",
     "PLACE",         "OPTIONS",       "GAMESPEED",   "PRODUCE", "SUSPEND", "ABANDON",      "PRIMARY",
     "SPECIAL_PLACE", "EXIT",          "ANIMATION",   "REPAIR",  "SELL",    "SPECIAL",      "FRAMESYNC",
-    "MESSAGE",       "RESPONSE_TIME", "FRAMEINFO",   "ARCHIVE", "TIMING",  "PROCESS_TIME",
+    "MESSAGE",       "RESPONSE_TIME", "FRAMEINFO",   "ARCHIVE", "TIMING",  "PROCESS_TIME", "SET_RALLY",
 };
 
 /***********************************************************************************************
@@ -390,6 +391,16 @@ void EventClass::Execute(void)
     /*
     **	Update the archive target for this building.
     */
+    case SET_RALLY:
+        if (BuildingClass* const building = As_Building(Data.NavCom.Whom)) {
+            TARGET rally = building->As_Target() != Data.NavCom.Where ? Data.NavCom.Where : TARGET_NONE;
+            if (building->Rally_Point() != rally) {
+                building->Rally_Point() = rally;
+                Map.Flag_To_Redraw(true);
+            }
+        }
+        break;
+
     case ARCHIVE:
         techno = As_Techno(Data.NavCom.Whom);
         if (techno && techno->IsActive) {
@@ -649,6 +660,9 @@ void EventClass::Execute(void)
             techno->Assign_Destination(TARGET_NONE);
             techno->Assign_Target(TARGET_NONE);
             techno->Enter_Idle_Mode();
+        }
+        if (techno && techno->What_Am_I() == RTTI_BUILDING && ((BuildingClass*)techno)->Can_Have_Rally_Point()) {
+            techno->Assign_Target(TARGET_NONE);
         }
         break;
 

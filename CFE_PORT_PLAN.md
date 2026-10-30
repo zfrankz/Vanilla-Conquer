@@ -338,6 +338,16 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      same. Orca: fights, reaches the destination, `on=0`, flies home. Stop and a new plain move end it. Saved mid-way
      to slot 50 and loaded: state restored, finishes at the destination. Save 1 (no block) loads.
      Not verified: Shift on the real keyboard, the cursor, radar clicks, group orders, real play, AI interactions.
+   - 7b `RALLY_POINTS`: with a weapons factory, helipad, barracks, hand of Nod or repair bay selected, a click on the
+     ground sets its rally point, a click on itself or Stop clears it; new units (not harvesters) go there; the selected
+     building shows a green line (legacy renderer's line, as in CFE). Aircraft leaving a repair bay don't rally.
+   - Differences from CFE: saved in a block after the attack-move one, not as a class member; `DoSmarterRunAway` and the
+     smarter repair bay exit are left for `SMARTER_REPAIRBAY`, not ported yet. The first version of `CFE_Load_Attack_Move` didn't
+     read its block with the switch off; fixed here, since the rally block follows it.
+   - Verified: builds. Instrumented runs (temporary code, removed) on save 2, click through `Active_Click_With`: weapons
+     factory and barracks: the new jeep and rifleman reach the rally cell (`dist=0`, guard); off: the jeep stays by the
+     factory; Stop clears it; saved and loaded, it still works. Not verified: real clicks, the line on screen, repair bay,
+     helipad, hand of Nod, rally on an object, reinforcement by Chinook, capture, AI.
 8. Balance patch, JD's adjustments
 
 VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be
