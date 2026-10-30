@@ -824,7 +824,7 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object)
             }
         }
     }
-    return (false);
+    return (Passes_Wall_Proximity(object, ZoneCell + ZoneOffset, PendingHouse));
 #endif
 }
 
@@ -911,7 +911,7 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
             }
         }
     }
-    return (false);
+    return (Passes_Wall_Proximity(object, trycell, house));
 }
 
 #endif // USE_RA_AI
@@ -1161,6 +1161,85 @@ void DisplayClass::AI(KeyNumType& input, int x, int y)
     }
 
     MapClass::AI(input, x, y);
+    Update_Placement_Cursor();
+}
+
+/***********************************************************************************************
+ * DisplayClass::Passes_Wall_Proximity -- Can a wall be built off a friendly wall in line?     *
+ *                                                                                             *
+ *    CFE TS-style walls: a wall can be placed up to WALL_BUILD_LENGTH cells from another wall *
+ *    of the same kind belonging to the house, with a clear path between.                      *
+ *                                                                                             *
+ * INPUT:   object -- The object being placed.                                                 *
+ *                                                                                             *
+ *          cell   -- The cell it would go in.                                                 *
+ *                                                                                             *
+ *          house  -- The house placing it.                                                    *
+ *                                                                                             *
+ * OUTPUT:  Does the wall pass the proximity check because of a friendly wall?                 *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool DisplayClass::Passes_Wall_Proximity(ObjectTypeClass const* object, CELL cell, HousesType house) const
+{
+    if (ActiveCFEPatchConfig.WallBuildLength <= 1 || house == HOUSE_NONE || !object
+        || object->What_Am_I() != RTTI_BUILDINGTYPE || !((BuildingTypeClass const*)object)->IsWall) {
+        return (false);
+    }
+
+    OverlayType overlay = ((BuildingTypeClass const*)object)->Overlay_Type();
+    for (int d = 0; d < ARRAY_SIZE(CFE_Cardinals); d++) {
+        if (Scan_For_Overlay(cell, CFE_Cardinals[d], overlay, ActiveCFEPatchConfig.WallBuildLength, true, house) >= 0) {
+            return (true);
+        }
+    }
+    return (false);
+}
+
+/***********************************************************************************************
+ * DisplayClass::Update_Placement_Cursor -- Previews the cells a wall will fill.               *
+ *                                                                                             *
+ *    CFE TS-style walls: while placing a wall, the cursor also covers the gaps it would fill  *
+ *    in. Holding Ctrl places a single piece, and the cursor goes back to one cell.            *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void DisplayClass::Update_Placement_Cursor(void)
+{
+    if (ActiveCFEPatchConfig.WallBuildLength <= 1 || !PendingObject || !CursorSize
+        || PendingObject->What_Am_I() != RTTI_BUILDINGTYPE || !((BuildingTypeClass const*)PendingObject)->IsWall) {
+        return;
+    }
+
+    BuildingTypeClass const* building = (BuildingTypeClass const*)PendingObject;
+    if (CFE_Should_Extend_Walls() && In_Radar(ZoneCell)) {
+        static short offsetlist[50];
+        int const maxoffsets = ARRAY_SIZE(offsetlist) - 1;
+        int count = 1;
+        offsetlist[0] = 0;
+
+        for (int d = 0; d < ARRAY_SIZE(CFE_Cardinals); d++) {
+            FacingType dir = CFE_Cardinals[d];
+            int scandist =
+                Scan_For_Overlay(ZoneCell, dir, building->Overlay_Type(), ActiveCFEPatchConfig.WallBuildLength);
+            if (count + scandist > maxoffsets) {
+                break;
+            }
+            CELL current = ZoneCell;
+            for (int i = 0; i < scandist; ++i) {
+                current = Adjacent_Cell(current, dir);
+                offsetlist[count++] = current - ZoneCell - ZoneOffset;
+            }
+        }
+        offsetlist[count] = REFRESH_EOL;
+        Set_Cursor_Shape(offsetlist);
+    } else if (CursorSize[1] != REFRESH_EOL) {
+        Set_Cursor_Shape(building->Occupy_List(true));
+    }
 }
 
 /***********************************************************************************************

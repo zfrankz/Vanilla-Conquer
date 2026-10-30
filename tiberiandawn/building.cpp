@@ -1362,6 +1362,127 @@ void BuildingClass::AI(void)
     }
 }
 
+const FacingType CFE_Cardinals[4] = {FACING_N, FACING_E, FACING_S, FACING_W};
+
+/*
+**	CFE: walls extend toward other walls unless Ctrl is held. Multiplayer ignores Ctrl, since a local
+**	key would make the players' games differ.
+*/
+bool CFE_Should_Extend_Walls(void)
+{
+    return (ActiveCFEPatchConfig.WallBuildLength > 1
+            && (GameToPlay != GAME_NORMAL || !Keyboard->Down(KN_LCTRL)));
+}
+
+/***********************************************************************************************
+ * BuildingTypeClass::Overlay_Type -- Fetches the overlay a wall building turns into.          *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Returns with the overlay type, or OVERLAY_NONE if this isn't a wall.               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+OverlayType BuildingTypeClass::Overlay_Type(void) const
+{
+    switch (Type) {
+    case STRUCT_SANDBAG_WALL:
+        return (OVERLAY_SANDBAG_WALL);
+
+    case STRUCT_CYCLONE_WALL:
+        return (OVERLAY_CYCLONE_WALL);
+
+    case STRUCT_BRICK_WALL:
+        return (OVERLAY_BRICK_WALL);
+
+    case STRUCT_BARBWIRE_WALL:
+        return (OVERLAY_BARBWIRE_WALL);
+
+    case STRUCT_WOOD_WALL:
+        return (OVERLAY_WOOD_WALL);
+
+    default:
+        return (OVERLAY_NONE);
+    }
+}
+
+/***********************************************************************************************
+ * BuildingClass::Create_Overlay_At -- Places one piece of wall.                               *
+ *                                                                                             *
+ * INPUT:   oclass -- The wall overlay.                                                        *
+ *                                                                                             *
+ *          cell   -- The cell to place it in.                                                 *
+ *                                                                                             *
+ * OUTPUT:  Was the piece placed?                                                              *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool BuildingClass::Create_Overlay_At(OverlayTypeClass const& oclass, CELL cell)
+{
+    ObjectClass* o = oclass.Create_One_Of(House);
+    if (o) {
+        if (o->Unlimbo(Cell_Coord(cell))) {
+            Map[cell].Owner = House->Class->House;
+            return (true);
+        }
+        delete o;
+    }
+    return (false);
+}
+
+/***********************************************************************************************
+ * BuildingClass::Unlimbo_Wall -- Turns a wall building into wall overlays.                    *
+ *                                                                                             *
+ *    CFE TS-style walls: the wall also fills in the gap to any wall of the same kind in line  *
+ *    with it, up to WALL_BUILD_LENGTH cells away. Each extra piece costs money only with      *
+ *    WALLS_HAVE_FULL_COST.                                                                    *
+ *                                                                                             *
+ * INPUT:   coord -- The coordinate to place the wall at.                                      *
+ *                                                                                             *
+ * OUTPUT:  Was the wall placed?                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool BuildingClass::Unlimbo_Wall(COORDINATE coord)
+{
+    CELL placecell = Coord_Cell(coord);
+    OverlayType otype = Class->Overlay_Type();
+    if (Can_Enter_Cell(placecell, FACING_NONE) != MOVE_OK || otype == OVERLAY_NONE) {
+        return (false);
+    }
+
+    OverlayTypeClass const& oclass = OverlayTypeClass::As_Reference(otype);
+    if (!Create_Overlay_At(oclass, placecell)) {
+        return (false);
+    }
+
+    if (CFE_Should_Extend_Walls()) {
+        for (int d = 0; d < ARRAY_SIZE(CFE_Cardinals); d++) {
+            FacingType dir = CFE_Cardinals[d];
+            int scandist = Map.Scan_For_Overlay(placecell, dir, otype, ActiveCFEPatchConfig.WallBuildLength);
+            CELL adjcell = placecell;
+            for (int i = 0; i < scandist; ++i) {
+                adjcell = Adjacent_Cell(adjcell, dir);
+                if (ActiveCFEPatchConfig.WallsAlwaysHaveFullCost && House->Available_Money() < Class->Cost_Of()) {
+                    if (House == PlayerPtr) {
+                        Speak(VOX_NO_CASH);
+                    }
+                    break;
+                }
+                if (!Create_Overlay_At(oclass, adjcell)) {
+                    break;
+                }
+                if (ActiveCFEPatchConfig.WallsAlwaysHaveFullCost) {
+                    House->Spend_Money(Class->Cost_Of());
+                }
+            }
+        }
+    }
+    Transmit_Message(RADIO_OVER_OUT);
+    Delete_This();
+    return (true);
+}
+
 /***********************************************************************************************
  * BuildingClass::Unlimbo -- Removes a building from limbo state.                              *
  *                                                                                             *
@@ -1406,40 +1527,7 @@ bool BuildingClass::Unlimbo(COORDINATE coord, DirType dir)
     **	converted to an overlay type.
     */
     if (Class->IsWall) {
-        if (Can_Enter_Cell(Coord_Cell(coord), FACING_NONE) == MOVE_OK) {
-            OverlayType otype = OVERLAY_NONE;
-            switch (Class->Type) {
-            case STRUCT_SANDBAG_WALL:
-                otype = OVERLAY_SANDBAG_WALL;
-                break;
-
-            case STRUCT_CYCLONE_WALL:
-                otype = OVERLAY_CYCLONE_WALL;
-                break;
-
-            case STRUCT_BRICK_WALL:
-                otype = OVERLAY_BRICK_WALL;
-                break;
-
-            case STRUCT_BARBWIRE_WALL:
-                otype = OVERLAY_BARBWIRE_WALL;
-                break;
-
-            case STRUCT_WOOD_WALL:
-                otype = OVERLAY_WOOD_WALL;
-                break;
-            }
-            if (otype != OVERLAY_NONE) {
-                ObjectClass* o = OverlayTypeClass::As_Reference(otype).Create_One_Of(House);
-                if (o && o->Unlimbo(coord)) {
-                    Map[Coord_Cell(coord)].Owner = House->Class->House;
-                    Transmit_Message(RADIO_OVER_OUT);
-                    Delete_This();
-                    return (true);
-                }
-            }
-        }
-        return (false);
+        return (Unlimbo_Wall(coord));
     }
 
     /*
@@ -5731,7 +5819,7 @@ bool BuildingClass::Passes_Proximity_Check(CELL homecell)
             }
         }
     }
-    return (false);
+    return (Map.Passes_Wall_Proximity(Class, homecell, House->Class->House));
 }
 
 /***********************************************************************************************

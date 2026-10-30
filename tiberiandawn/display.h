@@ -165,6 +165,8 @@ public:
     virtual void Put_Place_Back(TechnoClass*){}; // Affects 'pending' system.
     void Cursor_Mark(CELL pos, bool on);
     void Set_Cursor_Shape(short const* list);
+    void Update_Placement_Cursor(void);
+    bool Passes_Wall_Proximity(ObjectTypeClass const* object, CELL cell, HousesType house) const;
     CELL Set_Cursor_Pos(CELL pos = -1);
     void Get_Occupy_Dimensions(int& w, int& h, short const* list);
 

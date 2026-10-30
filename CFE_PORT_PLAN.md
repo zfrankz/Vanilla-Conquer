@@ -284,7 +284,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      armor-piercing vs steel 3→8. Shots in 500 frames: light tank 6→12, mammoth 8→16, with the quad gap of 12 frames.
      Not verified: real play; SAM, advanced tower and turret volleys; attack cycle ammunition; helicopter repair
      and reload; APC medic; SSM reload; stealth tank cloak timing and detection; commando firing while cloaked.
-6. Walls (TS-style building, crushing, ownership, AI wall shooting) – in progress: 6a–6c ported, play-test pending
+6. Walls (TS-style building, crushing, ownership, AI wall shooting) – 6a–6d ported, play-test pending
    - Split: 6a `WALL_CRUSH`, 6b `AI_VS_WALLS`, 6c `ADV_WALL_OWN`, 6d TS-style building.
    - 6a `WALL_CRUSH`: crushing vehicles (including rank 3 buggies) drive through and flatten crushable walls
      that aren't an ally's. `Reduce_Wall(-1)` destroys a wall outright, as in RA.
@@ -309,6 +309,16 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      goes to the player with the switch on and stays neutral with it off; with an enemy building beside it,
      destroying the player's base hands it to the enemy (off: stays neutral). With no other house nearby
      the owner keeps it, as CFE's scoring says. Not verified: real play; capture; selling; real map walls.
+   - 6d `WALL_BUILD_LENGTH` + `WALLS_HAVE_FULL_COST`: a wall placed in line with a friendly wall of the same kind,
+     up to that many cells away, fills the gap and may be placed there; the placement cursor shows it; Ctrl
+     places a single piece. Selling refunds a share of a full run when pieces were free.
+   - Differences from CFE: the default length is 1 (CFE's 5 would change the game without an ini entry);
+     multiplayer ignores Ctrl, because a local key would desync the players; `BUILDING_GAP` isn't ported, so other
+     buildings keep the original proximity rule. Not ported: the inverse wall preview markers (GlyphX shapes).
+   - Verified: builds. Instrumented runs (temporary code, removed) on save 2, a sandbag 3 cells from the spot:
+     length 1 and no ini entry: proximity fails, cursor 1 cell, 1 piece placed. Length 5: proximity passes, cursor 3
+     cells, gap filled (4 walls in all), the extra cells owned; full cost charges 100 for the 2 extras, otherwise
+     free. Length 2: out of reach, so as length 1. Not verified: real play; the cursor on screen; Ctrl; refunds.
 7. Bucket D: attack-move, rally points, Q-move
 8. Balance patch, JD's adjustments
 

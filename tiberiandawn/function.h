@@ -299,6 +299,8 @@ bool Is_Speaking(void);
 int Modify_Damage(int damage, WarheadType warhead, ArmorType armor, int distance);
 void Explosion_Damage(COORDINATE coord, unsigned strength, TechnoClass* source, WarheadType warhead);
 extern bool CFE_No_Veterancy_XP;
+extern const FacingType CFE_Cardinals[4];
+bool CFE_Should_Extend_Walls(void);
 
 /*
 **	CFE veterancy: special ammunition. It travels with the bullet and is handed to the next

@@ -2552,3 +2552,50 @@ void MapClass::Flip_Walls(CELL centercell, HousesType gainhouse, HousesType lose
         }
     }
 }
+
+/***********************************************************************************************
+ * MapClass::Scan_For_Overlay -- Looks along a straight line for a clear path to an overlay.   *
+ *                                                                                             *
+ * INPUT:   origin       -- The starting cell.                                                 *
+ *                                                                                             *
+ *          dir          -- The direction to search in.                                        *
+ *                                                                                             *
+ *          overlay      -- The overlay to search for.                                         *
+ *                                                                                             *
+ *          maxlength    -- The number of cells to search.                                     *
+ *                                                                                             *
+ *          limittohouse -- Only accept an overlay on a cell owned by whichhouse?              *
+ *                                                                                             *
+ *          whichhouse   -- The house for limittohouse.                                        *
+ *                                                                                             *
+ * OUTPUT:  Returns with the number of clear cells before the overlay, or -1 if not found.     *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+int MapClass::Scan_For_Overlay(CELL origin,
+                               FacingType dir,
+                               OverlayType overlay,
+                               int maxlength,
+                               bool limittohouse,
+                               HousesType whichhouse) const
+{
+    if ((limittohouse && whichhouse == HOUSE_NONE) || !In_Radar(origin)) {
+        return (-1);
+    }
+
+    CELL current = origin;
+    for (int i = 0; i < maxlength; ++i) {
+        current = Adjacent_Cell(current, dir);
+        if (!In_Radar(current)) {
+            break;
+        }
+        CellClass const& cell = (*this)[current];
+        if (cell.Overlay == overlay) {
+            return ((!limittohouse || whichhouse == cell.Owner) ? i : -1);
+        }
+        if (!cell.Is_Generally_Clear()) {
+            break;
+        }
+    }
+    return (-1);
+}

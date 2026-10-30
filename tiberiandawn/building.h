@@ -209,6 +209,8 @@ public:
     virtual bool Can_Demolish(void) const;
     virtual bool Can_Demolish_Unit(void) const;
     virtual bool Can_Capture(void) const;
+    bool Unlimbo_Wall(COORDINATE coord);
+    bool Create_Overlay_At(OverlayTypeClass const& oclass, CELL cell);
     virtual ObjectTypeClass const& Class_Of(void) const
     {
         return *Class;

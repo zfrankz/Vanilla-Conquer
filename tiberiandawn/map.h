@@ -93,6 +93,12 @@ public:
     void Cleanup_Vehicle_Reservations(void);
     void Rebuild_Vehicle_Reservations(void);
     void Flip_Walls(CELL centercell, HousesType gainhouse, HousesType losehouse);
+    int Scan_For_Overlay(CELL origin,
+                         FacingType dir,
+                         OverlayType overlay,
+                         int maxlength,
+                         bool limittohouse = false,
+                         HousesType whichhouse = HOUSE_NONE) const;
     bool Process_Tiberium_Death(CELL where, COORDINATE specifically_where, unsigned char how);
     virtual void Set_Map_Dimensions(int x, int y, int w, int h);
 

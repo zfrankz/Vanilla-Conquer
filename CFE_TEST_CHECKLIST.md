@@ -183,6 +183,14 @@ Add under `[FEATURES]`: `ADV_WALL_OWN=1`.
   ordered to.
 - [ ] **Changing hands:** capture or destroy the buildings by a wall and it goes to whoever's base it's now in.
 
+## 2n. TS-style walls (Phase 3 step 6d)
+Add under `[SETTINGS]`: `WALL_BUILD_LENGTH=5`, and `WALLS_HAVE_FULL_COST=0` for free extra pieces (`1` charges each).
+
+- [ ] **Gap filling:** with a wall built, place another of the same kind in line, up to 5 cells away: the gap fills.
+  The placement cursor shows the cells it will cover.
+- [ ] **Single piece:** hold Ctrl while placing: only one piece, and the cursor is one cell.
+- [ ] **Selling:** selling a wall piece refunds a smaller share with free extra pieces.
+
 ## 3. Fixes off (original game)
 - [ ] Rename `cfepatchredux.ini` (for example to `cfepatchredux.ini.off`) and play a mission.
   Everything should behave like the original game, and there should be no crashes.

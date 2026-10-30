@@ -109,7 +109,7 @@ struct CFEPatchConfig
     int TibResurgeDelay = 7200;
     int TreeVisceroidSpawnMode = 0;
     int MeanerVisceroids = 0;
-    int WallBuildLength = 5;
+    int WallBuildLength = 1; // CFE's default is 5; 1 keeps the original game without an ini entry.
     int InverseBuildingPreviewMode = 0; // 0=off; 1= MP only; 2 = all game modes
     int SmarterSAMAmmo = 2;
     int SmarterSAMBalanceDelay = 0;

@@ -609,6 +609,10 @@ public:
 */
 class BuildingTypeClass : public TechnoTypeClass
 {
+public:
+    OverlayType Overlay_Type(void) const;
+
+private:
     enum BuildingTypeClassRepairEnums
     {
         // REPAIR_COST=1,				// Cost to repair a single "step".
