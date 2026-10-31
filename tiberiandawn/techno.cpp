@@ -499,7 +499,6 @@ TechnoClass::TechnoClass(void)
     IsLocked = false;
     IsOwnedByPlayer = false;
     IsSecondShot = true;
-    IsSearchRangeLimited = false;
     IsTethered = false;
     SuspendedTarCom = TARGET_NONE;
     PrimaryFacing.Set(DIR_N);
@@ -915,6 +914,7 @@ TechnoClass::TechnoClass(HousesType house)
     IsLeader = false;
     IsLocked = false;
     IsSecondShot = false;
+    IsSearchRangeLimited = false;
     IsTethered = false;
 
     SuspendedTarCom = TARGET_NONE;
