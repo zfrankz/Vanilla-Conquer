@@ -503,7 +503,7 @@ void UnitClass::AI(void)
     /*
     **	Scatter units off buildings in guard modes.
     */
-    if (!IsTethered && !IsFiring && !IsDriving && !IsRotating
+    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving && !IsRotating
         && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
         && Map[Coord_Cell(Coord)].Cell_Building() != NULL) {
         Scatter(0, true, true);
@@ -646,7 +646,16 @@ RadioMessageType UnitClass::Receive_Message(RadioClass* from, RadioMessageType m
     **	entered the transport.
     */
     case RADIO_IM_IN:
-        if (How_Many() == Class->Max_Passengers()) {
+        if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+
+            /*
+            **	The passenger isn't counted yet. Close the door if it's the last, or if no one
+            **	else is coming.
+            */
+            if (How_Many() == Class->Max_Passengers() - 1 || CFE_All_Aboard(this, from)) {
+                APC_Close_Door();
+            }
+        } else if (How_Many() == Class->Max_Passengers()) {
             APC_Close_Door();
         }
         return (RADIO_ATTACH);

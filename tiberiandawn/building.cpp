@@ -850,7 +850,17 @@ bool BuildingClass::Mark(MarkType mark)
 
             } else {
 
-                if (Can_Enter_Cell(cell) == MOVE_OK) {
+                /*
+                **	Can_Enter_Cell cares about IsDown, which can be set too early here.
+                */
+                bool isdown = IsDown;
+                if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+                    IsDown = false;
+                }
+                MoveType canenter = Can_Enter_Cell(cell);
+                IsDown = isdown;
+
+                if (canenter == MOVE_OK) {
 
                     /*
                     **	Determine if a bib is required for this building. If one is, then
@@ -2935,8 +2945,14 @@ bool BuildingClass::Limbo(void)
         **	Update the power status of the owner's house.
         */
         House->Adjust_Power(-Power_Output());
-        House->Adjust_Drain(-Class->Drain);
-        House->Adjust_Capacity(-(int)Class->Capacity, true);
+
+        /*
+        **	A building lost during its construction animation hasn't had its grand opening yet.
+        */
+        if (!ActiveCFEPatchConfig.EnableGeneralBugfixes || Mission != MISSION_CONSTRUCTION) {
+            House->Adjust_Drain(-Class->Drain);
+            House->Adjust_Capacity(-(int)Class->Capacity, true);
+        }
         if (House == PlayerPtr) {
             Map.PowerClass::IsToRedraw = true;
             Map.Flag_To_Redraw(false);

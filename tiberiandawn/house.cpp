@@ -1475,7 +1475,8 @@ void HouseClass::AI(void)
     }
 #endif
 
-    if (GameToPlay != GAME_NORMAL && Class->House != HOUSE_JP) {
+    if (GameToPlay != GAME_NORMAL && Class->House != HOUSE_JP
+        && (!ActiveCFEPatchConfig.EnableGeneralBugfixes || Class->House != HOUSE_NEUTRAL)) {
         Check_Pertinent_Structures();
     }
 
@@ -2152,7 +2153,9 @@ void HouseClass::Make_Ally(HousesType house)
         **	If in normal game play but the house is defeated, then don't allow the ally
         **	key to work.
         */
-        if (!ScenarioInit && (IsDefeated || house == HOUSE_JP))
+        if (!ScenarioInit
+            && (IsDefeated || house == HOUSE_JP
+                || (ActiveCFEPatchConfig.EnableGeneralBugfixes && house == HOUSE_NEUTRAL && GameToPlay != GAME_NORMAL)))
             return;
 
         Allies |= (1 << house);
@@ -5345,7 +5348,9 @@ int HouseClass::Expert_AI(void)
         int maxbuilding = 0;
         int enemycount = 0;
 
-        for (HousesType house = HOUSE_FIRST; house < HOUSE_COUNT; house++) {
+        for (HousesType house = ActiveCFEPatchConfig.EnableGeneralBugfixes ? HOUSE_MULTI1 : HOUSE_FIRST;
+             house < HOUSE_COUNT;
+             house++) {
             HouseClass* h = HouseClass::As_Pointer(house);
             if (h != NULL && h->IsActive && !h->IsDefeated && !Is_Ally(h)) {
 

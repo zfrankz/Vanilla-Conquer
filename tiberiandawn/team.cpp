@@ -528,10 +528,24 @@ void TeamClass::AI(void)
             }
         }
 
+        /*
+        **	General bugfixes: a team with an engineer shouldn't go after what it can't capture.
+        */
+        bool teamhasengineers = false;
+        if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+            for (FootClass* member = Member; member; member = member->Member) {
+                if (member->IsActive && !member->IsInLimbo && member->Strength && member->What_Am_I() == RTTI_INFANTRY
+                    && *((InfantryClass*)member) == INFANTRY_E7) {
+                    teamhasengineers = true;
+                    break;
+                }
+            }
+        }
+
         switch (mission->Mission) {
         case TMISSION_ATTACKBASE:
             if (!Target_Legal(MissionTarget)) {
-                Assign_Mission_Target(Member->Greatest_Threat(THREAT_BUILDINGS));
+                Assign_Mission_Target(Member->Greatest_Threat(teamhasengineers ? THREAT_CAPTURE : THREAT_BUILDINGS));
                 if (!Target_Legal(MissionTarget))
                     IsNextMission = true;
             }
@@ -560,8 +574,9 @@ void TeamClass::AI(void)
         case TMISSION_ATTACKTARCOM:
         case TMISSION_RAMPAGE:
             if (!Target_Legal(MissionTarget)) {
-                Assign_Mission_Target(
-                    Member->Greatest_Threat(teamhascommandos ? (THREAT_BUILDINGS | THREAT_INFANTRY) : THREAT_NORMAL));
+                Assign_Mission_Target(Member->Greatest_Threat(
+                    teamhasengineers ? THREAT_CAPTURE
+                                     : (teamhascommandos ? (THREAT_BUILDINGS | THREAT_INFANTRY) : THREAT_NORMAL)));
                 if (!Target_Legal(MissionTarget))
                     IsNextMission = true;
             }

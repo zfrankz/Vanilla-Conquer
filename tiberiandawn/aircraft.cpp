@@ -724,6 +724,10 @@ void AircraftClass::AI(void)
 {
     Validate();
 
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes && *this == AIRCRAFT_TRANSPORT) {
+        Check_Loading_Passenger();
+    }
+
     /*
     **	CFE veterancy: rank 3 helicopters repair for free on a helipad, at half the repair bay's rate.
     */
@@ -1290,6 +1294,9 @@ int AircraftClass::Mission_Unload(void)
         case UNLOAD_PASSENGERS:
             if (!IsTethered) {
                 if (Is_Something_Attached()) {
+                    if (ActiveCFEPatchConfig.EnableGeneralBugfixes && *this == AIRCRAFT_TRANSPORT) {
+                        Open_Door(5, 4);
+                    }
                     FootClass* unit = (FootClass*)Detach_Object();
 
                     /*
@@ -2727,7 +2734,16 @@ RadioMessageType AircraftClass::Receive_Message(RadioClass* from, RadioMessageTy
     **	entered the transport.
     */
     case RADIO_IM_IN:
-        if (How_Many() == Class->Max_Passengers()) {
+        if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+
+            /*
+            **	The passenger isn't counted yet. Close the door if it's the last, or if no one
+            **	else is coming.
+            */
+            if (How_Many() == Class->Max_Passengers() - 1 || CFE_All_Aboard(this, from)) {
+                Close_Door(5, 4);
+            }
+        } else if (How_Many() == Class->Max_Passengers()) {
             Close_Door(5, 4);
         }
 
@@ -2831,6 +2847,64 @@ DirType AircraftClass::Desired_Load_Dir(ObjectClass* object, CELL& moveto) const
 {
     Validate();
     CELL center = Coord_Cell(Center_Coord());
+
+    /*
+    **	General bugfixes: the calling code expects 0 if no cell is suitable, and the original
+    **	never gives that. Prefer the south, which is how the art works.
+    */
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+        CELL ocenter = Coord_Cell(object->Center_Coord());
+        CELL oheadto = 0;
+        CELL navcell = 0;
+        if (object->What_Am_I() == RTTI_INFANTRY) {
+            InfantryClass* guy = (InfantryClass*)object;
+            if (guy->Head_To_Coord()) {
+                oheadto = Coord_Cell(guy->Head_To_Coord());
+            }
+            if (Target_Legal(guy->NavCom)) {
+                navcell = As_Cell(guy->NavCom);
+            }
+        }
+
+        moveto = 0;
+        int bestscore = -1;
+        for (FacingType sweep = FACING_N; sweep < FACING_COUNT; sweep++) {
+            CELL cell = Adjacent_Cell(center, sweep);
+            if (!Map.In_Radar(cell)) {
+                continue;
+            }
+            bool alreadythere = (cell == ocenter || cell == oheadto);
+            CellClass* cellptr = &Map[cell];
+            if (Ground[cellptr->Land_Type()].Cost[SPEED_FOOT] == 0 || cellptr->Flag.Occupy.Building
+                || cellptr->Flag.Occupy.Monolith || cellptr->Flag.Occupy.Vehicle
+                || ((cellptr->Flag.Composite & 0x01F) == 0x01F && !alreadythere)) {
+                continue;
+            }
+
+            int score = 0;
+            if (sweep == FACING_S) {
+                score += 100;
+            }
+            if (sweep == FACING_SW || sweep == FACING_SE) {
+                score += 5;
+            }
+            if (sweep == FACING_E || sweep == FACING_W) {
+                score += 1;
+            }
+            if (alreadythere) {
+                score += 1;
+            }
+            if (navcell != 0 && navcell == cell) {
+                score += 2;
+            }
+            if (score >= bestscore) {
+                bestscore = score;
+                moveto = cell;
+            }
+        }
+        return (DIR_N);
+    }
+
     for (int sweep = FACING_N; sweep < FACING_S; sweep++) {
         moveto = Adjacent_Cell(center, FACING_S + sweep);
         if (Map.In_Radar(moveto) && (Coord_Cell(object->Center_Coord()) == moveto || Map[moveto].Is_Generally_Clear()))
@@ -3410,6 +3484,104 @@ int AircraftClass::Rearm_Delay(bool second) const
 {
     Validate();
     return (FootClass::Rearm_Delay(second) / 2);
+}
+
+/***********************************************************************************************
+ * CFE_All_Aboard -- Is no other infantry on its way into this transport?                      *
+ *                                                                                             *
+ * INPUT:   transport -- The transport.                                                        *
+ *                                                                                             *
+ *          passenger -- The passenger boarding now, or NULL.                                  *
+ *                                                                                             *
+ * OUTPUT:  Can the door be closed?                                                            *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool CFE_All_Aboard(TechnoClass const* transport, RadioClass const* passenger)
+{
+    TARGET target = transport->As_Target();
+    for (int index = 0; index < Infantry.Count(); index++) {
+        InfantryClass* guy = Infantry.Ptr(index);
+        if (guy && guy != passenger && guy->IsActive && !guy->IsInLimbo && guy->Strength
+            && transport->House->Is_Ally(guy) && (guy->NavCom == target || guy->ArchiveTarget == target)) {
+            return (false);
+        }
+    }
+    return (true);
+}
+
+/***********************************************************************************************
+ * AircraftClass::Check_Loading_Passenger -- Unsticks a Chinook that has stopped loading.      *
+ *                                                                                             *
+ *    General bugfixes: a Chinook can end up in radio contact with infantry that isn't         *
+ *    tethered and won't load, which blocks everyone else. CFE couldn't find the cause, and    *
+ *    this is its workaround. It also closes a door left open once no one is left to board.    *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void AircraftClass::Check_Loading_Passenger(void)
+{
+    if (IsLanding || IsTakingOff || Altitude != 0 || IsTethered || Mission == MISSION_UNLOAD) {
+        return;
+    }
+
+    if (!In_Radio_Contact()) {
+        if (Is_Door_Open() && !Map[Coord_Cell(Coord)].Cell_Infantry() && CFE_All_Aboard(this, NULL)) {
+            Close_Door(5, 4);
+        }
+        return;
+    }
+
+    TechnoClass* contactee = Contact_With_Whom();
+    if (!contactee || !contactee->IsActive || contactee->IsInLimbo || !contactee->Strength) {
+        Radio_Off();
+        return;
+    }
+    if (contactee->What_Am_I() != RTTI_INFANTRY) {
+        return;
+    }
+
+    InfantryClass* guy = (InfantryClass*)contactee;
+    TARGET target = As_Target();
+    if (guy->NavCom != target && guy->ArchiveTarget != target) {
+        Transmit_Message(RADIO_OVER_OUT);
+        return;
+    }
+
+    if ((guy->Head_To_Coord() && !Target_Legal(guy->NavCom))
+        || ::Distance(Coord_Cell(Coord), Coord_Cell(guy->Coord)) >= 2) {
+        return;
+    }
+
+    Open_Door(5, 4);
+
+    /*
+    **	Send the infantry to the loading spot. If it won't go, or it's there already, then
+    **	straight into the Chinook.
+    */
+    bool direct = true;
+    if (Transmit_Message(RADIO_NEED_TO_MOVE) == RADIO_ROGER) {
+        CELL cell;
+        Desired_Load_Dir(guy, cell);
+        if (cell != 0) {
+            int param = (int)::As_Target(cell);
+            direct = Transmit_Message(RADIO_MOVE_HERE, param) == RADIO_YEA_NOW_WHAT;
+        }
+    }
+    if (direct) {
+        Transmit_Message(RADIO_TETHER);
+        int param = (int)target;
+        if (Transmit_Message(RADIO_MOVE_HERE, param) != RADIO_ROGER) {
+            Transmit_Message(RADIO_UNTETHER);
+            Transmit_Message(RADIO_OVER_OUT);
+        } else {
+            guy->Unselect();
+        }
+    }
 }
 
 /***********************************************************************************************

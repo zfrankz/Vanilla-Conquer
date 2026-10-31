@@ -1987,6 +1987,92 @@ int CellClass::Tiberium_Adjust(bool pregame)
     return (0);
 }
 
+/*
+**	General bugfixes: crate bombs could kill a unit in the middle of its AI, which can leave a
+**	cell reserved for a dead unit. They wait for the end of the object AI loop in the same
+**	logic tick, so these never need saving.
+*/
+enum CFECrateBombType
+{
+    CFE_CRATE_NUKE,
+    CFE_CRATE_ION,
+    CFE_CRATE_EXPLOSION,
+    CFE_CRATE_NAPALM
+};
+
+struct CFECrateBomb
+{
+    CELL Cell;
+    CFECrateBombType Type;
+    FootClass* Victim;
+};
+
+static CFECrateBomb _cfe_crate_bombs[32];
+static int _cfe_crate_bomb_count = 0;
+
+static bool CFE_Postpone_Crate_Bomb(CELL cell, CFECrateBombType type, FootClass* victim)
+{
+    if (!ActiveCFEPatchConfig.EnableGeneralBugfixes || _cfe_crate_bomb_count >= ARRAY_SIZE(_cfe_crate_bombs)) {
+        return (false);
+    }
+    CFECrateBomb& bomb = _cfe_crate_bombs[_cfe_crate_bomb_count++];
+    bomb.Cell = cell;
+    bomb.Type = type;
+    bomb.Victim = victim;
+    return (true);
+}
+
+/***********************************************************************************************
+ * CFE_Process_Crate_Bombs -- Sets off the crate bombs of this logic tick.                     *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void CFE_Process_Crate_Bombs(void)
+{
+    for (int i = 0; i < _cfe_crate_bomb_count; i++) {
+        CFECrateBomb const& bomb = _cfe_crate_bombs[i];
+        COORDINATE where = Cell_Coord(bomb.Cell);
+        bool alive = bomb.Victim && bomb.Victim->IsActive && !bomb.Victim->IsInLimbo && bomb.Victim->Strength;
+        int damage;
+
+        switch (bomb.Type) {
+        case CFE_CRATE_NUKE:
+            new AnimClass(ANIM_ATOM_BLAST, where);
+            break;
+
+        case CFE_CRATE_ION:
+            new AnimClass(ANIM_ION_CANNON, where);
+            break;
+
+        case CFE_CRATE_EXPLOSION:
+            if (alive) {
+                damage = 400;
+                bomb.Victim->Take_Damage(damage, 0, WARHEAD_HE);
+            }
+            for (int index = 0; index < 5; index++) {
+                COORDINATE coord = Coord_Scatter(where, Random_Pick(0, 0x0200));
+                new AnimClass(ANIM_FBALL1, coord);
+                damage = 400;
+                Explosion_Damage(coord, damage, NULL, WARHEAD_HE);
+            }
+            break;
+
+        case CFE_CRATE_NAPALM: {
+            COORDINATE coord = alive ? Coord_Mid(where, bomb.Victim->Center_Coord()) : where;
+            new AnimClass(ANIM_NAPALM3, coord);
+            damage = 600;
+            Explosion_Damage(coord, damage, NULL, WARHEAD_FIRE);
+            break;
+        }
+        }
+    }
+    _cfe_crate_bomb_count = 0;
+}
+
 /***********************************************************************************************
  * CellClass::Goodie_Check -- Performs crate discovery logic.                                  *
  *                                                                                             *
@@ -2320,14 +2406,18 @@ bool CellClass::Goodie_Check(FootClass* object, bool check_steel)
             **	Sometimes an explosion of great magnitude occurs.
             */
             case NUKE:
-                new AnimClass(ANIM_ATOM_BLAST, Cell_Coord());
+                if (!CFE_Postpone_Crate_Bomb(Cell_Number(), CFE_CRATE_NUKE, object)) {
+                    new AnimClass(ANIM_ATOM_BLAST, Cell_Coord());
+                }
                 break;
 
             /*
             **	Sometimes an explosion of great magnitude occurs.
             */
             case ION:
-                new AnimClass(ANIM_ION_CANNON, Cell_Coord());
+                if (!CFE_Postpone_Crate_Bomb(Cell_Number(), CFE_CRATE_ION, object)) {
+                    new AnimClass(ANIM_ION_CANNON, Cell_Coord());
+                }
                 break;
 
             /*
@@ -2400,6 +2490,9 @@ bool CellClass::Goodie_Check(FootClass* object, bool check_steel)
             **	A group of explosions are triggered around the crate.
             */
             case EXPLOSION:
+                if (CFE_Postpone_Crate_Bomb(Cell_Number(), CFE_CRATE_EXPLOSION, object)) {
+                    break;
+                }
                 damage = 400;
                 object->Take_Damage((int&)damage, 0, WARHEAD_HE);
                 for (index = 0; index < 5; index++) {
@@ -2414,6 +2507,9 @@ bool CellClass::Goodie_Check(FootClass* object, bool check_steel)
             **	A napalm blast is triggered.
             */
             case NAPALM:
+                if (CFE_Postpone_Crate_Bomb(Cell_Number(), CFE_CRATE_NAPALM, object)) {
+                    break;
+                }
                 coord = Coord_Mid(Cell_Coord(), object->Center_Coord());
                 new AnimClass(ANIM_NAPALM3, coord);
                 damage = 600;

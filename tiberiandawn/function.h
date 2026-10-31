@@ -301,6 +301,8 @@ void Explosion_Damage(COORDINATE coord, unsigned strength, TechnoClass* source, 
 extern bool CFE_No_Veterancy_XP;
 extern const FacingType CFE_Cardinals[4];
 bool CFE_Should_Extend_Walls(void);
+bool CFE_All_Aboard(TechnoClass const* transport, RadioClass const* passenger);
+void CFE_Process_Crate_Bombs(void);
 
 /*
 **	CFE veterancy: special ammunition. It travels with the bullet and is handed to the next

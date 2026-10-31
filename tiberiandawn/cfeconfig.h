@@ -71,6 +71,8 @@ struct CFEPatchConfig
     bool DeadBuildingScatterFix = false;
     // Not a CFE setting: CFE always runs its "two units in one spot" fixes; this port switches them.
     bool EnableCellReservationFix = false;
+    // Not a CFE setting: CFE always runs its fixes for bugs of the original game; this port switches them.
+    bool EnableGeneralBugfixes = false;
 
     bool OverrideAPCReqs = false;
     bool OverrideWarFactoryHP = false;

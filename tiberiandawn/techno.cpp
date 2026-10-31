@@ -4465,7 +4465,8 @@ void TechnoClass::Base_Is_Attacked(TechnoClass const* enemy)
                         defender[lp] = (FootClass*)infantry;
                         continue;
                     }
-                    if (count < 6 && value[count] < newweakest) {
+                    if (ActiveCFEPatchConfig.EnableGeneralBugfixes ? value[lp] < newweakest
+                                                                   : count < 6 && value[count] < newweakest) {
                         newweakest = value[lp];
                     }
                 }
@@ -4527,7 +4528,8 @@ void TechnoClass::Base_Is_Attacked(TechnoClass const* enemy)
                         defender[lp] = (FootClass*)unit;
                         continue;
                     }
-                    if (count < 6 && value[count] < newweakest) {
+                    if (ActiveCFEPatchConfig.EnableGeneralBugfixes ? value[lp] < newweakest
+                                                                   : count < 6 && value[count] < newweakest) {
                         newweakest = value[lp];
                     }
                 }

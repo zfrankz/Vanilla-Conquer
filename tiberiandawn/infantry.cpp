@@ -410,7 +410,9 @@ ResultType InfantryClass::Take_Damage(int& damage, int distance, WarheadType war
     if (damage && res != RESULT_DESTROYED && *this == INFANTRY_E4 && Vet().Rank == 0) {
         damage = 5;
         CFE_No_Veterancy_XP = true;
-        ResultType newres = FootClass::Take_Damage(damage, distance, warhead, source);
+        ResultType newres = ActiveCFEPatchConfig.EnableGeneralBugfixes
+                                ? FootClass::Take_Damage(damage, 0, WARHEAD_FIRE, source)
+                                : FootClass::Take_Damage(damage, distance, warhead, source);
         CFE_No_Veterancy_XP = false;
         res = MAX(res, newres);
     }
@@ -695,6 +697,25 @@ void InfantryClass::Per_Cell_Process(bool center)
     **	If the infantry unit is entering a cell that contains the building it is trying to
     **	capture, then capture it.
     */
+    /*
+    **	General bugfixes: two engineers reaching a building at once would both capture it. Look
+    **	for the actual destination among the cell's occupants, which also finds a Chinook.
+    */
+    if (center && Mission == MISSION_CAPTURE && ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+        ObjectClass* obj = cellptr->Cell_Occupier();
+        while (obj && obj->As_Target() != NavCom) {
+            obj = obj->Next;
+        }
+        if (obj) {
+            if (obj->Is_Techno() && Can_Capture_Now((TechnoClass*)obj)) {
+                ((TechnoClass*)obj)->Captured(House);
+                Delete_This();
+                return;
+            }
+            Assign_Destination(TARGET_NONE);
+        }
+    }
+
     if (center && Mission == MISSION_CAPTURE) {
         TechnoClass* tech = cellptr->Cell_Techno();
         if (tech && tech->As_Target() == NavCom && tech->What_Am_I() == RTTI_BUILDING && !tech->Can_Capture()) {
@@ -725,6 +746,9 @@ void InfantryClass::Per_Cell_Process(bool center)
     if (center && Mission == MISSION_ENTER && techno && Coord_Cell(Coord) == Coord_Cell(techno->Coord)
         && techno == As_Techno(NavCom)) {
         if (Transmit_Message(RADIO_IM_IN) == RADIO_ATTACH) {
+            if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+                ArchiveTarget = TARGET_NONE;
+            }
             Limbo();
             techno->Attach(this);
         }
@@ -972,6 +996,9 @@ void InfantryClass::Assign_Destination(TARGET target)
                 **	Determine if the transport is already in radio contact. If so, then just move
                 **	toward the transport and try to establish contact at a later time.
                 */
+                if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+                    ArchiveTarget = target;
+                }
                 if (techno->In_Radio_Contact()) {
 
                     // TCTCTC -- call for an update from the transport to get a good rondezvous position.
@@ -1024,7 +1051,14 @@ void InfantryClass::Assign_Target(TARGET target)
     **	If this is an infantry that can only capture, then also assign its destination to the
     **	target specified.
     */
-    if (!Target_Legal(NavCom) && Class->IsCapture && Class->Primary == WEAPON_NONE) {
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+        if (Class->IsCapture && Class->Primary == WEAPON_NONE) {
+            TechnoClass const* techno = As_Techno(target);
+            if (techno && Can_Capture_Now(techno)) {
+                Assign_Destination(target);
+            }
+        }
+    } else if (!Target_Legal(NavCom) && Class->IsCapture && Class->Primary == WEAPON_NONE) {
         BuildingClass const* building = As_Building(target);
         if (building && building->Can_Capture()) {
             Assign_Destination(target);
@@ -1197,7 +1231,7 @@ void InfantryClass::AI(void)
     /*
     **	Scatter infantry off buildings in guard modes.
     */
-    if (!IsTethered && !IsFiring && !IsDriving && !IsRotating
+    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving && !IsRotating
         && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
         && Map[Coord_Cell(Coord)].Cell_Building() != NULL) {
         Scatter(0, true, true);
@@ -3249,7 +3283,8 @@ ActionType InfantryClass::What_Action(ObjectClass* object) const
     if (Class->IsCapture && action == ACTION_ATTACK) {
         if (object->Owner() != Owner()
             && ((object->What_Am_I() == RTTI_AIRCRAFT && ((AircraftClass*)object)->Pip_Count() == 0
-                 && *((AircraftClass*)object) == AIRCRAFT_TRANSPORT)
+                 && *((AircraftClass*)object) == AIRCRAFT_TRANSPORT
+                 && (!ActiveCFEPatchConfig.EnableGeneralBugfixes || ((AircraftClass*)object)->Altitude == 0))
                 || (object->What_Am_I() == RTTI_BUILDING && ((BuildingClass*)object)->Can_Capture()))) {
 
             action = ACTION_CAPTURE;
@@ -3625,7 +3660,25 @@ int InfantryClass::Full_Name(void) const
 int InfantryClass::Mission_Attack(void)
 {
     Validate();
-    if (*this == INFANTRY_E7 && As_Building(TarCom)) {
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+
+        /*
+        **	Only shunt an engineer to capturing if it can capture the target. A computer
+        **	controlled one that can't finds something else instead.
+        */
+        TechnoClass* techno = (*this == INFANTRY_E7) ? As_Techno(TarCom) : NULL;
+        if (techno) {
+            if (!Can_Capture_Now(techno)) {
+                if (House->IsHuman) {
+                    return (FootClass::Mission_Attack());
+                }
+                Assign_Target(Greatest_Threat(THREAT_CAPTURE));
+            }
+            Assign_Destination(TarCom);
+            Assign_Mission(MISSION_CAPTURE);
+            return (1);
+        }
+    } else if (*this == INFANTRY_E7 && As_Building(TarCom)) {
         Assign_Destination(TarCom);
         Assign_Mission(MISSION_CAPTURE);
         return (1);
@@ -3665,6 +3718,54 @@ bool InfantryClass::Is_Infantry(void) const
 {
     Validate();
     return (true);
+}
+
+/***********************************************************************************************
+ * InfantryClass::Can_Capture_Now -- Can this engineer capture the object right now?           *
+ *                                                                                             *
+ * INPUT:   techno -- The object to check.                                                     *
+ *                                                                                             *
+ * OUTPUT:  Is it a live enemy building that can be captured, or an empty grounded Chinook?    *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool InfantryClass::Can_Capture_Now(TechnoClass const* techno) const
+{
+    if (!techno->IsActive || techno->IsInLimbo || !techno->Strength || Owner() == techno->Owner()) {
+        return (false);
+    }
+    if (techno->What_Am_I() == RTTI_BUILDING) {
+        return (((BuildingClass const*)techno)->Can_Capture());
+    }
+    if (techno->What_Am_I() == RTTI_AIRCRAFT) {
+        AircraftClass const* aircraft = (AircraftClass const*)techno;
+        return (*aircraft == AIRCRAFT_TRANSPORT && aircraft->Pip_Count() == 0 && aircraft->Altitude == 0);
+    }
+    return (false);
+}
+
+/***********************************************************************************************
+ * InfantryClass::Player_Assign_Mission -- Assigns a mission as result of player input.        *
+ *                                                                                             *
+ *    General bugfixes: a new order cancels any plan to board a transport.                     *
+ *                                                                                             *
+ * INPUT:   mission     -- The mission to assign.                                              *
+ *                                                                                             *
+ *          target      -- The target of the mission.                                          *
+ *                                                                                             *
+ *          destination -- The destination of the mission.                                     *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void InfantryClass::Player_Assign_Mission(MissionType mission, TARGET target, TARGET destination)
+{
+    Validate();
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+        ArchiveTarget = TARGET_NONE;
+    }
+    TechnoClass::Player_Assign_Mission(mission, target, destination);
 }
 
 /***********************************************************************************************

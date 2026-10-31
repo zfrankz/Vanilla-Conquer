@@ -86,6 +86,27 @@ bool LayerClass::Submit(ObjectClass const* object, bool sort)
  *=============================================================================================*/
 void LayerClass::Sort(void)
 {
+    /*
+    **	The original does one pass per tick, which often leaves the list unsorted.
+    */
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+        bool sorted = false;
+        int end = Count() - 1;
+        while (!sorted) {
+            sorted = true;
+            for (int index = 0; index < end; index++) {
+                if (*(*this)[index + 1] < *(*this)[index]) {
+                    sorted = false;
+                    ObjectClass* temp = (*this)[index + 1];
+                    (*this)[index + 1] = (*this)[index];
+                    (*this)[index] = temp;
+                }
+            }
+            end--;
+        }
+        return;
+    }
+
     for (int index = 0; index < Count() - 1; index++) {
         if (*(*this)[index + 1] < *(*this)[index]) {
             ObjectClass* temp;

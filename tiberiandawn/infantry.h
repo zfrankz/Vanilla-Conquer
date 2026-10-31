@@ -136,6 +136,9 @@ public:
     static void Init(void);
 
     virtual void Assign_Destination(TARGET);
+    virtual void
+    Player_Assign_Mission(MissionType mission, TARGET target = TARGET_NONE, TARGET destination = TARGET_NONE);
+    bool Can_Capture_Now(TechnoClass const* techno) const;
 
     /*
     **	Query functions.

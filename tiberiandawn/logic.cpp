@@ -217,6 +217,11 @@ void LogicClass::AI(void)
         }
     }
 
+    /*
+    **	Crate bombs wait until here, so they can't kill a unit partway through its AI.
+    */
+    CFE_Process_Crate_Bombs();
+
     //	Heap_Dump_Check( "After Object AI" );
 
     /*

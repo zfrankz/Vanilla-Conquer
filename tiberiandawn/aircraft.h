@@ -119,6 +119,7 @@ public:
     DirType Pose_Dir(void) const;
     TARGET Good_LZ(void) const;
     bool Do_Smarter_Run_Away(void);
+    void Check_Loading_Passenger(void);
     virtual DirType Fire_Direction(void) const;
 
     /*
