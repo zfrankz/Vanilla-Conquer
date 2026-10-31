@@ -459,6 +459,14 @@ ResultType InfantryClass::Take_Damage(int& damage, int distance, WarheadType war
         }
 
         /*
+        **	Meaner visceroids' victims may become visceroids.
+        */
+        if (ActiveCFEPatchConfig.MeanerVisceroids && source && source->What_Am_I() == RTTI_UNIT
+            && *((UnitClass*)source) == UNIT_VICE) {
+            Death_By_Tiberium() = 2;
+        }
+
+        /*
         **	CFE balance patch: a buffed chem soldier's victims may become visceroids.
         */
         if (ActiveCFEPatchConfig.OverrideChemGuyBuff && source && source->What_Am_I() == RTTI_INFANTRY

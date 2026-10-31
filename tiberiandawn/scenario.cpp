@@ -978,6 +978,14 @@ void Fixup_Scenario(bool issavedgameload)
     }
 
     /*
+    **	Meaner visceroids get more health. CFE multiplies the current value here, which grows
+    **	on every call, so this works from the original value.
+    */
+    static int vice_strength = UnitTypeClass::As_Reference(UNIT_VICE).MaxStrength;
+    ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_VICE)).MaxStrength =
+        (int)(vice_strength * (1.0 + (0.25 * ActiveCFEPatchConfig.MeanerVisceroids)));
+
+    /*
     ** CFE: raise what was at full health before the maximums above changed.
     */
     if (!issavedgameload) {

@@ -2516,6 +2516,17 @@ bool MapClass::Process_Tiberium_Death(CELL where, COORDINATE specifically_where,
                 delete unit;
             }
         }
+    } else if (how == 2) {
+        if (Random_Pick(0, 3) < 1) {
+            UnitClass* unit = new UnitClass(UNIT_VICE, HOUSE_JP);
+            if (unit) {
+                if (unit->Unlimbo(specifically_where) || Scan_Place_Object(unit, where)) {
+                    unit->Do_Squidgy_Spawn();
+                    return true;
+                }
+                delete unit;
+            }
+        }
     } else if (how >= 3 && how <= 6) {
         if (Random_Pick(0, 99) < 10 + (5 * (how - 3))) {
             UnitClass* unit = new UnitClass(UNIT_VICE, HOUSE_JP);

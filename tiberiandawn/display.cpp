@@ -2869,6 +2869,59 @@ COORDINATE DisplayClass::Pixel_To_Coord(int x, int y)
 }
 
 /***********************************************************************************************
+ * DisplayClass::Nearest_Edge_Entry_Point -- Finds the closest way onto the map from an edge.  *
+ *                                                                                             *
+ * INPUT:   input -- The cell to get close to.                                                 *
+ *                                                                                             *
+ * OUTPUT:  Returns with the off-map cell to start from, or 0 if none is clear.                *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+CELL DisplayClass::Nearest_Edge_Entry_Point(CELL input)
+{
+    CELL bestcell = 0;
+    int bestdistance = INT_MAX;
+    COORDINATE coord = Cell_Coord(input);
+
+    /*
+    **	Each entry is an edge cell and the step onto the map from it: north, east, south, west.
+    */
+    for (int edge = 0; edge < 4; edge++) {
+        int count = (edge & 1) ? MapCellHeight : MapCellWidth;
+        for (int i = 0; i < count; i++) {
+            CELL cell = 0;
+            CELL inward = 0;
+            switch (edge) {
+            case 0:
+                cell = XY_Cell(MapCellX + i, MapCellY - 1);
+                inward = cell + MAP_CELL_W;
+                break;
+            case 1:
+                cell = XY_Cell(MapCellX + MapCellWidth, MapCellY + i);
+                inward = cell - 1;
+                break;
+            case 2:
+                cell = XY_Cell(MapCellX + i, MapCellY + MapCellHeight);
+                inward = cell - MAP_CELL_W;
+                break;
+            default:
+                cell = XY_Cell(MapCellX - 1, MapCellY + i);
+                inward = cell + 1;
+                break;
+            }
+
+            int distance = Distance(Cell_Coord(cell), coord);
+            if (distance < bestdistance && (*this)[cell].Is_Generally_Clear()
+                && (*this)[inward].Is_Generally_Clear()) {
+                bestcell = cell;
+                bestdistance = distance;
+            }
+        }
+    }
+    return (bestcell);
+}
+
+/***********************************************************************************************
  * DisplayClass::Calculated_Cell -- Fetch a map cell based on specified method.                *
  *                                                                                             *
  *    Find a cell meeting the specified requirements. This function is                         *

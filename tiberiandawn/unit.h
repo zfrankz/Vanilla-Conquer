@@ -101,6 +101,9 @@ public:
     bool Unload_Hovercraft_Process(void);
     bool Goto_Tiberium(void);
     bool Do_Smarter_Run_Away(void);
+    bool Is_Meaner_Monster(void) const;
+    int Meaner_Hunt(void);
+    void Burst_Tiberium(CELL cell);
     bool Harvesting(void);
     void APC_Close_Door(void);
     void APC_Open_Door(void);

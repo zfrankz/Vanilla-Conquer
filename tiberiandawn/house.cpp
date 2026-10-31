@@ -1085,7 +1085,8 @@ void HouseClass::AI(void)
                 UnitClass* obj = NULL;
                 CELL cell;
 
-                if (Special.IsJurassic && AreThingiesEnabled) {
+                bool isdinos = Special.IsJurassic && AreThingiesEnabled;
+                if (isdinos) {
                     obj = new UnitClass(Random_Pick(UNIT_TRIC, UNIT_STEG), HOUSE_JP);
                 } else if (Special.IsVisceroids) {
                     if (BuildLevel >= 7) {
@@ -1098,8 +1099,37 @@ void HouseClass::AI(void)
                 if (obj) {
                     cell = XY_Cell(Map.MapCellX + Random_Pick(0, Map.MapCellWidth - 1),
                                    Map.MapCellY + Random_Pick(0, Map.MapCellHeight - 1));
-                    if (!Scan_Place_Object(obj, cell)) {
-                        delete obj;
+
+                    /*
+                    **	With meaner visceroids, dinosaurs walk in from the nearest map edge.
+                    */
+                    bool placed = false;
+                    if (isdinos && ActiveCFEPatchConfig.MeanerVisceroids) {
+                        CELL edgecell = Map.Nearest_Edge_Entry_Point(cell);
+                        if (edgecell != 0) {
+                            FacingType eface = FACING_N;
+                            if (Cell_X(edgecell) == Map.MapCellX - 1) {
+                                eface = FACING_E;
+                            } else if (Cell_X(edgecell) == Map.MapCellX + Map.MapCellWidth) {
+                                eface = FACING_W;
+                            } else if (Cell_Y(edgecell) == Map.MapCellY - 1) {
+                                eface = FACING_S;
+                            }
+                            if (obj->Unlimbo(Cell_Coord(edgecell), Facing_Dir(eface))) {
+                                obj->Assign_Mission(MISSION_MOVE);
+                                obj->Assign_Destination(::As_Target(cell));
+                                obj->Commence();
+                                placed = true;
+                            }
+                        }
+                    }
+
+                    if (!placed) {
+                        if (!Scan_Place_Object(obj, cell)) {
+                            delete obj;
+                        } else if (!isdinos && ActiveCFEPatchConfig.MeanerVisceroids) {
+                            obj->Do_Squidgy_Spawn();
+                        }
                     }
                 }
             }

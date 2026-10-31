@@ -2418,6 +2418,18 @@ static CFEVeterancy& CFE_Vet_Entry(TechnoClass const* object)
 CFEVeterancy const& TechnoClass::Vet(void) const
 {
     static CFEVeterancy const _off;
+
+    /*
+    **	Meaner visceroids get fixed bonuses. These don't take a per-unit state or need saving.
+    */
+    if (ActiveCFEPatchConfig.MeanerVisceroids && What_Am_I() == RTTI_UNIT && *((UnitClass const*)this) == UNIT_VICE) {
+        static CFEVeterancy _meaner;
+        _meaner.FirepowerBias = 1.0f + (0.2f * ActiveCFEPatchConfig.MeanerVisceroids);
+        _meaner.ArmorBias = 1.0f - (0.1f * ActiveCFEPatchConfig.MeanerVisceroids);
+        _meaner.SpeedBias = 1.025f + (0.025f * ActiveCFEPatchConfig.MeanerVisceroids);
+        return (_meaner);
+    }
+
     if (ActiveCFEPatchConfig.EnableVeterancy == 2
         || (ActiveCFEPatchConfig.EnableVeterancy == 1 && GameToPlay != GAME_NORMAL)) {
         return (CFE_Vet_Entry(this));

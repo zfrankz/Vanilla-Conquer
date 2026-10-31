@@ -410,6 +410,18 @@ void UnitClass::AI(void)
     if (*this == UNIT_VICE && Map[Coord_Cell(Coord)].Land_Type() == LAND_TIBERIUM && Health_Ratio() < 0x0100
         && (Frame % 16) == 0) {
         Strength++;
+        if (ActiveCFEPatchConfig.MeanerVisceroids) {
+            Strength = min(Strength + ActiveCFEPatchConfig.MeanerVisceroids, (int)Class->MaxStrength);
+        }
+        Mark(MARK_CHANGE);
+    }
+
+    /*
+    **	Meaner visceroids also heal away from tiberium.
+    */
+    if (ActiveCFEPatchConfig.MeanerVisceroids > 1 && *this == UNIT_VICE && (Frame % 16) == 0
+        && Health_Ratio() < 0x0100) {
+        Strength = min(Strength + ActiveCFEPatchConfig.MeanerVisceroids - 1, (int)Class->MaxStrength);
         Mark(MARK_CHANGE);
     }
 
@@ -855,6 +867,10 @@ bool UnitClass::Unlimbo(COORDINATE coord, DirType dir)
         ** flag them so they can.  This undoes the work of Techno::Unlimbo which
         ** stole their IsALoaner flag.
         */
+        if (ActiveCFEPatchConfig.MeanerVisceroids && *this == UNIT_VICE) {
+            Assign_Mission(MISSION_HUNT);
+        }
+
         if (*this == UNIT_GUNBOAT || *this == UNIT_HOVER) {
             IsALoaner = true;
         }
@@ -961,6 +977,14 @@ ResultType UnitClass::Take_Damage(int& damage, int distance, WarheadType warhead
                 Sound_Effect(VOC_DINODIE1, Coord);
             }
 
+            /*
+            **	A chemical splash suits meaner visceroids better than an ordinary explosion.
+            */
+            if (ActiveCFEPatchConfig.MeanerVisceroids && *this == UNIT_VICE) {
+                anim = ANIM_CHEM_BALL;
+                Sound_Effect(VOC_SQUISH2, Coord);
+            }
+
             new AnimClass(anim, Coord);
 
             /*
@@ -1059,10 +1083,17 @@ ResultType UnitClass::Take_Damage(int& damage, int distance, WarheadType warhead
             }
         }
 
+        bool burst = ActiveCFEPatchConfig.MeanerVisceroids && *this == UNIT_VICE;
+        CELL burstcell = Coord_Cell(Coord);
+
         /*
         **	Finally, delete the vehicle.
         */
         Delete_This();
+
+        if (burst) {
+            Burst_Tiberium(burstcell);
+        }
 
     } else {
 
@@ -1437,6 +1468,15 @@ void UnitClass::Enter_Idle_Mode(bool initial)
                 if (GameToPlay == GAME_NORMAL || House->IsHuman) {
                     order = MISSION_GUARD;
                 } else {
+
+                    /*
+                    **	Meaner visceroids and multiplayer dinosaurs keep their AI in the hunt mission.
+                    */
+                    if (Is_Meaner_Monster()) {
+                        Assign_Mission(MISSION_HUNT);
+                        return;
+                    }
+
                     // if (GameToPlay != GAME_NORMAL) {
 #ifndef USE_RA_AI
                     // Don't use MISSION_TIMED_HUNT since this can trigger the Blitz behavior
@@ -2455,6 +2495,145 @@ void UnitClass::Draw_It(int x, int y, WindowNumberType window)
 }
 
 /***********************************************************************************************
+ * UnitClass::Is_Meaner_Monster -- Does this unit use the meaner visceroid AI?                 *
+ *                                                                                             *
+ *    CFE MEANER_VISCEROIDS: visceroids, and the dinosaurs that replace them in multiplayer.   *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Should this unit use the meaner AI?                                                *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool UnitClass::Is_Meaner_Monster(void) const
+{
+    if (!ActiveCFEPatchConfig.MeanerVisceroids) {
+        return (false);
+    }
+    return (*this == UNIT_VICE
+            || (GameToPlay != GAME_NORMAL && Special.IsJurassic && AreThingiesEnabled && *this >= UNIT_TRIC
+                && *this <= UNIT_STEG));
+}
+
+/***********************************************************************************************
+ * UnitClass::Meaner_Hunt -- Hunt AI for meaner visceroids.                                    *
+ *                                                                                             *
+ *    Goes for anything nearby. With nothing nearby it mostly keeps after its old target.      *
+ *    Failing that it sits for a bit (1/2), wanders nearby (7/16), goes somewhere random on    *
+ *    the map (3/64), or scans the whole map for something to attack (1/64).                   *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Returns with the delay before the next call.                                       *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+int UnitClass::Meaner_Hunt(void)
+{
+    IsSearchRangeLimited = false;
+
+    TARGET oldtarget = TarCom;
+    if (Target_Something_Nearby(THREAT_AREA)) {
+        Approach_Target();
+        return (TICKS_PER_SECOND + 5);
+    }
+
+    if (Target_Legal(oldtarget) && Random_Pick(0, 19) < 19) {
+        Assign_Target(oldtarget);
+        Approach_Target();
+        return (TICKS_PER_SECOND + 5);
+    }
+
+    Assign_Target(TARGET_NONE);
+    int choice = Random_Pick(0, 63);
+
+    if (choice < 32) {
+        if (*this != UNIT_VICE) {
+            Random_Animate();
+            return (Random_Pick((3 * TICKS_PER_SECOND) + 5, 10 * TICKS_PER_SECOND));
+        }
+        return ((3 * TICKS_PER_SECOND) + 5);
+    }
+
+    if (choice < 63) {
+        CELL here = Coord_Cell(Coord);
+        for (int tries = 0; tries <= 100; tries++) {
+            int x;
+            int y;
+            if (choice < 60) {
+                x = Random_Pick(Cell_X(here) - 4, Cell_X(here) + 4);
+                y = Random_Pick(Cell_Y(here) - 4, Cell_Y(here) + 4);
+            } else {
+                x = Random_Pick(Map.MapCellX, Map.MapCellX + Map.MapCellWidth - 1);
+                y = Random_Pick(Map.MapCellY, Map.MapCellY + Map.MapCellHeight - 1);
+            }
+            if (x < 0 || y < 0 || x >= MAP_CELL_W || y >= MAP_CELL_H) {
+                continue;
+            }
+            CELL newcell = XY_Cell(x, y);
+            if (Map.In_Radar(newcell) && Find_Path_AStar(nullptr, here, newcell, 1, MOVE_NO, -1)) {
+                Assign_Mission(MISSION_MOVE);
+                Assign_Destination(::As_Target(newcell));
+                break;
+            }
+        }
+        return (1);
+    }
+
+    if (Target_Something_Nearby(THREAT_NORMAL)) {
+        Approach_Target();
+    }
+    return (TICKS_PER_SECOND + 5);
+}
+
+/*
+**	Can tiberium from a dying visceroid be put in this cell?
+*/
+static bool CFE_Tiberium_Can_Land(CellClass const* cellptr)
+{
+    return (Map.In_Radar(cellptr->Cell_Number()) && cellptr->Cell_Object() == NULL
+            && cellptr->Land_Type() == LAND_CLEAR && cellptr->Overlay == OVERLAY_NONE
+            && cellptr->TType != TEMPLATE_BRIDGE1 && cellptr->TType != TEMPLATE_BRIDGE2
+            && cellptr->TType != TEMPLATE_BRIDGE3 && cellptr->TType != TEMPLATE_BRIDGE4);
+}
+
+/***********************************************************************************************
+ * UnitClass::Burst_Tiberium -- Scatters tiberium where a meaner visceroid died.               *
+ *                                                                                             *
+ *    The cell becomes full grown tiberium, and each adjacent one has a 2 in 3 chance of       *
+ *    gaining some.                                                                            *
+ *                                                                                             *
+ * INPUT:   cell -- The cell where the visceroid died.                                         *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   The unit has been deleted by now, so this mustn't touch its members.            *
+ *=============================================================================================*/
+void UnitClass::Burst_Tiberium(CELL cell)
+{
+    CellClass* cellptr = &Map[cell];
+    if (cellptr->Land_Type() == LAND_TIBERIUM) {
+        cellptr->OverlayData = 11;
+    } else if (CFE_Tiberium_Can_Land(cellptr)) {
+        new OverlayClass((OverlayType)Random_Pick((int)OVERLAY_TIBERIUM1, (int)OVERLAY_TIBERIUM12), cell);
+        cellptr->OverlayData = 11;
+    }
+
+    for (FacingType i = FACING_N; i < FACING_COUNT; i++) {
+        CellClass* newcell = Map[cell].Adjacent_Cell(i);
+        if (newcell && Random_Pick(0, 2) < 2) {
+            if (newcell->Land_Type() == LAND_TIBERIUM && newcell->OverlayData < 11) {
+                newcell->OverlayData = Random_Pick(newcell->OverlayData + 1, 11);
+            } else if (CFE_Tiberium_Can_Land(newcell)) {
+                new OverlayClass((OverlayType)Random_Pick((int)OVERLAY_TIBERIUM1, (int)OVERLAY_TIBERIUM12),
+                                 newcell->Cell_Number());
+                newcell->OverlayData = ActiveCFEPatchConfig.TibIndexBugfix ? Random_Pick(0, 5) : Random_Pick(1, 6);
+            }
+        }
+    }
+}
+
+/***********************************************************************************************
  * UnitClass::Do_Smarter_Run_Away -- Drives off a repair bay to the best cell around it.       *
  *                                                                                             *
  *    CFE smarter repair bays: picks a cell next to the bay, preferring empty cells and the    *
@@ -3375,6 +3554,8 @@ int UnitClass::Mission_Hunt(void)
             }
             break;
         }
+    } else if (Is_Meaner_Monster()) {
+        return (Meaner_Hunt());
     } else {
 
         if (*this == UNIT_GUNBOAT) {
@@ -4577,8 +4758,11 @@ void UnitClass::Read_INI(CCINIClass& ini)
 
                         if (unit->Unlimbo(coord, dir)) {
                             unit->Strength = Fixed_To_Cardinal(unit->Class->MaxStrength, strength);
-                            if (GameToPlay == GAME_NORMAL || unit->House->IsHuman
-                                || ActiveCFEPatchConfig.MPPreplacedUnitOrderMode == 1) {
+                            if (ActiveCFEPatchConfig.MeanerVisceroids && *unit == UNIT_VICE) {
+                                unit->Assign_Mission(MISSION_HUNT);
+                                unit->Commence();
+                            } else if (GameToPlay == GAME_NORMAL || unit->House->IsHuman
+                                       || ActiveCFEPatchConfig.MPPreplacedUnitOrderMode == 1) {
                                 unit->Assign_Mission(mission);
                                 unit->Commence();
                             } else if (ActiveCFEPatchConfig.MPPreplacedUnitOrderMode == 2) {
@@ -4809,6 +4993,24 @@ int UnitClass::Mission_Move(void)
     if (*this == UNIT_GUNBOAT) {
         Assign_Mission(MISSION_HUNT);
         return (TICKS_PER_SECOND);
+    }
+
+    /*
+    **	Meaner visceroids drop a move to go and kill something, and go back to hunting when
+    **	they get there.
+    */
+    if (Is_Meaner_Monster()) {
+        if (Target_Something_Nearby(THREAT_AREA)) {
+            Assign_Destination(TARGET_NONE);
+            Assign_Mission(MISSION_HUNT);
+            Approach_Target();
+            return (1);
+        }
+        if (!Target_Legal(NavCom) || NavCom == ::As_Target(Coord_Cell(Coord))) {
+            Assign_Destination(TARGET_NONE);
+            Assign_Mission(MISSION_HUNT);
+            return (1);
+        }
     }
     return (TarComClass::Mission_Move());
 }
