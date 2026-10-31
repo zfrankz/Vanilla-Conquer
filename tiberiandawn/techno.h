@@ -165,6 +165,12 @@ public:
     unsigned IsSecondShot : 1;
 
     /*
+    **	CFE search range fix: computer controlled objects in the campaign keep the original
+    **	search range until they hunt, fight or get an order, since missions depend on it.
+    */
+    unsigned IsSearchRangeLimited : 1;
+
+    /*
     **	For units in area guard mode, this is the recorded home position. The guarding
     **	unit will try to stay near this location in the course of it's maneuvers. This is
     **	also used to record a pending transport for those passengers that are waiting for
@@ -306,6 +312,7 @@ public:
     bool Target_Something_Nearby_Hunt(ThreatType threat);
     MissionType CFE_Queued_Mission(MissionType mission) const;
     TARGET Greatest_Threat_Wall(ThreatType method, bool adjacent) const;
+    int Fixed_Search_Range(ThreatType method, int range) const;
     bool Evaluate_Cell_For_Wall(CELL cell) const;
     bool Verify_Attack_Walls(bool speedcheck) const;
     virtual void Stun(void);

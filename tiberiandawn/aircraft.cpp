@@ -541,6 +541,7 @@ void AircraftClass::Read_INI(CCINIClass& ini)
                             air->Strength = Fixed_To_Cardinal(air->Class->MaxStrength, strength);
                             if (air->Unlimbo(coord, dir)) {
                                 air->Assign_Mission(AircraftClass::Mission_From_Name(strtok(NULL, ",\n\r")));
+                                air->IsSearchRangeLimited = GameToPlay == GAME_NORMAL;
                             } else {
                                 delete air;
                             }
@@ -2354,6 +2355,8 @@ int AircraftClass::Mission_Attack(void)
         Assign_Mission(MISSION_HUNT);
         return (1);
     }
+
+    IsSearchRangeLimited = false;
 
     enum
     {

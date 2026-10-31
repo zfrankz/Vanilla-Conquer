@@ -4587,6 +4587,7 @@ void UnitClass::Read_INI(CCINIClass& ini)
                             } else {
                                 unit->Enter_Idle_Mode();
                             }
+                            unit->IsSearchRangeLimited = GameToPlay == GAME_NORMAL;
 
                             /*
                             **	The gunboat is a special case: It must "drive" off the edge of the map.

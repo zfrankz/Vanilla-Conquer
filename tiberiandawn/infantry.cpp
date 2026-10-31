@@ -3370,6 +3370,7 @@ void InfantryClass::Read_INI(CCINIClass& ini)
                             } else {
                                 infantry->Enter_Idle_Mode();
                             }
+                            infantry->IsSearchRangeLimited = GameToPlay == GAME_NORMAL;
                         } else {
 
                             /*

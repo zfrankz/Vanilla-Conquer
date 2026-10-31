@@ -3597,6 +3597,7 @@ void BuildingClass::Read_INI(CCINIClass& ini)
                         if (b->Trigger) {
                             b->Trigger->AttachCount++;
                         }
+                        b->IsSearchRangeLimited = GameToPlay == GAME_NORMAL;
                     } else {
 
                         /*

@@ -767,6 +767,8 @@ int FootClass::Mission_Hunt(void)
         }
     }
 
+    IsSearchRangeLimited = false;
+
     bool found = ActiveCFEPatchConfig.EnableHuntFix ? Target_Something_Nearby_Hunt(THREAT_RANGE)
                                                     : Target_Something_Nearby(THREAT_NORMAL);
     if (!found) {

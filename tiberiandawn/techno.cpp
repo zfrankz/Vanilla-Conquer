@@ -499,6 +499,7 @@ TechnoClass::TechnoClass(void)
     IsLocked = false;
     IsOwnedByPlayer = false;
     IsSecondShot = true;
+    IsSearchRangeLimited = false;
     IsTethered = false;
     SuspendedTarCom = TARGET_NONE;
     PrimaryFacing.Set(DIR_N);
@@ -1176,6 +1177,10 @@ bool TechnoClass::Unlimbo(COORDINATE coord, DirType dir)
         Commence();
 
         IsLocked = Map.In_Radar(Coord_Cell(coord));
+
+        if (GameToPlay == GAME_NORMAL && House && !House->IsHuman) {
+            IsSearchRangeLimited = true;
+        }
         return (true);
     }
     return (false);
@@ -1667,6 +1672,16 @@ TARGET TechnoClass::Greatest_Threat(ThreatType method) const
             crange = MAX(Weapon_Range(0), Weapon_Range(1)) / ICON_LEPTON_W;
             crange++;
         }
+
+        /*
+        **	The search loop stops short of crange, so the fixed search goes one further. crange
+        **	itself stays as it is, since the half and quarter checks below need the real range.
+        */
+        int fixedrange = Fixed_Search_Range(method, range);
+        if (fixedrange) {
+            crange = fixedrange;
+        }
+        int scanrange = fixedrange ? crange + 1 : crange;
         CELL cell = Coord_Cell(Fire_Coord(0));
         //		CELL cell = Coord_Cell(Center_Coord());
 
@@ -1704,7 +1719,7 @@ TARGET TechnoClass::Greatest_Threat(ThreatType method) const
         */
         TechnoClass const* object;
         int value;
-        for (int radius = 1; radius < crange; radius++) {
+        for (int radius = 1; radius < scanrange; radius++) {
 
             /*
             **	Scan the top and bottom rows of the "box".
@@ -2321,6 +2336,8 @@ void TechnoClass::Assign_Target(TARGET target)
             ObjectClass* object = As_Object(target);
             if (object && (object->IsActive == false || object->Strength == 0)) {
                 target = TARGET_NONE;
+            } else if (object) {
+                IsSearchRangeLimited = false;
             }
         }
     }
@@ -2951,6 +2968,7 @@ void TechnoClass::Player_Assign_Mission(MissionType mission, TARGET target, TARG
             Response_Move();
         }
     }
+    IsSearchRangeLimited = false;
     Queue_Mission(As_Target(), CFE_Queued_Mission(mission), target, destination);
 }
 
@@ -4758,6 +4776,36 @@ void TechnoClass::Response_Sabotage(void)
 }
 
 /***********************************************************************************************
+ * TechnoClass::Fixed_Search_Range -- Works out the search radius with the range bugs fixed.   *
+ *                                                                                             *
+ *    CFE SEARCH_RANGE_FIX: the original rounds the radius down for ranges that aren't a       *
+ *    whole number of cells, and its search loop stops one ring short. 1 fixes weapon range    *
+ *    scans, 2 fixes area scans too.                                                           *
+ *                                                                                             *
+ * INPUT:   method -- The kind of scan.                                                        *
+ *                                                                                             *
+ *          range  -- Unused for weapon range scans. Otherwise a range already worked out, or  *
+ *                    0 to use the area threat range.                                          *
+ *                                                                                             *
+ * OUTPUT:  Returns with the radius in cells, or 0 to keep the original search.                *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+int TechnoClass::Fixed_Search_Range(ThreatType method, int range) const
+{
+    int level = IsSearchRangeLimited ? 0 : ActiveCFEPatchConfig.SearchRangeFixMode;
+
+    if (method & THREAT_RANGE) {
+        if (level > 0) {
+            return ((MAX(Weapon_Range(0), Weapon_Range(1)) + ICON_LEPTON_W - 1) / ICON_LEPTON_W);
+        }
+    } else if (level > 1) {
+        return (((range ? range : Threat_Range(1)) + ICON_LEPTON_W - 1) / ICON_LEPTON_W);
+    }
+    return (0);
+}
+
+/***********************************************************************************************
  * TechnoClass::Target_Something_Nearby -- Handles finding and assigning a nearby target.      *
  *                                                                                             *
  *    This routine will search for a nearby target and assign it to this object's TarCom.      *
@@ -4909,6 +4957,10 @@ TARGET TechnoClass::Greatest_Threat_Wall(ThreatType method, bool adjacent) const
 
     int crange = (method & THREAT_RANGE) ? (MAX(Weapon_Range(0), Weapon_Range(1)) / ICON_LEPTON_W) + 1
                                          : Threat_Range(1) / ICON_LEPTON_W;
+    int fixedrange = Fixed_Search_Range(method, 0);
+    if (fixedrange) {
+        crange = fixedrange + 1;
+    }
     if (adjacent) {
         crange = 2;
     }
