@@ -1170,8 +1170,12 @@ int AircraftClass::Mission_Unload(void)
                                 **	Cargo planes announce reinforcements when they unload
                                 **	their cargo.
                                 */
-                                if (*this == AIRCRAFT_CARGO && House == PlayerPtr) {
-                                    Speak(VOX_REINFORCEMENTS, NULL, Cell_Coord(cell));
+                                if (*this == AIRCRAFT_CARGO && House == PlayerPtr
+                                    && ActiveCFEPatchConfig.QuieterAirstrips != 1) {
+                                    Speak(ActiveCFEPatchConfig.QuieterAirstrips == 3 ? VOX_UNIT_READY
+                                                                                     : VOX_REINFORCEMENTS,
+                                          NULL,
+                                          Cell_Coord(cell));
                                 }
                                 unit->IsALoaner = false;
                                 unit->IsLocked = true;

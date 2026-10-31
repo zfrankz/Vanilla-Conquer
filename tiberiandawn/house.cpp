@@ -660,7 +660,7 @@ bool HouseClass::Can_Build(TechnoTypeClass const* type, HousesType house) const
     if (type->What_Am_I() == RTTI_BUILDINGTYPE
         && (((BuildingTypeClass const*)type)->Type == STRUCT_TEMPLE
             || ((BuildingTypeClass const*)type)->Type == STRUCT_OBELISK)
-        && Class->House == HOUSE_GOOD) {
+        && Class->House == HOUSE_GOOD && !ActiveCFEPatchConfig.BuildForbiddenSPCapturables) {
 
         return (false);
     }
@@ -679,7 +679,7 @@ bool HouseClass::Can_Build(TechnoTypeClass const* type, HousesType house) const
     **	Nod has captured the GDI construction yard.
     */
     if (type->What_Am_I() == RTTI_BUILDINGTYPE && (((BuildingTypeClass const*)type)->Type == STRUCT_EYE)
-        && Class->House == HOUSE_BAD) {
+        && Class->House == HOUSE_BAD && !ActiveCFEPatchConfig.BuildForbiddenSPCapturables) {
 
         return (false);
     }
@@ -899,6 +899,20 @@ void HouseClass::AI(void)
     // to the original code. ST - 4/17/2019 4:32PM
     Logic_Switch_Player_Context(this);
 #endif
+
+    /*
+    **	Tell the local player which mod this is.
+    */
+    if (Frame == 75 && this == PlayerPtr && ActiveCFEPatchConfig.EnableVersionAnnounce) {
+        Messages.Add_Message("CFE Patch Redux version 1.9",
+                             MPlayerTColors[RemapColor],
+                             TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW,
+                             TICKS_PER_SECOND * 20,
+                             0,
+                             0);
+        Map.Flag_To_Redraw(false);
+    }
+
     /*
     **	Reset the scan accumulation bits for the next logic pass.
     */
@@ -5624,6 +5638,13 @@ UrgencyType HouseClass::Check_Build_Offense(void) const
 UrgencyType HouseClass::Check_Attack(void) const
 {
     // assert(Houses.ID(this) == ID);
+
+    /*
+    **	Neutral houses declaring an attack after a minute is unwanted on some maps (e.g. Cactus Valley).
+    */
+    if (ActiveCFEPatchConfig.DisableMPNeutralAttacks && (Class->House == HOUSE_JP || Class->House == HOUSE_NEUTRAL)) {
+        return (URGENCY_NONE);
+    }
 
     if (Frame > TICKS_PER_MINUTE && Attack == 0) {
         if (State == STATE_ATTACKED) {

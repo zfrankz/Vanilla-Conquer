@@ -230,6 +230,16 @@ bool Do_Reinforcements(TeamTypeClass* teamtype)
                     }
 
                     /*
+                    **	Computer controlled copters can then fly off the map when they are done.
+                    */
+                    if (GameToPlay == GAME_NORMAL && ActiveCFEPatchConfig.ForceLoanerCopters
+                        && temp->What_Am_I() == RTTI_AIRCRAFT && !HouseClass::As_Pointer(teamtype->House)->IsHuman
+                        && (*((AircraftClass*)temp) == AIRCRAFT_HELICOPTER
+                            || *((AircraftClass*)temp) == AIRCRAFT_ORCA)) {
+                        temp->IsALoaner = true;
+                    }
+
+                    /*
                     **	Link to the list of normal objects.
                     */
                     temp->Next = object;

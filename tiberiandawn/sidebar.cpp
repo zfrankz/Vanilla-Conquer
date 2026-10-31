@@ -1704,6 +1704,16 @@ bool SidebarClass::StripClass::AI(KeyNumType& input, int, int)
                             case RTTI_UNIT:
                             case RTTI_AIRCRAFT:
                                 OutList.Add(EventClass(EventClass::PLACE, pending->What_Am_I(), -1));
+
+                                /*
+                                **	Vehicles from an airstrip can leave the announcement to the cargo plane.
+                                */
+                                if (ActiveCFEPatchConfig.QuieterAirstrips >= 2 && pending->What_Am_I() == RTTI_UNIT) {
+                                    BuildingClass* builder = pending->Who_Can_Build_Me(false, false);
+                                    if (builder == NULL || *builder == STRUCT_AIRSTRIP) {
+                                        break;
+                                    }
+                                }
                                 // Fall into next case.
 
                             case RTTI_BUILDING:

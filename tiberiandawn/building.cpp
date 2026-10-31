@@ -1191,7 +1191,7 @@ void BuildingClass::AI(void)
                     Strength = Class->MaxStrength;
                     IsRepairing = false;
                 }
-            } else {
+            } else if (!ActiveCFEPatchConfig.EnableOOMRepair) {
                 IsRepairing = false;
             }
         }
@@ -1247,11 +1247,18 @@ void BuildingClass::AI(void)
             if (House->Available_Money() >= REPAIR_THRESHHOLD) {
                 Repair(1);
             } else {
+                /*
+                **	The random chance was never meant for scenario numbers above 15.
+                */
+                int sellchance = (int)Scen.Scenario;
+                if (ActiveCFEPatchConfig.EnableSellChanceFix && sellchance > 15) {
+                    sellchance = 15;
+                }
 
                 // GB 2022 improvement by TobiasKarnat, This on top would improve
                 // skirmish by randomizing building choice, prioritizing power and
                 // sell off later [TD].
-                if (IsTickedOff && (int)Scen.Scenario > 2 && Random_Pick(0, 50) < (int)Scen.Scenario && !Trigger
+                if (IsTickedOff && (int)Scen.Scenario > 2 && Random_Pick(0, 50) < sellchance && !Trigger
                     && *this != STRUCT_CONST && Health_Ratio() < (unsigned)(0x0040)) {
                     if (GameToPlay != GAME_NORMAL || Scen.Scenario != 15 || PlayerPtr->ActLike != HOUSE_GOOD
                         || *this != STRUCT_TEMPLE) {
@@ -1705,6 +1712,11 @@ ResultType BuildingClass::Take_Damage(int& damage, int distance, WarheadType war
             }
 
             Sound_Effect(VOC_XPLOBIG4, Coord);
+
+            if (ActiveCFEPatchConfig.BuildingDeathAnnounceMode >= 1) {
+                Death_Announcement();
+            }
+
             while (*offset != REFRESH_EOL) {
                 COORDINATE scatter_coord;
                 int delay;
@@ -2176,6 +2188,16 @@ void BuildingClass::Drop_Debris(TARGET source)
         odds -= 1;
     if (IsCaptured)
         odds += 6;
+
+    /*
+    **	Safe sabotage: no survivors from a building blown up by a saboteur.
+    */
+    if (Target_Legal(WhomToRepay)
+        && ((ActiveCFEPatchConfig.SafeSabotage == 1 && GameToPlay == GAME_NORMAL && !House->IsHuman)
+            || ActiveCFEPatchConfig.SafeSabotage == 2)) {
+        IsSurvivorless = true;
+    }
+
     while (*offset != REFRESH_EOL) {
         CELL newcell;
 
@@ -4368,6 +4390,10 @@ int BuildingClass::Mission_Deconstruction(void)
                     while (typ == INFANTRY_E7 && engine) {
                         typ = Crew_Type();
                     }
+                    if (count == 1 && !engine && ActiveCFEPatchConfig.MCVAlwaysSpawnEngineer && *this == STRUCT_CONST
+                        && !IsCaptured && House->IsHuman) {
+                        typ = INFANTRY_E7;
+                    }
                     if (typ == INFANTRY_E7)
                         engine = true;
 
@@ -5334,31 +5360,31 @@ int BuildingClass::Pip_Count(void) const
 void BuildingClass::Death_Announcement(TechnoClass const*) const
 {
     Validate();
-    // Changed for multiplayer ST - 3/13/2019 5:31PM
-    if (Is_Discovered_By_Player() || Is_Owned_By_Player()) {
-        // if (IsDiscoveredByPlayer || IsOwnedByPlayer) {
-        if (House != PlayerPtr && GameToPlay != GAME_NORMAL) {
-            if (Options.IsDeathAnnounce)
-                Speak(VOX_ENEMY_STRUCTURE);
+    int mode = ActiveCFEPatchConfig.BuildingDeathAnnounceMode;
+    bool faction = mode == 4 || (mode >= 3 && GameToPlay == GAME_NORMAL);
+
+    /*
+    **	The owner hears about it from mode 1 up.
+    */
+    if (House == PlayerPtr) {
+        if (!faction) {
+            Speak(VOX_STRUCTURE_LOST);
+        } else if (House->ActLike == HOUSE_GOOD) {
+            Speak(VOX_GDI_STRUCTURE);
+        } else if (House->ActLike == HOUSE_BAD) {
+            Speak(VOX_NOD_STRUCTURE);
+        }
+        return;
+    }
+
+    /*
+    **	Everyone else hears about it from mode 2 up, for GDI or Nod buildings they have seen.
+    */
+    if (mode > 1 && (House->ActLike == HOUSE_GOOD || House->ActLike == HOUSE_BAD) && Is_Discovered_By_Player()) {
+        if (!faction) {
+            Speak(VOX_ENEMY_STRUCTURE);
         } else {
-            if (House == PlayerPtr || Options.IsDeathAnnounce) {
-                if (!Options.IsDeathAnnounce) {
-                    Speak(VOX_STRUCTURE_LOST);
-                } else {
-                    switch (House->ActLike) {
-                    case HOUSE_GOOD:
-                        Speak(VOX_GDI_STRUCTURE);
-                        break;
-
-                    case HOUSE_BAD:
-                        Speak(VOX_NOD_STRUCTURE);
-                        break;
-
-                    default:
-                        break;
-                    }
-                }
-            }
+            Speak(House->ActLike == HOUSE_GOOD ? VOX_GDI_STRUCTURE : VOX_NOD_STRUCTURE);
         }
     }
 }

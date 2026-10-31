@@ -2504,7 +2504,8 @@ bool UnitClass::Goto_Tiberium(void)
             /*
             **	Perform a ring search outward from the center.
             */
-            for (int radius = 1; radius < 64; radius++) {
+            int maxradius = 128; // Tightened on the 16th ring if there is still no tiberium.
+            for (int radius = 1; radius < maxradius; radius++) {
                 CELL cell = center;
                 CELL bestcell = 0;
                 int tiberium = 0;
@@ -2554,6 +2555,18 @@ bool UnitClass::Goto_Tiberium(void)
                 if (bestcell) {
                     Assign_Destination(::As_Target(bestcell));
                     return (false);
+                }
+
+                /*
+                **	After a while, cap the radius at the farthest map edge.
+                */
+                if (radius == 16) {
+                    int cellx = Cell_X(center);
+                    int celly = Cell_Y(center);
+                    int newradius = max(cellx - Map.MapCellX + 1, Map.MapCellX + Map.MapCellWidth - cellx);
+                    newradius = max(newradius, celly - Map.MapCellY + 1);
+                    newradius = max(newradius, Map.MapCellY + Map.MapCellHeight - celly);
+                    maxradius = min(newradius, maxradius);
                 }
             }
         }
@@ -4421,8 +4434,12 @@ void UnitClass::Read_INI(CCINIClass& ini)
 
                         if (unit->Unlimbo(coord, dir)) {
                             unit->Strength = Fixed_To_Cardinal(unit->Class->MaxStrength, strength);
-                            if (GameToPlay == GAME_NORMAL || unit->House->IsHuman) {
+                            if (GameToPlay == GAME_NORMAL || unit->House->IsHuman
+                                || ActiveCFEPatchConfig.MPPreplacedUnitOrderMode == 1) {
                                 unit->Assign_Mission(mission);
+                                unit->Commence();
+                            } else if (ActiveCFEPatchConfig.MPPreplacedUnitOrderMode == 2) {
+                                unit->Assign_Mission(MISSION_TIMED_HUNT);
                                 unit->Commence();
                             } else {
                                 unit->Enter_Idle_Mode();

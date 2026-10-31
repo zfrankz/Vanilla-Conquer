@@ -3360,8 +3360,12 @@ void InfantryClass::Read_INI(CCINIClass& ini)
 
                         if (!is_scb10ea_chan && infantry->Unlimbo(coord, dir)) {
                             infantry->Strength = Fixed_To_Cardinal(infantry->Class_Of().MaxStrength, strength);
-                            if (GameToPlay == GAME_NORMAL || infantry->House->IsHuman) {
+                            if (GameToPlay == GAME_NORMAL || infantry->House->IsHuman
+                                || ActiveCFEPatchConfig.MPPreplacedUnitOrderMode == 1) {
                                 infantry->Assign_Mission(mission);
+                                infantry->Commence();
+                            } else if (ActiveCFEPatchConfig.MPPreplacedUnitOrderMode == 2) {
+                                infantry->Assign_Mission(MISSION_HUNT);
                                 infantry->Commence();
                             } else {
                                 infantry->Enter_Idle_Mode();

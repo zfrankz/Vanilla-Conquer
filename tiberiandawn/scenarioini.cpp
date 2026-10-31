@@ -313,6 +313,14 @@ bool Read_Scenario_Ini(char* root, bool fresh)
 #else
         BuildLevel = Scen.Scenario;
 #endif
+
+        /*
+        **	A map can override the loaner copter default in either direction.
+        */
+        int loanercopter = ini.Get_Int("Basic", "CFELoanerCopter", -1);
+        if (loanercopter > -1) {
+            ActiveCFEPatchConfig.ForceLoanerCopters = loanercopter != 0;
+        }
     }
 
     /*
