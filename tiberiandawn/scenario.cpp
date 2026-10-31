@@ -870,7 +870,7 @@ void Fixup_Scenario(bool issavedgameload)
     InfantryTypeClass& e5 = (InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_E5);
 
     if (GameToPlay != GAME_NORMAL || ActiveCFEPatchConfig.ApplyMPBalanceToSP) {
-        if (ActiveCFEPatchConfig.OverrideAPCReqs) {
+        if (ActiveCFEPatchConfig.OverrideAPCReqs || ActiveCFEPatchConfig.JDExtraAdjustments) {
             ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_APC)).Pre &= ~STRUCTF_REPAIR;
         }
         if (ActiveCFEPatchConfig.OverrideWarFactoryHP) {
@@ -883,7 +883,7 @@ void Fixup_Scenario(bool issavedgameload)
         if (ActiveCFEPatchConfig.OverrideArtyTurn) {
             ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_ARTY)).ROT = ActiveCFEPatchConfig.OverrideArtyTurn_Value;
         }
-        if (ActiveCFEPatchConfig.OverrideMLRSReqs) {
+        if (ActiveCFEPatchConfig.OverrideMLRSReqs || ActiveCFEPatchConfig.JDExtraAdjustments) {
             mlrs.Pre |= STRUCTF_RADAR;
             mlrs.Pre &= ~STRUCTF_EYE;
         }
@@ -920,6 +920,49 @@ void Fixup_Scenario(bool issavedgameload)
     }
 
     /*
+    ** CFE: john_drak's extra adjustments to buildables.
+    */
+    if (ActiveCFEPatchConfig.JDExtraAdjustments) {
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_HARVESTER)).Scenario = 5;
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_HTANK)).Scenario = 12;
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_ARTY)).Scenario = 8;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_CYCLONE_WALL)).Scenario = 8;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_BRICK_WALL)).Scenario = 11;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_ATOWER)).Scenario = 12;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_ADVANCED_POWER)).Scenario = 12;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_HAND)).Scenario = 1;
+
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_MSAM)).Pre |= STRUCTF_RADAR;
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_MSAM)).Pre &= ~STRUCTF_ATOWER;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_RADAR)).Pre |= STRUCTF_POWER;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_RADAR)).Pre &= ~STRUCTF_REFINERY;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_WEAP)).Pre |= STRUCTF_BARRACKS;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_WEAP)).Pre &= ~STRUCTF_REFINERY;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_AIRSTRIP)).Pre |= STRUCTF_BARRACKS;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_AIRSTRIP)).Pre &= ~STRUCTF_REFINERY;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_HELIPAD)).Pre |= STRUCTF_RADAR;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_HELIPAD)).Pre &= ~STRUCTF_BARRACKS;
+
+        ((InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_E1)).SightRange = 2;
+        ((InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_E2)).SightRange = 2;
+        ((InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_E4)).SightRange = 2;
+        ((InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_E5)).SightRange = 2;
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_JEEP)).SightRange = 3;
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_BUGGY)).SightRange = 3;
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_BIKE)).SightRange = 3;
+        ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_GTOWER)).SightRange = 4;
+
+        /*
+        ** The MLRS and APC requirements apply in the campaign even without the balance patch.
+        */
+        if (GameToPlay == GAME_NORMAL && !ActiveCFEPatchConfig.ApplyMPBalanceToSP) {
+            mlrs.Pre |= STRUCTF_RADAR;
+            mlrs.Pre &= ~STRUCTF_EYE;
+            ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_APC)).Pre &= ~STRUCTF_REPAIR;
+        }
+    }
+
+    /*
     ** CFE: make the multiplayer units available in the campaign.
     */
     if (GameToPlay == GAME_NORMAL && ActiveCFEPatchConfig.MPUnitsInSP) {
@@ -929,7 +972,8 @@ void Fixup_Scenario(bool issavedgameload)
         }
         unsigned char final_missions = (PlayerPtr->ActLike == HOUSE_GOOD) ? 15 : 13;
         ((InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_RAMBO)).Scenario = final_missions;
-        ((AircraftTypeClass&)AircraftTypeClass::As_Reference(AIRCRAFT_TRANSPORT)).Scenario = final_missions;
+        ((AircraftTypeClass&)AircraftTypeClass::As_Reference(AIRCRAFT_TRANSPORT)).Scenario =
+            ActiveCFEPatchConfig.JDExtraAdjustments ? 10 : final_missions;
         ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_MSAM)).Scenario = 13;
     }
 

@@ -377,6 +377,12 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      40 chem kills mark all 40 and spawn 6 (rank 0) and 12 (rank 3), none with the buff off; damage 875 to 88 and 1000 to
      100; cameo seen in a frame dump; saves 2 and 5 reach 1800 frames, exit 0. Not verified: building a lab by clicking,
      placing it, its effect on the AI, the 768 minigunner range in a fight, real multiplayer, real play.
+   - 8b `JD_EXTRA_ADJUSTMENTS`: earlier scenarios and changed prerequisites for buildables, more sight for light units,
+     GDI rocket soldier from level 5, sandbags without the GDI limit, Chinook at 10 with multiplayer units. As in CFE, the
+     800 stealth tank price needs the balance to apply (`APPLY...=1` in the campaign). CFE's use of `Scenario` instead of
+     `level` for GDI's second training mission only happens with this switch here (always, in CFE).
+   - Verified: builds. Instrumented runs on save 2: values off and on as in CFE's list, E3 and sandbag `Can_Build` move
+     from levels 7/8 to 5, Chinook 10; all options with saves 2 and 5 reach 1800 frames, exit 0. Not verified: real play.
 
 VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be
 cherry-picked; each feature's diff is applied by hand, then clang-formatted.

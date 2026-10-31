@@ -254,3 +254,9 @@ Set the `DO_OVERRIDE_*` lines, `DO_CHEM_GUY_BUFF=1` and `MULTIPLAYER_UNITS_IN_SI
 - Chem soldier kills: now and then a visceroid appears where the victim died.
 - Capture a bio lab with an engineer.
 - Without `APPLY_...`: the campaign plays as the original.
+
+## 2s. JD's adjustments (`JD_EXTRA_ADJUSTMENTS=1` under `[BALANCE]`)
+
+- GDI mission 5 or 6: the rocket soldier and sandbags are offered.
+- Riflemen, jeeps and buggies reveal more shroud.
+- Radar needs only a power plant; the war factory and airstrip need a barracks (not a refinery).

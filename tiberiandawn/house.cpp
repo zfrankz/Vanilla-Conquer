@@ -629,7 +629,8 @@ bool HouseClass::Can_Build(TechnoTypeClass const* type, HousesType house) const
     **	until mission #8.
     */
     if (house == HOUSE_GOOD && type->What_Am_I() == RTTI_INFANTRYTYPE
-        && ((InfantryTypeClass const*)type)->Type == INFANTRY_E3 && level < 7) {
+        && ((InfantryTypeClass const*)type)->Type == INFANTRY_E3
+        && level < (ActiveCFEPatchConfig.JDExtraAdjustments ? 5 : 7)) {
 
         return (false);
     }
@@ -704,7 +705,8 @@ bool HouseClass::Can_Build(TechnoTypeClass const* type, HousesType house) const
     /*
     **	GDI can build the sandbag wall only from scenario #9 onwards.
     */
-    if (house == HOUSE_GOOD && level < 8 && type->What_Am_I() == RTTI_BUILDINGTYPE
+    if (!ActiveCFEPatchConfig.JDExtraAdjustments && house == HOUSE_GOOD && level < 8
+        && type->What_Am_I() == RTTI_BUILDINGTYPE
         && ((BuildingTypeClass const*)type)->Type == STRUCT_SANDBAG_WALL) {
 
         return (false);
@@ -714,7 +716,7 @@ bool HouseClass::Can_Build(TechnoTypeClass const* type, HousesType house) const
     **	GDI has a special second training mission. Adjust the scenario level so that
     **	scenario two will still feel like scenario #1.
     */
-    if (house == HOUSE_GOOD && level == 2) {
+    if (house == HOUSE_GOOD && (ActiveCFEPatchConfig.JDExtraAdjustments ? Scen.Scenario == 2 : level == 2)) {
         level = 1;
     }
 
