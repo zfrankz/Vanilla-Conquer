@@ -811,7 +811,7 @@ bool Restate_Mission(char const* name, int button1, int button2)
     return (false);
 }
 
-void Fixup_Scenario(void)
+void Fixup_Scenario(bool issavedgameload)
 {
     /*
     ** "Fraidycat" civilians avoid wandering into Tiberium for SCG08EB, since they're mission-critical.
@@ -835,6 +835,14 @@ void Fixup_Scenario(void)
     }
 
     /*
+    ** CFE: this runs after the units in the scenario file were created, so remember the old
+    ** maximums to raise the strength of anything that was at full health.
+    */
+    int old_weap_strength = BuildingTypeClass::As_Reference(STRUCT_WEAP).MaxStrength;
+    int old_mlrs_strength = UnitTypeClass::As_Reference(UNIT_MLRS).MaxStrength;
+    int old_e3_strength = InfantryTypeClass::As_Reference(INFANTRY_E3).MaxStrength;
+
+    /*
     ** Modern Balance
     */
     if (Special.ModernBalance) {
@@ -850,5 +858,110 @@ void Fixup_Scenario(void)
     } else {
         ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_WEAP)).MaxStrength = 400;
         ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_APC)).Pre &= ~STRUCTF_REPAIR;
+    }
+
+    /*
+    ** CFE balance patch.
+    */
+    BuildingTypeClass& weap = (BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_WEAP);
+    BuildingTypeClass& biolab = (BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_BIO_LAB);
+    UnitTypeClass& mlrs = (UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_MLRS);
+    InfantryTypeClass& e3 = (InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_E3);
+    InfantryTypeClass& e5 = (InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_E5);
+
+    if (GameToPlay != GAME_NORMAL || ActiveCFEPatchConfig.ApplyMPBalanceToSP) {
+        if (ActiveCFEPatchConfig.OverrideAPCReqs) {
+            ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_APC)).Pre &= ~STRUCTF_REPAIR;
+        }
+        if (ActiveCFEPatchConfig.OverrideWarFactoryHP) {
+            weap.MaxStrength = ActiveCFEPatchConfig.OverrideWarFactoryHP_Value;
+        }
+        if (ActiveCFEPatchConfig.OverrideStealthTankCost) {
+            ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_STANK)).Cost =
+                ActiveCFEPatchConfig.OverrideStealthTankCost_Value;
+        }
+        if (ActiveCFEPatchConfig.OverrideArtyTurn) {
+            ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_ARTY)).ROT = ActiveCFEPatchConfig.OverrideArtyTurn_Value;
+        }
+        if (ActiveCFEPatchConfig.OverrideMLRSReqs) {
+            mlrs.Pre |= STRUCTF_RADAR;
+            mlrs.Pre &= ~STRUCTF_EYE;
+        }
+        if (ActiveCFEPatchConfig.OverrideMLRSHP) {
+            mlrs.MaxStrength = ActiveCFEPatchConfig.OverrideMLRSHP_Value;
+        }
+        if (ActiveCFEPatchConfig.OverrideMLRSGDIOnly) {
+            mlrs.Ownable &= ~HOUSEF_BAD;
+        }
+        if (ActiveCFEPatchConfig.OverrideMCVSight) {
+            ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_MCV)).SightRange =
+                ActiveCFEPatchConfig.OverrideMCVSight_Value;
+            ((BuildingTypeClass&)BuildingTypeClass::As_Reference(STRUCT_CONST)).SightRange =
+                ActiveCFEPatchConfig.OverrideConYardSight_Value;
+        }
+        if (ActiveCFEPatchConfig.OverrideRocketGuyHP) {
+            e3.MaxStrength = ActiveCFEPatchConfig.OverrideRocketGuyHP_Value;
+        }
+        if (ActiveCFEPatchConfig.OverrideRocketGuyCost) {
+            e3.Cost = ActiveCFEPatchConfig.OverrideRocketGuyCost_Value;
+        }
+        if (ActiveCFEPatchConfig.OverrideChemGuyBuff) {
+            biolab.Pre |= STRUCTF_REFINERY;
+            biolab.Pre &= ~STRUCTF_HOSPITAL;
+            biolab.Level = 7;
+            biolab.IsCaptureable = true;
+            biolab.Reward = 65;
+            e5.Pre |= STRUCTF_BIO_LAB;
+            e5.Pre &= ~STRUCTF_EYE;
+        }
+        if (ActiveCFEPatchConfig.OverrideMinigunnerRange) {
+            Weapons[WEAPON_M16].Range = ActiveCFEPatchConfig.OverrideMinigunnerRange_Value;
+        }
+    }
+
+    /*
+    ** CFE: make the multiplayer units available in the campaign.
+    */
+    if (GameToPlay == GAME_NORMAL && ActiveCFEPatchConfig.MPUnitsInSP) {
+        e5.Scenario = 11;
+        if (ActiveCFEPatchConfig.OverrideChemGuyBuff) {
+            biolab.Scenario = 11;
+        }
+        unsigned char final_missions = (PlayerPtr->ActLike == HOUSE_GOOD) ? 15 : 13;
+        ((InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_RAMBO)).Scenario = final_missions;
+        ((AircraftTypeClass&)AircraftTypeClass::As_Reference(AIRCRAFT_TRANSPORT)).Scenario = final_missions;
+        ((UnitTypeClass&)UnitTypeClass::As_Reference(UNIT_MSAM)).Scenario = 13;
+    }
+
+    /*
+    ** CFE: raise what was at full health before the maximums above changed.
+    */
+    if (!issavedgameload) {
+        for (int index = 0; index < Buildings.Count(); index++) {
+            BuildingClass* building = Buildings.Ptr(index);
+            if (building != NULL && *building == STRUCT_WEAP && building->Strength >= old_weap_strength) {
+                building->Strength = weap.MaxStrength;
+            }
+        }
+        for (int index = 0; index < Units.Count(); index++) {
+            UnitClass* unit = Units.Ptr(index);
+            if (unit != NULL && *unit == UNIT_MLRS && unit->Strength >= old_mlrs_strength) {
+                unit->Strength = mlrs.MaxStrength;
+            }
+        }
+        for (int index = 0; index < Infantry.Count(); index++) {
+            InfantryClass* guy = Infantry.Ptr(index);
+            if (guy != NULL && *guy == INFANTRY_E3 && guy->Strength >= old_e3_strength) {
+                guy->Strength = e3.MaxStrength;
+            }
+        }
+    }
+
+    /*
+    ** CFE: civilians can see in multiplayer (only there, it would break campaign missions).
+    */
+    if (GameToPlay != GAME_NORMAL && ActiveCFEPatchConfig.MPCivSight) {
+        ((InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_C1)).SightRange = 1;
+        ((InfantryTypeClass&)InfantryTypeClass::As_Reference(INFANTRY_C7)).SightRange = 1;
     }
 }

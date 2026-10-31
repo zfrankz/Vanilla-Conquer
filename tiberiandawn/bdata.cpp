@@ -4197,6 +4197,15 @@ void BuildingTypeClass::Init(TheaterType theater)
                 sprintf(buffer, "%.4sICNH", classptr->IniName);
                 _makepath(fullname, NULL, NULL, buffer, Theaters[theater].Suffix);
                 cameo_ptr = MFCD::Retrieve(fullname);
+
+                /*
+                **	The game data has no bio lab cameo (the CFE balance patch makes it buildable),
+                **	so show the chem soldier it unlocks.
+                */
+                if (!cameo_ptr && classptr->Type == STRUCT_BIO_LAB) {
+                    _makepath(fullname, NULL, NULL, "E5ICNH", Theaters[theater].Suffix);
+                    cameo_ptr = MFCD::Retrieve(fullname);
+                }
                 if (cameo_ptr) {
                     ((void const*&)classptr->CameoData) = cameo_ptr;
                 }

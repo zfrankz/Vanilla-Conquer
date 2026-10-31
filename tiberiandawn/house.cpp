@@ -696,7 +696,7 @@ bool HouseClass::Can_Build(TechnoTypeClass const* type, HousesType house) const
     **	Nod cannot build a helipad in the normal game.
     */
     if (house == HOUSE_BAD && type->What_Am_I() == RTTI_BUILDINGTYPE
-        && ((BuildingTypeClass const*)type)->Type == STRUCT_HELIPAD) {
+        && ((BuildingTypeClass const*)type)->Type == STRUCT_HELIPAD && !ActiveCFEPatchConfig.MPUnitsInSP) {
 
         return (false);
     }

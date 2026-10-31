@@ -3521,6 +3521,18 @@ ResultType TechnoClass::Take_Damage(int& damage, int distance, WarheadType warhe
                 || (source->What_Am_I() == RTTI_UNIT && *((UnitClass*)source) == UNIT_FTANK))) {
             damage = MAX((int)(0.1 * damage), 1);
         }
+
+        /*
+        **	CFE balance patch: chem soldiers and visceroids nearly ignore each other's chem spray.
+        */
+        if (ActiveCFEPatchConfig.OverrideChemGuyBuff
+            && ((What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)this) == INFANTRY_E5)
+                || (What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_VICE))
+            && source && source->IsActive
+            && ((source->What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)source) == INFANTRY_E5)
+                || (source->What_Am_I() == RTTI_UNIT && *((UnitClass*)source) == UNIT_VICE))) {
+            damage = MAX((int)(0.1 * damage), 1);
+        }
     }
 
     int oldstrength = Strength;

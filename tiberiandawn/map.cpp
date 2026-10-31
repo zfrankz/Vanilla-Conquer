@@ -2492,9 +2492,9 @@ void MapClass::CFE_Logic(void)
  * MapClass::Process_Tiberium_Death -- Maybe spawns a visceroid where infantry died.           *
  *                                                                                             *
  *    CFE Patch Redux "TS visceroid spawn" (how == 1: died walking through tiberium). The      *
- *    chance starts at 1 in 20 and rises with each such death until a visceroid appears. CFE's *
- *    other cases (killed by a visceroid or a buffed chem soldier) come with meaner visceroids *
- *    and the balance options.                                                                 *
+ *    chance starts at 1 in 20 and rises with each such death until a visceroid appears. With  *
+ *    the balance patch's chem soldier buff, how is 3 plus the killer's rank: a chance of 10%  *
+ *    plus 5% per rank. CFE's other case (killed by a visceroid) comes with meaner visceroids. *
  *=============================================================================================*/
 bool MapClass::Process_Tiberium_Death(CELL where, COORDINATE specifically_where, unsigned char how)
 {
@@ -2511,6 +2511,17 @@ bool MapClass::Process_Tiberium_Death(CELL where, COORDINATE specifically_where,
                 if (unit->Unlimbo(specifically_where) || Scan_Place_Object(unit, where)) {
                     unit->Do_Squidgy_Spawn();
                     offal_count = 0;
+                    return true;
+                }
+                delete unit;
+            }
+        }
+    } else if (how >= 3 && how <= 6) {
+        if (Random_Pick(0, 99) < 10 + (5 * (how - 3))) {
+            UnitClass* unit = new UnitClass(UNIT_VICE, HOUSE_JP);
+            if (unit) {
+                if (unit->Unlimbo(specifically_where) || Scan_Place_Object(unit, where)) {
+                    unit->Do_Squidgy_Spawn();
                     return true;
                 }
                 delete unit;

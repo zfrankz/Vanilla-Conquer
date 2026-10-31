@@ -244,3 +244,13 @@ Any mission with a few units; `ATTACK_MOVE=1` as well for the last items.
 - Save with a route under way, load: they carry on.
 - Hold Q + Shift and click: same route, fighting on the way.
 - Helicopters on a Q + Shift loop: out of ammo they go home, reload and restart it.
+
+## 2r. Balance patch (`[BALANCE]` section, `APPLY_BALANCE_TO_SINGLE_PLAYER=1`)
+
+Set the `DO_OVERRIDE_*` lines, `DO_CHEM_GUY_BUFF=1` and `MULTIPLAYER_UNITS_IN_SINGLE_PLAYER=1`; a Nod mission 11 or later for the lab.
+- Prices and health in the sidebar: stealth tank 700, rocket soldier 250.
+- With a refinery, the structures column offers an icon reading "Chem. Warrior": that is the bio lab (no art of its own). Build and place it.
+- With the lab and a barracks (Hand of Nod), the chem soldier appears.
+- Chem soldier kills: now and then a visceroid appears where the victim died.
+- Capture a bio lab with an engineer.
+- Without `APPLY_...`: the campaign plays as the original.

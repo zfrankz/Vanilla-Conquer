@@ -359,6 +359,24 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      last waypoint; saved with 2 waypoints left and loaded: it goes on. Not verified: the Q key, loops with helicopters,
      the out-of-ammo restart, a full list, a waypoint on an object, real play, AI.
 8. Balance patch, JD's adjustments
+   - 8a Balance patch, `[BALANCE]` section. All in `Fixup_Scenario`, which gained CFE's `issavedgameload` (full-health
+     war factories, MLRS and rocket soldiers placed by the scenario are raised to the new maximum, not on a load).
+     `DO_OVERRIDE_*`, `DO_MLRS_REQ_RADAR`, `DO_MLRS_GDI_ONLY`, `DO_CHEM_GUY_BUFF` apply in multiplayer, and in the campaign
+     with `APPLY_BALANCE_TO_SINGLE_PLAYER=1`. `MULTIPLAYER_UNITS_IN_SINGLE_PLAYER` and `MP_CIV_SIGHT` also ported.
+     Chem buff: bio lab buildable from level 7 after a refinery, capturable, unlocks the chem soldier; chem soldiers and
+     visceroids take 10% from each other; chem kills may spawn a visceroid (10% + 5% per rank, side effect of how 3-6 in
+     `Process_Tiberium_Death`, including the `DeathByTiberium` item left from step 4). `Weapons[]` is no longer const.
+   - Differences from CFE: the game data has no bio lab cameo (CFE uses a Remaster texture), so the sidebar shows
+     `E5ICNH`, whose art says "Chem. Warrior". CFE's defaults in `DEFAULT.CFEPATCHREDUX.INI` turn most of this on; here all
+     are off until set. As in CFE, stats changed by one game stay until restart: with `APPLY...=0`, a skirmish followed
+     by a campaign mission in the same session keeps the balance. `NUKE_TANK` is not ported (the unit is not in VC).
+   - Verified: builds. Instrumented runs on save 2: stats unchanged with no options; with options and `APPLY=0` the
+     campaign is unchanged and a multiplayer `Fixup_Scenario` applies them, civilians sight 1 only there; with `APPLY=1`
+     all values as configured; `Can_Build` by level (bio lab/chem 11, helipad for Nod 10, commando/Chinook 15 as GDI,
+     Nod MLRS never); new-scenario path raises 400/100/25 to 520/120/35 and leaves a damaged factory, load path does not;
+     40 chem kills mark all 40 and spawn 6 (rank 0) and 12 (rank 3), none with the buff off; damage 875 to 88 and 1000 to
+     100; cameo seen in a frame dump; saves 2 and 5 reach 1800 frames, exit 0. Not verified: building a lab by clicking,
+     placing it, its effect on the AI, the 768 minigunner range in a fight, real multiplayer, real play.
 
 VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be
 cherry-picked; each feature's diff is applied by hand, then clang-formatted.

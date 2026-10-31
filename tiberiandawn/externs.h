@@ -363,7 +363,7 @@ extern unsigned char const RemapNone[256];
 extern unsigned char const RemapGold[256];
 extern unsigned char const RemapRed[256];
 extern unsigned char const RemapLtBlue[256];
-extern WeaponTypeClass const Weapons[WEAPON_COUNT];
+extern WeaponTypeClass Weapons[WEAPON_COUNT]; // Not const so the CFE balance patch can change a weapon's range.
 extern WarheadTypeClass const Warheads[WARHEAD_COUNT];
 extern char const* SourceName[SOURCE_COUNT];
 extern GroundType const Ground[LAND_COUNT];

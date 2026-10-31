@@ -459,6 +459,14 @@ ResultType InfantryClass::Take_Damage(int& damage, int distance, WarheadType war
         }
 
         /*
+        **	CFE balance patch: a buffed chem soldier's victims may become visceroids.
+        */
+        if (ActiveCFEPatchConfig.OverrideChemGuyBuff && source && source->What_Am_I() == RTTI_INFANTRY
+            && *((InfantryClass*)source) == INFANTRY_E5) {
+            Death_By_Tiberium() = 3 + source->Vet().Rank;
+        }
+
+        /*
         **	The type of warhead determines the animation the infantry
         **	will perform when killed.
         */

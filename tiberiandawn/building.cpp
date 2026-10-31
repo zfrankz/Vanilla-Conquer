@@ -2067,6 +2067,13 @@ BuildingClass::BuildingClass(StructType type, HousesType house)
         ActLike = HOUSE_GOOD;
         IsCaptured = true;
     }
+    if (type == STRUCT_BIO_LAB && ActiveCFEPatchConfig.OverrideChemGuyBuff
+        && (GameToPlay != GAME_NORMAL || ActiveCFEPatchConfig.ApplyMPBalanceToSP)) {
+        ActLike = HOUSE_BAD;
+        if (House->ActLike != HOUSE_BAD) {
+            IsCaptured = true;
+        }
+    }
 
     if (GameToPlay == GAME_INTERNET) {
         House->BuildingTotals.Increment_Unit_Total((int)type);
