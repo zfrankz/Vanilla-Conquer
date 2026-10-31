@@ -388,7 +388,8 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      CFE's unflagged repair bay changes (dismissing a unit, the bay's permission not covering other units) are behind it.
    - `SEARCH_RANGE_FIX`: 1 fixes weapon range scans, 2 also area scans. Computer objects in the campaign keep the original
      range until they hunt, fight or get an order. New bit in `TechnoClass`, so the save format stays; objects in old
-     saves start with the fix on.
+     saves read it as 0, so they start with the fix on (save 2: 0 of 22 player and 0 of 50 enemy objects limited). The
+     first version set the bit in `TechnoClass(void)` and left it uninitialised in new objects; fixed in the next commit.
    - `MEANER_VISCEROIDS` (1-3): health, firepower, armor, speed and healing; hunting AI; spreading on kills; tiberium burst
      on death; multiplayer dinosaurs walk in from the edge. Differences from CFE: the biases come from `Vet()` and need no
      state, so a visceroid doesn't gain ranks; CFE's `MaxStrength *=` compounds on each `Fixup_Scenario`, here it works
@@ -401,7 +402,9 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      of single sided buildings and `IsReallyCaptured`.
    - Not ported, and why:
      - `SPLIT_DUAL_CAPTURABLES`: 2 new unit and 2 new building types change `HouseClass`'s arrays (`BQuantity`,
-       `UnitTrackerClass<STRUCT_COUNT>`...), so the saves would need migrating, and needs art. Belongs to phase 5.
+       `UnitTrackerClass<STRUCT_COUNT>`...), and `SAVEGAME_VERSION` adds up `sizeof(HouseClass)`, so existing saves
+       would stop loading. Art isn't the obstacle: CFE reuses `HPADMAKE` and `MCV` (it has no legacy cameo redirection,
+       which would need adding). Belongs to phase 5.
      - CFE `38edd8d` (an MCV remembering a captured yard's side) needs per-unit state; goes with the above.
      - `INVERSE_PREVIEW_MODE`, `LEGACY_RENDER_DISABLE_MODE`, CFE's stop order for buildings (`Selected_Stop`), sound fixes
        for per-player contexts: Remaster client only. `CUSTOM_MISSION_DEFAULT_SCENARIO`, `CFEDinos`, `CFEScenario`: GlyphX
@@ -421,10 +424,21 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      forced crate explosions hurt at once off, 32 of 40 a tick later on; Chinook boards 3 with the door closed, 2 with it
      open off; two engineers, one captures and one is left. All 9 saves load; saves 2, 5 and 8 with everything on reach
      1800 frames, exit 0.
-   - Not verified: multiplayer (`DISABLE_MP_NEUTRAL_ATTACKS`, `MP_PREPLACED_UNIT_ORDER_MODE`, dinosaurs, the neutral fixes),
-     `QUIETER_AIRSTRIPS`, `SELL_CHANCE_FIX` and `LOANER_COPTER_DEFAULT` at runtime, walls not counting for `BUILDING_GAP`
-     (the save had no walls), helicopters leaving a bay, `Base_Is_Attacked`, the team changes, the capture flag of
-     single sided buildings for a house acting as the other side, real play.
+   - Verified in a second pass, on the final code (temporary code, removed): real ini file with all these keys parsed, and
+     saves 2, 5 and 8 reach 1800 frames, exit 0. `SELL_CHANCE_FIX` 22 to 15 at scenario 22. `LOANER_COPTER_DEFAULT`
+     reinforcing Orca loaner 0 to 1. `QUIETER_AIRSTRIPS` cargo plane: 0 reinforcements, 1 silent, 3 unit ready. Sandbag:
+     gap 1 or 2 with walls within the gap add 15 or 30 cells, `WALL_BUILD_LENGTH=5` with gap 2 adds 0. Orca: with
+     `SMARTER_REPAIRBAY` alone it scatters off the bay; with `RALLY_POINTS` and a rally point on the bay it flies to a free
+     helipad and lands; off it stays on the bay. House acting GDI building a war factory: captured flag 1 to 0. Team with
+     an engineer ignores a tank's attack with `GENERAL_BUGFIXES`. Simulated skirmish (`GameToPlay` set by the harness):
+     preplaced unit/infantry orders by mode 0 guard, 1 from the map, 2 timed hunt/hunt; no alliance with neutral.
+   - `Is_Near_Friendly_Cell` and the options off: a frame by frame state hash can't compare builds, as one binary differs
+     from itself with the same save and seed. Instead, every changed hunk since `54ddd7af` was checked for a switch; the
+     only unswitched behaviour is the `Goto_Tiberium` cap, which also changes how many random numbers a failed search uses.
+   - Not verified: real multiplayer and dinosaurs; `QUIETER_AIRSTRIPS` sidebar part and mode 2; `Base_Is_Attacked` (called
+     200 times without a crash, no defender assigned on or off); `THREAT_CAPTURE` teams (same target on and off in the
+     test); the `IsDown`, drain, flamethrower, gunboat and scatter fixes; real play. Audit of CFE's unflagged fixes covered
+     32 chosen commits out of 568, not all: the sound commits `47faceb` and `cef9665` were listed but not read.
 
 VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be
 cherry-picked; each feature's diff is applied by hand, then clang-formatted.
