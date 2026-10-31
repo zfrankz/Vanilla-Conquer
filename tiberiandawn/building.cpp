@@ -2075,6 +2075,7 @@ BuildingClass::BuildingClass(StructType type, HousesType house)
     WhomToRepay = TARGET_NONE;
     IsCaptured = false;
     IsReallyCaptured = false;
+    IsAwaitingOpening = true;
     IsCharged = false;
     IsCharging = false;
     IsSurvivorless = false;
@@ -2979,9 +2980,9 @@ bool BuildingClass::Limbo(void)
         House->Adjust_Power(-Power_Output());
 
         /*
-        **	A building lost during its construction animation hasn't had its grand opening yet.
+        **	A building lost before its grand opening hasn't added its drain or capacity yet.
         */
-        if (!ActiveCFEPatchConfig.EnableGeneralBugfixes || Mission != MISSION_CONSTRUCTION) {
+        if (!ActiveCFEPatchConfig.EnableGeneralBugfixes || !IsAwaitingOpening) {
             House->Adjust_Drain(-Class->Drain);
             House->Adjust_Capacity(-(int)Class->Capacity, true);
         }
@@ -3207,6 +3208,15 @@ TARGET BuildingClass::Greatest_Threat(ThreatType threat) const
 void BuildingClass::Grand_Opening(bool captured)
 {
     Validate();
+
+    /*
+    **	General bugfixes: don't count a building twice if it opens when revealed and again
+    **	when its construction finishes. Being captured is a real second opening.
+    */
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes && !IsAwaitingOpening && !captured) {
+        return;
+    }
+    IsAwaitingOpening = false;
 
     /*
     **	Adjust the owning house according to the power, drain, and Tiberium capacity that

@@ -128,6 +128,12 @@ public:
     unsigned IsReallyCaptured : 1;
 
     /*
+    **	This building has not had its grand opening. Set on creation instead of when opened,
+    **	so that buildings from older saved games, where the bit is clear, count as opened.
+    */
+    unsigned IsAwaitingOpening : 1;
+
+    /*
     **	Special countdown to destruction value. If the building is destroyed,
     **	it won't actually be removed from the map until this value reaches
     **	zero. This delay is for cosmetic reasons.
