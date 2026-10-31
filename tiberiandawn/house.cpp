@@ -5381,7 +5381,11 @@ int HouseClass::Expert_AI(void)
                 **	candidate base. The higher the value, the better the candidate house
                 **	is to becoming the preferred enemy for this house.
                 */
-                int value = ((MAP_CELL_W * 2) - Distance(Center, h->Center));
+                int distance = Distance(Center, h->Center);
+                if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+                    distance = Lepton_To_Cell(distance);
+                }
+                int value = (MAP_CELL_W * 2) - distance;
                 value *= 2;
 
                 /*
