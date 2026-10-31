@@ -2074,6 +2074,7 @@ BuildingClass::BuildingClass(StructType type, HousesType house)
 #endif
     WhomToRepay = TARGET_NONE;
     IsCaptured = false;
+    IsReallyCaptured = false;
     IsCharged = false;
     IsCharging = false;
     IsSurvivorless = false;
@@ -2092,13 +2093,44 @@ BuildingClass::BuildingClass(StructType type, HousesType house)
     **	the house they are supposed to act like, regardless of who the current
     **	owner may happen to be.
     */
-    if ((type == STRUCT_AIRSTRIP || type == STRUCT_HAND) && house != HOUSE_BAD) {
-        ActLike = HOUSE_BAD;
-        IsCaptured = true;
-    }
-    if ((type == STRUCT_WEAP || type == STRUCT_BARRACKS) && house != HOUSE_GOOD) {
-        ActLike = HOUSE_GOOD;
-        IsCaptured = true;
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+
+        /*
+        **	This goes for all the single sided buildings, and goes by which side the house
+        **	acts like, so that they aren't always flagged as captured in multiplayer.
+        */
+        switch (type) {
+        case STRUCT_OBELISK:
+        case STRUCT_TURRET:
+        case STRUCT_SAM:
+        case STRUCT_AIRSTRIP:
+        case STRUCT_HAND:
+        case STRUCT_TEMPLE:
+            ActLike = HOUSE_BAD;
+            IsCaptured = House->ActLike != HOUSE_BAD;
+            break;
+
+        case STRUCT_WEAP:
+        case STRUCT_GTOWER:
+        case STRUCT_ATOWER:
+        case STRUCT_BARRACKS:
+        case STRUCT_EYE:
+            ActLike = HOUSE_GOOD;
+            IsCaptured = House->ActLike != HOUSE_GOOD;
+            break;
+
+        default:
+            break;
+        }
+    } else {
+        if ((type == STRUCT_AIRSTRIP || type == STRUCT_HAND) && house != HOUSE_BAD) {
+            ActLike = HOUSE_BAD;
+            IsCaptured = true;
+        }
+        if ((type == STRUCT_WEAP || type == STRUCT_BARRACKS) && house != HOUSE_GOOD) {
+            ActLike = HOUSE_GOOD;
+            IsCaptured = true;
+        }
     }
     if (type == STRUCT_BIO_LAB && ActiveCFEPatchConfig.OverrideChemGuyBuff
         && (GameToPlay != GAME_NORMAL || ActiveCFEPatchConfig.ApplyMPBalanceToSP)) {
@@ -2207,7 +2239,7 @@ void BuildingClass::Drop_Debris(TARGET source)
     int odds = 2;
     if (Target_Legal(WhomToRepay))
         odds -= 1;
-    if (IsCaptured)
+    if (Was_Captured())
         odds += 6;
 
     /*
@@ -4000,6 +4032,7 @@ bool BuildingClass::Captured(HouseClass* newowner)
         HouseClass* oldowner = House; // Added for RA AI in TD. ST - 7/26/2019 9:25AM
 
         IsCaptured = true;
+        IsReallyCaptured = true;
         TechnoClass::Captured(newowner);
         Rally_Point() = TARGET_NONE;
 
@@ -4402,7 +4435,7 @@ int BuildingClass::Mission_Deconstruction(void)
             */
             if (!Target_Legal(ArchiveTarget) || !Special.IsMCVDeploy || *this != STRUCT_CONST) {
                 int divisor = 200;
-                if (IsCaptured)
+                if (Was_Captured())
                     divisor *= 2;
                 int count = (Class->Raw_Cost() + (divisor - 1)) / divisor;
                 bool engine = false;
@@ -4419,7 +4452,7 @@ int BuildingClass::Mission_Deconstruction(void)
                         typ = Crew_Type();
                     }
                     if (count == 1 && !engine && ActiveCFEPatchConfig.MCVAlwaysSpawnEngineer && *this == STRUCT_CONST
-                        && !IsCaptured && House->IsHuman) {
+                        && !Was_Captured() && House->IsHuman) {
                         typ = INFANTRY_E7;
                     }
                     if (typ == INFANTRY_E7)
@@ -5690,7 +5723,7 @@ InfantryType BuildingClass::Crew_Type(void) const
         }
 
     case STRUCT_CONST:
-        if (!IsCaptured && House->IsHuman && Random_Pick(0, 3) == 0) {
+        if (!Was_Captured() && House->IsHuman && Random_Pick(0, 3) == 0) {
             return (INFANTRY_E7);
         }
         break;
@@ -6078,6 +6111,14 @@ bool BuildingClass::Rally_Unit(TechnoClass& unit)
     TARGET rally = Target_For_Rally_Point();
     int target = unit.As_Target() != rally ? rally : ::As_Target(Nearby_Location());
     return (Target_Legal(target) && Transmit_Message(RADIO_MOVE_HERE, target, &unit) == RADIO_ROGER);
+}
+
+/*
+**	Should this building get the penalties of a captured one?
+*/
+bool BuildingClass::Was_Captured(void) const
+{
+    return (ActiveCFEPatchConfig.EnableGeneralBugfixes ? IsReallyCaptured : IsCaptured);
 }
 
 /***********************************************************************************************

@@ -122,6 +122,12 @@ public:
     unsigned IsCaptured : 1;
 
     /*
+    **	General bugfixes: IsCaptured is also set on buildings merely built from a captured
+    **	construction yard. This is only set when an engineer took the building.
+    */
+    unsigned IsReallyCaptured : 1;
+
+    /*
     **	Special countdown to destruction value. If the building is destroyed,
     **	it won't actually be removed from the map until this value reaches
     **	zero. This delay is for cosmetic reasons.
@@ -251,6 +257,7 @@ public:
     virtual bool Limbo(void);
     bool Passes_Proximity_Check(CELL homecell);
     void Dismiss_Repaired_Unit(void);
+    bool Was_Captured(void) const;
 
     /*
     **	Display and rendering support functionality. Supports imagery and how

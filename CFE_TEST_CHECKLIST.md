@@ -260,3 +260,40 @@ Set the `DO_OVERRIDE_*` lines, `DO_CHEM_GUY_BUFF=1` and `MULTIPLAYER_UNITS_IN_SI
 - GDI mission 5 or 6: the rocket soldier and sandbags are offered.
 - Riflemen, jeeps and buggies reveal more shroud.
 - Radar needs only a power plant; the war factory and airstrip need a barracks (not a refinery).
+
+## 2t. Small options (Phase 3 step 9)
+
+- `OOM_REPAIR=1`: start repairing a building, run out of credits: the wrench stays and repair resumes with money.
+- `VERSION_ANNOUNCE=1`: a few seconds into a new mission, "CFE Patch Redux version 1.9".
+- `SHROUD_REMOVER=1`: no shroud in a new mission.
+- `MCV_ALWAYS_SPAWN_ENGINEER=1`: sell your own construction yard: an engineer comes out.
+- `BUILDING_DEATH_ANNOUNCE_MODE=1`: lose a building: "structure lost". Mode 2: also for enemy ones you have seen.
+- `QUIETER_AIRSTRIPS=2` with an airstrip: order a vehicle: only "reinforcements have arrived" when it lands.
+- `SAFE_SABOTAGE=1`: blow up an enemy building with C4: no crew comes out.
+
+## 2u. Building gap (`BUILDING_GAP=2` under `[SETTINGS]`)
+
+- Place a building leaving a one cell gap: allowed. With `BUILDING_GAP=1`: refused, as the original.
+
+## 2v. Smarter repair bays (`SMARTER_REPAIRBAY=1` under `[FEATURES]`)
+
+- Send a damaged vehicle: when fully repaired it drives off by itself, to the rally point if there is one.
+- Send a second vehicle while the bay is busy: the cursor shows "enter", it waits and goes in after the first.
+- Send a helicopter: when repaired it goes to a helipad.
+
+## 2w. Search range (`SEARCH_RANGE_FIX=2` under `[SETTINGS]`)
+
+- Enemies in a mission still don't react from further than usual until they start fighting.
+- Your own units in guard open fire a little sooner.
+
+## 2x. Meaner visceroids (`MEANER_VISCEROIDS=3` under `[SETTINGS]`; `TS_VISCEROID_SPAWN=1` or a late mission)
+
+- Visceroids wander the map and hunt instead of sitting still, and take noticeably more damage to kill.
+- Infantry they kill sometimes become visceroids.
+- When one dies, a green splash and tiberium appears around it.
+
+## 2y. Original game bugfixes (`GENERAL_BUGFIXES=1` under `[FEATURES]`)
+
+- Two engineers on one building: one goes in, the other survives.
+- Load 3 infantry into a Chinook: all board and the door closes.
+- Mission with crates: an explosive crate still works, and nothing stays stuck on that cell.

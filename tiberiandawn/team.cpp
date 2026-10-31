@@ -1104,6 +1104,18 @@ void TeamClass::Took_Damage(FootClass*, ResultType result, TechnoClass* source)
                         }
                     }
 
+                    /*
+                    **	General bugfixes: a team with an engineer only turns on buildings.
+                    */
+                    if (ActiveCFEPatchConfig.EnableGeneralBugfixes && source->What_Am_I() != RTTI_BUILDING) {
+                        for (FootClass* unit = Member; unit; unit = unit->Member) {
+                            if (unit->IsActive && unit->What_Am_I() == RTTI_INFANTRY
+                                && *((InfantryClass*)unit) == INFANTRY_E7) {
+                                return;
+                            }
+                        }
+                    }
+
                     // CFE: a team with a commando doesn't turn on something a commando can't deal with.
                     if (ActiveCFEPatchConfig.SmarterCPUCommandos && source->What_Am_I() != RTTI_BUILDING
                         && source->What_Am_I() != RTTI_INFANTRY) {

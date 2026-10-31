@@ -111,9 +111,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
    - Done (one commit each, switch off = original code): `TIB_INDEX_BUGFIX`, `GDI9_FIX`,
      `DEATHS_DOOR_FIX`, `DEAD_BUILDING_SCATTER_FIX`, `DISTANCE_CALC_FIX`, `NUKE_RADIUS_FIX`,
      `GUNBOAT_BUGFIX`, `BURNING_TREE_FIX`. Each builds; TD starts with all eight on (30 s smoke test).
-   - Deferred: `SELL_CHANCE_FIX` (needs CFE's `EffectiveScenario`), `HUNT_FIX` + `SEARCH_RANGE_FIX`
-     (CFE adds 108 lines to `TECHNO.CPP`, a 90-line search function at CFE HEAD; port together), hunks inside CFE-only code (A* cell weights,
-     new tiberium spread function, meaner visceroids) come with those features.
+   - Later: `HUNT_FIX` in 6b; `SELL_CHANCE_FIX`, `SEARCH_RANGE_FIX` and meaner visceroids in step 9.
    - Crash found in play-test (burning tree, `AnimClass::~AnimClass`), fixed in `c0407c42` by porting
      CFE `8f5389c`, which my first pass missed because it doesn't name the switch. From now on each
      feature's CFE commits are also found by message keywords and by `git log -L` on the touched functions.
@@ -143,10 +141,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      `rand()` (uniformity checked with 300000 draws); new per-cell/per-infantry/map state lives in unsaved
      tables or statics instead of saved members (resurgence build-up restarts after a load); the visceroid
      grow-in animation is Remastered-renderer only, so spawning just plays the squish sound.
-   - Moved: `MEANER_VISCEROIDS` needs CFE's per-unit firepower/armor/speed biases (come with veterancy,
-     step 5) and its per-scenario type-stat adjustments (balance, step 8); port it after step 5.
-     CFE's killed-by-visceroid and chem-soldier visceroid spawns come with it / with the balance options.
-   - General bugfix bucket: CFE `1cab6b4` and `d2edf47` (`Goto_Tiberium` efficiency and megamap radius, no switch).
+   - `MEANER_VISCEROIDS` and the `Goto_Tiberium` cap (CFE `1cab6b4`, `d2edf47`): step 9.
 4. A* pathing + tiberium aversion – 4a, 4b and 4c ported, play-test pending
    (SEARCH.H turned out to be unrelated: it came with CFE's INIClass backport.)
    - 4a `ASTAR_PATHING` + `INFANTRY_TIBERIUM_AVERSION` (commit `f5e038eb`): A* search, CFE's traffic-flow cell
@@ -244,8 +239,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
    - Differences from CFE: the repeated shunt code is one function, `FootClass::CFE_Send_After_Building`; CFE
      changes `Mission_Hunt`, `Coordinate_Attack` and the team threat masks with the switch off too, here
      they keep the original code then; the engineer half of `Took_Damage` and of the team target choice
-     belongs to CFE's MinorAIFixes (general bugfix bucket, not ported); the `SAFE_SABOTAGE` change is
-     not ported, as that setting isn't. As in CFE, `Can_Fire` stops human commandos shooting buildings too.
+     belongs to CFE's MinorAIFixes (`GENERAL_BUGFIXES`, step 9); `SAFE_SABOTAGE` also came in step 9. As in CFE, `Can_Fire` stops human commandos shooting buildings too.
    - Verified: builds, no warnings on changed lines. Instrumented runs (temporary code, removed) on save 2,
      an enemy commando hunting by the player's base, kept alive, 1200 frames: off it shoots one building for
      all 1200 frames and 7 buildings stay 7; on it goes to sabotage and buildings fall to 2, targeting
@@ -296,7 +290,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
    - 6b `AI_VS_WALLS` + `HUNT_FIX`: computer controlled units and infantry shoot enemy walls in range when they
      have no target or an adjacent wall seems to block the way, and may plan routes through them. `HUNT_FIX`
      searches near first and the whole map only if nothing is near, with the same wall checks.
-   - Differences from CFE: `SEARCH_RANGE_FIX` isn't ported, so the wall search uses the plain range. With the
+   - Differences from CFE: with the
      switches off the original `Can_Enter_Cell` results stand (CFE's refactor changes them even with both off).
    - Verified: builds. Instrumented runs (temporary code, removed) on save 2: an enemy medium tank and grenadier
      beside a player sandbag wall, far from anything else: off, both can't enter the cell and the wall is
@@ -313,8 +307,7 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      up to that many cells away, fills the gap and may be placed there; the placement cursor shows it; Ctrl
      places a single piece. Selling refunds a share of a full run when pieces were free.
    - Differences from CFE: the default length is 1 (CFE's 5 would change the game without an ini entry);
-     multiplayer ignores Ctrl, because a local key would desync the players; `BUILDING_GAP` isn't ported, so other
-     buildings keep the original proximity rule. Not ported: the inverse wall preview markers (GlyphX shapes).
+     multiplayer ignores Ctrl, because a local key would desync the players. Not ported: the inverse wall preview markers (GlyphX shapes).
    - Verified: builds. Instrumented runs (temporary code, removed) on save 2, a sandbag 3 cells from the spot:
      length 1 and no ini entry: proximity fails, cursor 1 cell, 1 piece placed. Length 5: proximity passes, cursor 3
      cells, gap filled (4 walls in all), the extra cells owned; full cost charges 100 for the 2 extras, otherwise
@@ -341,8 +334,8 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
    - 7b `RALLY_POINTS`: with a weapons factory, helipad, barracks, hand of Nod or repair bay selected, a click on the
      ground sets its rally point, a click on itself or Stop clears it; new units (not harvesters) go there; the selected
      building shows a green line (legacy renderer's line, as in CFE). Aircraft leaving a repair bay don't rally.
-   - Differences from CFE: saved in a block after the attack-move one, not as a class member; `DoSmarterRunAway` and the
-     smarter repair bay exit are left for `SMARTER_REPAIRBAY`, not ported yet. The first version of `CFE_Load_Attack_Move` didn't
+   - Differences from CFE: saved in a block after the attack-move one, not as a class member; the smarter repair
+     bay exit came with `SMARTER_REPAIRBAY` in step 9. The first version of `CFE_Load_Attack_Move` didn't
      read its block with the switch off; fixed here, since the rally block follows it.
    - Verified: builds. Instrumented runs (temporary code, removed) on save 2, click through `Active_Click_With`: weapons
      factory and barracks: the new jeep and rifleman reach the rally cell (`dist=0`, guard); off: the jeep stays by the
@@ -383,6 +376,55 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      `level` for GDI's second training mission only happens with this switch here (always, in CFE).
    - Verified: builds. Instrumented runs on save 2: values off and on as in CFE's list, E3 and sandbag `Can_Build` move
      from levels 7/8 to 5, Chinook 10; all options with saves 2 and 5 reach 1800 frames, exit 0. Not verified: real play.
+
+9. Remaining switches and fixes of the original game
+   - Small switches: `OOM_REPAIR`, `SELL_CHANCE_FIX`, `SAFE_SABOTAGE`, `MCV_ALWAYS_SPAWN_ENGINEER`,
+     `BUILD_FORBIDDEN_SP_CAPTURABLES`, `DISABLE_MP_NEUTRAL_ATTACKS`, `VERSION_ANNOUNCE`, `LOANER_COPTER_DEFAULT` (and a
+     map's `CFELoanerCopter`), `MP_PREPLACED_UNIT_ORDER_MODE`, `BUILDING_DEATH_ANNOUNCE_MODE`, `QUIETER_AIRSTRIPS`,
+     `SHROUD_REMOVER`; `Goto_Tiberium` caps its ring search at the farthest map edge after 16 rings (always on, as in CFE).
+   - `BUILDING_GAP`, default 1 here (CFE's 2 would change the game without an ini entry). With `WALL_BUILD_LENGTH`
+     above the gap, walls no longer count as friendly cells (`AllowSandbagging`).
+   - `SMARTER_REPAIRBAY`: repaired units leave by themselves, units can queue on a busy bay, helicopters go to a helipad.
+     CFE's unflagged repair bay changes (dismissing a unit, the bay's permission not covering other units) are behind it.
+   - `SEARCH_RANGE_FIX`: 1 fixes weapon range scans, 2 also area scans. Computer objects in the campaign keep the original
+     range until they hunt, fight or get an order. New bit in `TechnoClass`, so the save format stays; objects in old
+     saves start with the fix on.
+   - `MEANER_VISCEROIDS` (1-3): health, firepower, armor, speed and healing; hunting AI; spreading on kills; tiberium burst
+     on death; multiplayer dinosaurs walk in from the edge. Differences from CFE: the biases come from `Vet()` and need no
+     state, so a visceroid doesn't gain ranks; CFE's `MaxStrength *=` compounds on each `Fixup_Scenario`, here it works
+     from the original value; the random-map wander uses the real map bounds; `Nearest_Edge_Entry_Point` measures in
+     coordinates (CFE passes cells to `Distance`, measuring cell number differences).
+   - `GENERAL_BUGFIXES`, a new switch for what CFE always does, off by default: engineers (two capturing at once, Chinooks,
+     teams, stray attack missions), neutral house in multiplayer, crate bombs after the object AI (a per-tick table,
+     never saved), Chinook and APC boarding and doors, `Base_Is_Attacked` defenders, full layer sort, drain from buildings
+     lost during construction, flamethrower self damage, gunboats from off the map, `IsDown` in `Mark`, the capture flag
+     of single sided buildings and `IsReallyCaptured`.
+   - Not ported, and why:
+     - `SPLIT_DUAL_CAPTURABLES`: 2 new unit and 2 new building types change `HouseClass`'s arrays (`BQuantity`,
+       `UnitTrackerClass<STRUCT_COUNT>`...), so the saves would need migrating, and needs art. Belongs to phase 5.
+     - CFE `38edd8d` (an MCV remembering a captured yard's side) needs per-unit state; goes with the above.
+     - `INVERSE_PREVIEW_MODE`, `LEGACY_RENDER_DISABLE_MODE`, CFE's stop order for buildings (`Selected_Stop`), sound fixes
+       for per-player contexts: Remaster client only. `CUSTOM_MISSION_DEFAULT_SCENARIO`, `CFEDinos`, `CFEScenario`: GlyphX
+       custom missions. `NUKE_TANK`: the unit isn't in VC. `EnableNewSkirmishAI`: CFE never reads it from the ini.
+     - CFE's `HasOpened` half of `fdb9f5b` (double power on MCVs): VC has no such flag; the drain half uses the mission.
+     - `SELL_CHANCE_FIX` uses `Scen.Scenario`, not CFE's `EffectiveScenario`: same in the campaign, in multiplayer it's
+       the map number capped at 15 instead of a value from the build level.
+   - Verified: builds. Instrumented runs (temporary code, removed). Save 2: `OOM_REPAIR` keeps repairing at 0 credits;
+     `SAFE_SABOTAGE=2` 0 crew against 33 over 3 buildings; 6 of 6 seeds give an engineer with `MCV_ALWAYS_SPAWN_ENGINEER`,
+     3 of 6 without; temple/obelisk `Can_Build` 0 to 1; neutral `Check_Attack` 4 to 0; `Debug_Unshroud` 1; version
+     message at frame 75; death announcement 42/44/43 for modes 2 and 4, none for an enemy in mode 1; `Goto_Tiberium`
+     finds a cell 19 away, none with no tiberium. `BUILDING_GAP` 1/2/3: 102/137/175 cells, 102 by either code path.
+     Repair bay, two jeeps: off 18 frames in one cell, the last stays on the bay; on 0 and both leave. `What_Action` on a
+     busy bay 7 to 3. Search range: medium tank 3 to 4 at mode 1, artillery area 9 to 10 at mode 2, limited objects keep
+     the original. Visceroids level 3: 150 to 262 health, unchanged after 3 `Fixup_Scenario`; 1.6/0.7/1.1; 40 hits marked,
+     10 spawned; 4 tiberium cells on death; 1096 frames in move, 100 in hunt, against 1196 guard off. `GENERAL_BUGFIXES`:
+     forced crate explosions hurt at once off, 32 of 40 a tick later on; Chinook boards 3 with the door closed, 2 with it
+     open off; two engineers, one captures and one is left. All 9 saves load; saves 2, 5 and 8 with everything on reach
+     1800 frames, exit 0.
+   - Not verified: multiplayer (`DISABLE_MP_NEUTRAL_ATTACKS`, `MP_PREPLACED_UNIT_ORDER_MODE`, dinosaurs, the neutral fixes),
+     `QUIETER_AIRSTRIPS`, `SELL_CHANCE_FIX` and `LOANER_COPTER_DEFAULT` at runtime, walls not counting for `BUILDING_GAP`
+     (the save had no walls), helicopters leaving a bay, `Base_Is_Attacked`, the team changes, the capture flag of
+     single sided buildings for a house acting as the other side, real play.
 
 VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be
 cherry-picked; each feature's diff is applied by hand, then clang-formatted.
