@@ -517,8 +517,14 @@ void Speak_AI(void)
                 _makepath(name, NULL, NULL, Speech[SpeakQueue], ".AUD");
                 if (CCFileClass(name).Read(SpeechBuffer, SPEECH_BUFFER_SIZE)) {
                     Play_Sample(SpeechBuffer, 254, Options.Volume);
+                    _last = SpeakQueue;
+                } else {
+                    /*
+                    **	Nothing was loaded (some versions lack some voices), so the
+                    **	buffer can't be replayed the next time this voice comes up.
+                    */
+                    _last = VOX_NONE;
                 }
-                _last = SpeakQueue;
             } else {
                 Play_Sample(SpeechBuffer, 254, Options.Volume);
             }
