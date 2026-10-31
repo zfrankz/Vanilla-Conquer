@@ -889,6 +889,16 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
     while (*ptr != REFRESH_EOL) {
         CELL cell = trycell + *ptr++;
 
+        if (ActiveCFEPatchConfig.BuildingGap != 1 || !ActiveCFEPatchConfig.AllowSandbagging) {
+            if (!In_Radar(cell)) {
+                return (false);
+            }
+            if (Is_Near_Friendly_Cell(cell, house)) {
+                return (true);
+            }
+            continue;
+        }
+
         for (FacingType facing = FACING_N; facing < FACING_COUNT; facing++) {
             CELL newcell = Adjacent_Cell(cell, facing);
 
@@ -915,6 +925,50 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
 }
 
 #endif // USE_RA_AI
+
+/***********************************************************************************************
+ * DisplayClass::Is_Near_Friendly_Cell -- Checks for friendly cells within the building gap.   *
+ *                                                                                             *
+ *    CFE BUILDING_GAP: a building can go up to this many cells from a friendly building, or   *
+ *    from a cell owned by the house. Walls don't count if they can be chained further than    *
+ *    the gap, or a base could creep across the map with sandbags.                             *
+ *                                                                                             *
+ * INPUT:   cell  -- The cell to search around.                                                *
+ *                                                                                             *
+ *          house -- The house placing the building.                                           *
+ *                                                                                             *
+ * OUTPUT:  Is there a friendly cell in range?                                                 *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool DisplayClass::Is_Near_Friendly_Cell(CELL cell, HousesType house) const
+{
+    int radius = ActiveCFEPatchConfig.BuildingGap;
+    int cellx = Cell_X(cell);
+    int celly = Cell_Y(cell);
+
+    for (int y = max(celly - radius, 0); y <= min(celly + radius, MAP_CELL_H - 1); y++) {
+        for (int x = max(cellx - radius, 0); x <= min(cellx + radius, MAP_CELL_W - 1); x++) {
+            CELL newcell = XY_Cell(x, y);
+            if (!In_Radar(newcell)) {
+                continue;
+            }
+
+            CellClass const& cellptr = (*this)[newcell];
+            if (cellptr.Owner == house
+                && (ActiveCFEPatchConfig.AllowSandbagging || cellptr.Overlay == OVERLAY_NONE
+                    || !OverlayTypeClass::As_Reference(cellptr.Overlay).IsWall)) {
+                return (true);
+            }
+
+            BuildingClass const* base = cellptr.Cell_Building();
+            if (base && base->IsActive && base->House->Class->House == house) {
+                return (true);
+            }
+        }
+    }
+    return (false);
+}
 
 /***********************************************************************************************
  * DisplayClass::Set_Cursor_Pos -- Controls the display and animation of the tac cursor.       *

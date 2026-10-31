@@ -118,6 +118,7 @@ public:
     bool Cell_Seems_Ok(CELL cell, bool landing = false) const;
     DirType Pose_Dir(void) const;
     TARGET Good_LZ(void) const;
+    bool Do_Smarter_Run_Away(void);
     virtual DirType Fire_Direction(void) const;
 
     /*

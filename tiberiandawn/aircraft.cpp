@@ -3410,6 +3410,45 @@ int AircraftClass::Rearm_Delay(bool second) const
 }
 
 /***********************************************************************************************
+ * AircraftClass::Do_Smarter_Run_Away -- Sends a repaired helicopter to a helipad.             *
+ *                                                                                             *
+ *    CFE smarter repair bays: the helicopter takes a free helipad, or else lands near one.    *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Was the helicopter dealt with?                                                     *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool AircraftClass::Do_Smarter_Run_Away(void)
+{
+    if (*this != AIRCRAFT_ORCA && *this != AIRCRAFT_HELICOPTER) {
+        return (false);
+    }
+
+    BuildingClass* building = Find_Docking_Bay(STRUCT_HELIPAD, false);
+    if (Transmit_Message(RADIO_HELLO, building) != RADIO_ROGER) {
+        building = NULL;
+    }
+    if (building != NULL) {
+        Assign_Destination(building->As_Target());
+        Assign_Target(TARGET_NONE);
+        Assign_Mission(MISSION_ENTER);
+        return (true);
+    }
+
+    TARGET goodenough = Good_LZ();
+    if (Target_Legal(goodenough) && goodenough != ::As_Target(Coord_Cell(Coord))) {
+        Assign_Destination(goodenough);
+        Assign_Target(TARGET_NONE);
+        Assign_Mission(MISSION_MOVE);
+    } else {
+        Scatter(0, true);
+    }
+    return (true);
+}
+
+/***********************************************************************************************
  * AircraftClass::Threat_Range -- Returns with a range to scan for targets.                    *
  *                                                                                             *
  *    This routine returns with the distance to scan for targets according to the type of      *

@@ -250,6 +250,7 @@ public:
     virtual bool Unlimbo(COORDINATE, DirType dir = DIR_N);
     virtual bool Limbo(void);
     bool Passes_Proximity_Check(CELL homecell);
+    void Dismiss_Repaired_Unit(void);
 
     /*
     **	Display and rendering support functionality. Supports imagery and how

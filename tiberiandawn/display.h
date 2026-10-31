@@ -186,6 +186,7 @@ public:
     bool Passes_Proximity_Check(ObjectTypeClass const* object);
 #ifdef USE_RA_AI
     bool Passes_Proximity_Check(ObjectTypeClass const* object, HousesType house, short const* list, CELL trycell) const;
+    bool Is_Near_Friendly_Cell(CELL cell, HousesType house) const;
 #endif
     ObjectClass* Cell_Object(CELL cell, int x = 0, int y = 0);
     ObjectClass* Next_Object(ObjectClass* object);

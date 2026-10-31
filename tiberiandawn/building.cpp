@@ -335,7 +335,11 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
                         if (!Rally_Unit(*Contact_With_Whom())) {
                             Transmit_Message(RADIO_RUN_AWAY);
                         }
-                        Transmit_Message(RADIO_OVER_OUT);
+                        if (ActiveCFEPatchConfig.EnableSmarterRepairBays) {
+                            Dismiss_Repaired_Unit();
+                        } else {
+                            Transmit_Message(RADIO_OVER_OUT);
+                        }
                         return (RADIO_ROGER);
                     }
                 }
@@ -461,6 +465,13 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
         **	CFE: send the unit to the rally point, if there is one.
         */
         if (Can_Have_Rally_Point() && Rally_Unit(static_cast<FootClass&>(*from))) {
+
+            /*
+            **	The next unit in a repair queue shouldn't come back after leaving.
+            */
+            if (ActiveCFEPatchConfig.EnableSmarterRepairBays && *this == STRUCT_REPAIR && Contact_With_Whom() == from) {
+                Dismiss_Repaired_Unit();
+            }
             return (RADIO_ROGER);
         }
         if (*this == STRUCT_WEAP || *this == STRUCT_AIRSTRIP || *this == STRUCT_REPAIR
@@ -5010,7 +5021,18 @@ int BuildingClass::Mission_Repair(void)
             if (IsReadyToCommence && Transmit_Message(RADIO_NEED_TO_MOVE) == RADIO_ROGER) {
                 IsReadyToCommence = false;
                 int param = Health_Ratio();
-                if (Transmit_Message(RADIO_REPAIR, param) != RADIO_ROGER) {
+                RadioMessageType reply = Transmit_Message(RADIO_REPAIR, param);
+
+                /*
+                **	Smarter repair bays send a fully repaired unit on its way.
+                */
+                if (ActiveCFEPatchConfig.EnableSmarterRepairBays && reply == RADIO_REPAIR) {
+                    if (!Rally_Unit(*Contact_With_Whom())) {
+                        Transmit_Message(RADIO_RUN_AWAY);
+                    }
+                    Dismiss_Repaired_Unit();
+                }
+                if (reply != RADIO_ROGER) {
 #ifdef OBSOLETE
                     if (House->Available_Money() < 10) {
                         Transmit_Message(RADIO_RUN_AWAY);
@@ -5877,6 +5899,13 @@ bool BuildingClass::Passes_Proximity_Check(CELL homecell)
         if (!Map.In_Radar(cell))
             return (false);
 
+        if (ActiveCFEPatchConfig.BuildingGap != 1 || !ActiveCFEPatchConfig.AllowSandbagging) {
+            if (Map.Is_Near_Friendly_Cell(cell, House->Class->House)) {
+                return (true);
+            }
+            continue;
+        }
+
         for (FacingType facing = FACING_N; facing < FACING_COUNT; facing++) {
             CELL newcell = Adjacent_Cell(cell, facing);
 
@@ -6023,7 +6052,7 @@ bool BuildingClass::Rally_Unit(TechnoClass& unit)
     **	Aircraft leaving a repair bay don't go to its rally point.
     */
     if (*this == STRUCT_REPAIR && unit.What_Am_I() == RTTI_AIRCRAFT) {
-        return (false);
+        return (ActiveCFEPatchConfig.EnableSmarterRepairBays && static_cast<AircraftClass&>(unit).Do_Smarter_Run_Away());
     }
 
     /*
@@ -6032,6 +6061,34 @@ bool BuildingClass::Rally_Unit(TechnoClass& unit)
     TARGET rally = Target_For_Rally_Point();
     int target = unit.As_Target() != rally ? rally : ::As_Target(Nearby_Location());
     return (Target_Legal(target) && Transmit_Message(RADIO_MOVE_HERE, target, &unit) == RADIO_ROGER);
+}
+
+/***********************************************************************************************
+ * BuildingClass::Dismiss_Repaired_Unit -- Ends the repair bay's contact with a unit.          *
+ *                                                                                             *
+ *    CFE smarter repair bays: the unit forgets the bay, so it doesn't turn back to it, and    *
+ *    the bay goes back to idle for the next unit in the queue.                                *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+void BuildingClass::Dismiss_Repaired_Unit(void)
+{
+    if (In_Radio_Contact()) {
+        Contact_With_Whom()->ArchiveTarget = TARGET_NONE;
+        Contact_With_Whom()->Assign_Target(TARGET_NONE);
+    }
+    Transmit_Message(RADIO_UNTETHER);
+    Transmit_Message(RADIO_OVER_OUT);
+
+    if (Mission == MISSION_REPAIR) {
+        IsReadyToCommence = false;
+        Begin_Mode(BSTATE_IDLE);
+        Status = 1; // IDLE
+    }
 }
 
 /***********************************************************************************************

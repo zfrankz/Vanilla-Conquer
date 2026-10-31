@@ -100,6 +100,7 @@ public:
     void Find_LZ(void);
     bool Unload_Hovercraft_Process(void);
     bool Goto_Tiberium(void);
+    bool Do_Smarter_Run_Away(void);
     bool Harvesting(void);
     void APC_Close_Door(void);
     void APC_Open_Door(void);

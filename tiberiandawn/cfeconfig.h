@@ -95,7 +95,7 @@ struct CFEPatchConfig
     int EnableCommandoGuard = 1;
     int SafeSabotage = 0;
     int InfantryTiberiumAversion = 0;
-    int BuildingGap = 2;
+    int BuildingGap = 1; // CFE's default is 2; 1 keeps the original game without an ini entry.
     int HarvyQueueJumpCutoff = 4;
     int HarvyOptimizeUnloadWaitWeight = 13;
     int HarvyOptimizeThrashingCutoff = 5;

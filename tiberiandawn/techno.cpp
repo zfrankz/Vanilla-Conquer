@@ -856,6 +856,12 @@ RadioMessageType TechnoClass::Receive_Message(RadioClass* from, RadioMessageType
                 Strength += step;
                 return (RADIO_ROGER);
             }
+        } else if (ActiveCFEPatchConfig.EnableSmarterRepairBays) {
+
+            /*
+            **	Echo the message at full health, so that "no cash" and "done" can be told apart.
+            */
+            return (RADIO_REPAIR);
         }
         break;
 

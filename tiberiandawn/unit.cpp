@@ -768,6 +768,12 @@ RadioMessageType UnitClass::Receive_Message(RadioClass* from, RadioMessageType m
                 TarCom = As_Target();
                 return (RADIO_ROGER);
             }
+        } else if (ActiveCFEPatchConfig.EnableSmarterRepairBays && In_Radio_Contact()) {
+            TechnoClass* contact = Contact_With_Whom();
+            if (contact->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)contact) == STRUCT_REPAIR
+                && Do_Smarter_Run_Away()) {
+                return (RADIO_ROGER);
+            }
         }
         return (DriveClass::Receive_Message(from, message, param));
 
@@ -2449,6 +2455,115 @@ void UnitClass::Draw_It(int x, int y, WindowNumberType window)
 }
 
 /***********************************************************************************************
+ * UnitClass::Do_Smarter_Run_Away -- Drives off a repair bay to the best cell around it.       *
+ *                                                                                             *
+ *    CFE smarter repair bays: picks a cell next to the bay, preferring empty cells and the    *
+ *    direction the unit is already facing, and scatters anything friendly in the way.         *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  Is the unit on its way? False falls back on the ordinary scatter.                  *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *=============================================================================================*/
+bool UnitClass::Do_Smarter_Run_Away(void)
+{
+    /*
+    **	The rally point was already tried before getting here.
+    */
+    if (Target_Legal(NavCom) && Mission == MISSION_MOVE) {
+        return (true);
+    }
+
+    BuildingClass* beneathme = Map[Coord_Cell(Center_Coord())].Cell_Building();
+    if (!beneathme || *beneathme != STRUCT_REPAIR) {
+        return (false);
+    }
+
+    CELL mycell = Coord_Cell(Coord);
+    int bestscore = 0;
+    CELL bestcell = 0;
+    FacingType bestdirection = FACING_NONE;
+
+    for (FacingType face = FACING_N; face < FACING_COUNT; face++) {
+        CELL newcell = Adjacent_Cell(mycell, face);
+        if (!Map.In_Radar(newcell)) {
+            continue;
+        }
+
+        /*
+        **	The pad is a + shape, so the cardinal directions take an extra cell.
+        */
+        if (((int)face) % 2 == 0) {
+            newcell = Adjacent_Cell(newcell, face);
+            if (!Map.In_Radar(newcell)) {
+                continue;
+            }
+        }
+
+        int score = 0;
+        MoveType move = Can_Enter_Cell(newcell, FACING_NONE);
+        if (move == MOVE_OK) {
+            score += 104;
+        } else if (move == MOVE_MOVING_BLOCK) {
+            score += 100;
+        } else if (move == MOVE_TEMP) {
+            score += 10;
+        }
+
+        if (score) {
+            /*
+            **	Prefer the direction that takes the least turning.
+            */
+            FacingType current = Dir_Facing(PrimaryFacing);
+            int dista = ((int)face - (int)current) & 7;
+            int distb = ((int)current - (int)face) & 7;
+            score += 4 - min(dista, distb);
+
+            if (score > bestscore) {
+                bestscore = score;
+                bestcell = newcell;
+                bestdirection = face;
+            }
+        }
+    }
+
+    if (!bestscore) {
+        return (false);
+    }
+
+    Assign_Destination(::As_Target(bestcell));
+    Assign_Mission(MISSION_MOVE);
+
+    /*
+    **	The movement logic won't scatter occupants, because this unit is "close enough" already.
+    **	Also scatter whatever is just past the cell, to clear a block two deep.
+    */
+    if (bestscore < 100) {
+        CellClass* cellptr = &Map[bestcell];
+        TechnoClass* blockage = cellptr->Cell_Techno();
+        if (blockage && blockage->IsActive && House->Is_Ally(blockage)) {
+            cellptr->Incoming(Coord, true, true);
+        }
+        for (FacingType face = FACING_N; face < FACING_COUNT; face++) {
+            int turn = ((int)face - (int)bestdirection) & 7;
+            if (turn == 0 || turn == 1 || turn == 7) {
+                CELL newcell = Adjacent_Cell(bestcell, face);
+                if (!Map.In_Radar(newcell)) {
+                    continue;
+                }
+                cellptr = &Map[newcell];
+                blockage = cellptr->Cell_Techno();
+                if (blockage && blockage->IsActive && House->Is_Ally(blockage)) {
+                    cellptr->Incoming(Coord, true, true);
+                }
+            }
+        }
+    }
+    return (true);
+}
+
+/***********************************************************************************************
  * UnitClass::Goto_Tiberium -- Search for and head toward nearest available Tiberium patch.    *
  *                                                                                             *
  *    This routine is used to move a harvester to a place where it can load up with            *
@@ -3616,10 +3731,22 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
     ** for how they affect movement.
     */
     bool crushable = false;
+    bool repairbaysaysok = false;
     ObjectClass* obj = cellptr->Cell_Occupier();
     while (obj) {
 
         if (obj != this) {
+
+            /*
+            **	The repair bay's authorization doesn't cover another unit on the bay, such as
+            **	one that is leaving, so go on checking the rest of the cell.
+            */
+            if (ActiveCFEPatchConfig.EnableSmarterRepairBays && obj == Contact_With_Whom()
+                && obj->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)obj) == STRUCT_REPAIR) {
+                repairbaysaysok = true;
+                obj = obj->Next;
+                continue;
+            }
 
             /*
             **	Always allow entry if trying to move on a cell with
@@ -3707,6 +3834,14 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType facing) const
         **	Move to next object in chain.
         */
         obj = obj->Next;
+    }
+
+    /*
+    **	The bay was the only thing in the cell. The checks below would stop non-crushers.
+    */
+    if (repairbaysaysok && retval == MOVE_OK
+        && (!ActiveCFEPatchConfig.EnableCellReservationFix || !cellptr->Flag.Occupy.Vehicle)) {
+        return (MOVE_OK);
     }
 
     /*
@@ -4319,6 +4454,14 @@ ActionType UnitClass::What_Action(ObjectClass* object) const
     */
     if (Is_Owned_By_Player() && House->Class->House == object->Owner() && object->What_Am_I() == RTTI_BUILDING
         && ((UnitClass*)this)->Transmit_Message(RADIO_CAN_LOAD, (TechnoClass*)object) == RADIO_ROGER) {
+        action = ACTION_ENTER;
+    }
+
+    /*
+    **	Smarter repair bays let units queue for a bay that is in use.
+    */
+    if (ActiveCFEPatchConfig.EnableSmarterRepairBays && Is_Owned_By_Player() && House->Class->House == object->Owner()
+        && object->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)object) == STRUCT_REPAIR) {
         action = ACTION_ENTER;
     }
 
