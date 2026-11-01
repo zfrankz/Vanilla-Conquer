@@ -404,6 +404,19 @@ void UnitClass::AI(void)
     }
 
     /*
+    **	CFE harvester load balancing/optimize: clear the unload refinery if not harvesting or
+    **	entering a refinery.
+    */
+    if (Class->IsToHarvest && (ActiveCFEPatchConfig.EnableHarvyLoadBalancing || ActiveCFEPatchConfig.EnableHarvyOptimize)) {
+        if (Mission != MISSION_HARVEST) {
+            if (Mission != MISSION_ENTER || !In_Radio_Contact() || Contact_With_Whom()->What_Am_I() != RTTI_BUILDING
+                || *((BuildingClass*)Contact_With_Whom()) != STRUCT_REFINERY) {
+                TiberiumUnloadRefinery = TARGET_NONE;
+            }
+        }
+    }
+
+    /*
     **	Handle combat logic for this unit. It will determine if it has a target and
     **	if so, if conditions are favorable for firing. When conditions permit, the
     **	unit will fire upon its target.
@@ -901,6 +914,13 @@ RadioMessageType UnitClass::Receive_Message(RadioClass* from, RadioMessageType m
             Assign_Mission(MISSION_GUARD);
         }
         DriveClass::Receive_Message(from, message, param);
+        return (RADIO_ROGER);
+
+    case RADIO_CANCEL:
+        if ((Mission == MISSION_RETURN || Mission == MISSION_ENTER) && Class->IsToHarvest) {
+            Set_Mission(MISSION_HARVEST);
+            Transmit_Message(RADIO_OVER_OUT);
+        }
         return (RADIO_ROGER);
     }
     return (DriveClass::Receive_Message(from, message, param));
@@ -2931,6 +2951,21 @@ int UnitClass::Mission_Harvest(void)
     */
     case LOOKING:
         /*
+        **	CFE harvester features: a full harvester goes straight home.
+        */
+        if ((ActiveCFEPatchConfig.EnableHarvyQueueJump || ActiveCFEPatchConfig.EnableHarvyOptimize
+             || ActiveCFEPatchConfig.EnableHarvyLoadBalancing)
+            && Tiberium_Load() == 1) {
+            IsHarvesting = false;
+            Status = FINDHOME;
+            Assign_Target(TARGET_NONE); // Clear the target or it'll assume it already has a refinery to go to.
+            if (ActiveCFEPatchConfig.EnableHarvyLoadBalancing || ActiveCFEPatchConfig.EnableHarvyOptimize) {
+                TiberiumUnloadRefinery = TARGET_NONE;
+            }
+            return (1);
+        }
+
+        /*
         **	Slightly hacky; if TarCom is set then skip to finding home state.
         */
         if (Target_Legal(TarCom)) {
@@ -2942,6 +2977,9 @@ int UnitClass::Mission_Harvest(void)
         /*
         ** Look for ore where we last found some - mine the same patch
         */
+        if (ActiveCFEPatchConfig.EnableHarvyOptimize || ActiveCFEPatchConfig.EnableHarvyLoadBalancing) {
+            TiberiumUnloadRefinery = TARGET_NONE;
+        }
         if (Target_Legal(ArchiveTarget)) {
             Assign_Destination(ArchiveTarget);
             ArchiveTarget = 0;
@@ -3029,6 +3067,27 @@ int UnitClass::Mission_Harvest(void)
             BuildingClass* nearest = Find_Best_Refinery();
 
             /*
+            **	CFE harvester load balancing/optimize: remember the refinery picked even when
+            **	it's busy, so that other harvesters count this one, and queue up beside it.
+            */
+            if (ActiveCFEPatchConfig.EnableHarvyLoadBalancing || ActiveCFEPatchConfig.EnableHarvyOptimize) {
+                if (nearest != NULL) {
+                    TiberiumUnloadRefinery = nearest->As_Target();
+                    if (Transmit_Message(RADIO_HELLO, nearest) == RADIO_ROGER) {
+                        Status = HEADINGHOME;
+                        if (nearest->House == PlayerPtr && (PlayerPtr->Capacity - PlayerPtr->Tiberium) < 300
+                            && PlayerPtr->Capacity > 500
+                            && (PlayerPtr->ActiveBScan & (STRUCTF_REFINERY | STRUCTF_CONST))) {
+                            Speak(VOX_NEED_MO_CAPACITY);
+                        }
+                    } else {
+                        Assign_Destination(::As_Target(Nearby_Location(nearest)));
+                    }
+                }
+                break;
+            }
+
+            /*
             **	Since the refinery said it was ok to load, establish radio
             **	contact with the refinery and then await docking orders.
             */
@@ -3043,7 +3102,11 @@ int UnitClass::Mission_Harvest(void)
                 nearest = Find_Best_Refinery();
                 ScenarioInit--;
                 if (nearest != NULL) {
-                    Assign_Destination(::As_Target(Nearby_Location(nearest)));
+                    if (ActiveCFEPatchConfig.EnableHarvyQueueJump && Transmit_Message(RADIO_HELLO, nearest) == RADIO_ROGER) {
+                        Status = HEADINGHOME;
+                    } else {
+                        Assign_Destination(::As_Target(Nearby_Location(nearest)));
+                    }
                 }
             }
         }
@@ -4461,27 +4524,177 @@ fixed UnitClass::Tiberium_Load(void) const
     return (0);
 }
 
+BuildingClass* UnitClass::Tiberium_Unload_Refinery(void) const
+{
+    return Target_Legal(TiberiumUnloadRefinery) ? As_Building(TiberiumUnloadRefinery) : NULL;
+}
+
+/*
+**	CFE harvester load balancing/optimize: candidate refineries for Find_Best_Refinery.
+*/
+struct RefineryData
+{
+    BuildingClass* Refinery;
+    int Distance;
+    int Harvesters;
+};
+
+static bool operator==(const RefineryData& lhs, const RefineryData& rhs)
+{
+    return lhs.Refinery == rhs.Refinery;
+}
+
+static bool operator!=(const RefineryData& lhs, const RefineryData& rhs)
+{
+    return !(lhs == rhs);
+}
+
+static int _refinery_compare(const void* left, const void* right)
+{
+    const RefineryData& lhs = *reinterpret_cast<const RefineryData*>(left);
+    const RefineryData& rhs = *reinterpret_cast<const RefineryData*>(right);
+    if (lhs.Distance < rhs.Distance) {
+        return -1;
+    } else if (rhs.Distance < lhs.Distance) {
+        return 1;
+    }
+    return 0;
+}
+
 BuildingClass* UnitClass::Find_Best_Refinery(void) const
 {
-    /*
-    **	Remember our last refinery and prefer that one, if still available and valid.
-    */
-    if (Target_Legal(TiberiumUnloadRefinery)) {
-        BuildingClass* refinery = As_Building(TiberiumUnloadRefinery);
-        if (refinery != NULL && refinery->House == House && !refinery->IsInLimbo
-            && refinery->Mission != MISSION_DECONSTRUCTION && *refinery == STRUCT_REFINERY
-            && Map[refinery->Center_Coord()].Zones[Techno_Type_Class()->MZone]
-                   == Map[Center_Coord()].Zones[Techno_Type_Class()->MZone]) {
-            return refinery;
-        } else {
-            TiberiumUnloadRefinery = TARGET_NONE;
+    if (!ActiveCFEPatchConfig.EnableHarvyLoadBalancing && !ActiveCFEPatchConfig.EnableHarvyOptimize) {
+        /*
+        **	Remember our last refinery and prefer that one, if still available and valid.
+        */
+        if (Target_Legal(TiberiumUnloadRefinery)) {
+            BuildingClass* refinery = As_Building(TiberiumUnloadRefinery);
+            if (refinery != NULL && (refinery->IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes)
+                && refinery->House == House && !refinery->IsInLimbo && refinery->Mission != MISSION_DECONSTRUCTION
+                && *refinery == STRUCT_REFINERY
+                && Map[refinery->Center_Coord()].Zones[Techno_Type_Class()->MZone]
+                       == Map[Center_Coord()].Zones[Techno_Type_Class()->MZone]) {
+                return refinery;
+            } else {
+                TiberiumUnloadRefinery = TARGET_NONE;
+            }
         }
+
+        /*
+        **	Find nearby refinery and head to it?
+        */
+        return Find_Docking_Bay(STRUCT_REFINERY, false);
     }
 
     /*
-    **	Find nearby refinery and head to it?
+    **	CFE: all distances here are in leptons; the settings were converted in cfeconfig.cpp.
     */
-    return Find_Docking_Bay(STRUCT_REFINERY, false);
+    static DynamicVectorClass<RefineryData> _refineries;
+
+    _refineries.Clear();
+    for (int i = 0; i < Buildings.Count(); ++i) {
+        BuildingClass* refinery = Buildings.Ptr(i);
+        if (refinery != NULL && refinery->IsActive && refinery->House == House && !refinery->IsInLimbo
+            && refinery->Mission != MISSION_DECONSTRUCTION && *refinery == STRUCT_REFINERY
+            && Map[refinery->Center_Coord()].Zones[Techno_Type_Class()->MZone]
+                   == Map[Center_Coord()].Zones[Techno_Type_Class()->MZone]) {
+            RefineryData data = {refinery, Distance(refinery), 0};
+            _refineries.Add(data);
+        }
+    }
+
+    // Base case for zero or one refineries.
+    if (_refineries.Count() == 0) {
+        return NULL;
+    } else if (_refineries.Count() == 1) {
+        return _refineries[0].Refinery;
+    }
+
+    // Count harvesters going to each refinery as well as the total.
+    int num_harvesters = 0;
+    for (int i = 0; i < Units.Count(); ++i) {
+        UnitClass* unit = Units.Ptr(i);
+        if (unit != NULL && unit->IsActive && !unit->IsInLimbo && unit->Class->IsToHarvest && unit->House == House) {
+            BuildingClass* refinery = unit->Tiberium_Unload_Refinery();
+            if (refinery != NULL) {
+                RefineryData key = {refinery, 0, 0};
+                int index = _refineries.ID(key);
+                if (index >= 0) {
+                    /*
+                    **	If we're closer to the refinery than another harvester by a large enough
+                    **	margin, don't count it. Only discount a first-in-line harvester if queue
+                    **	jumping is enabled (Status 2 is FINDHOME, so not first in line).
+                    */
+                    if (ActiveCFEPatchConfig.EnableHarvyOptimize
+                        && (ActiveCFEPatchConfig.EnableHarvyQueueJump || unit->Status == 2)) {
+                        int other_distance = unit->Distance(refinery);
+                        if (_refineries[index].Distance + ActiveCFEPatchConfig.HarvyOptimizeCommunalismWeight
+                                < other_distance
+                            && other_distance > ActiveCFEPatchConfig.HarvyQueueJumpCutoff) {
+                            continue;
+                        }
+                    }
+                    _refineries[index].Harvesters++;
+                    num_harvesters++;
+                }
+            }
+        }
+    }
+
+    // Increase distance to account for the wait for other harvesters to unload. To prevent
+    // thrashing, use a lower penalty if already very close to the refinery.
+    if (ActiveCFEPatchConfig.EnableHarvyOptimize) {
+        for (int i = 0; i < _refineries.Count(); ++i) {
+            if (_refineries[i].Distance < ActiveCFEPatchConfig.HarvyOptimizeThrashingCutoff) {
+                _refineries[i].Distance += _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeThrashingWeight;
+            } else {
+                _refineries[i].Distance += _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeUnloadWaitWeight;
+            }
+        }
+    }
+
+    // Sort by distance (special case for 2 refineries as that's a single swap).
+    if (_refineries.Count() == 2) {
+        if (_refineries[0].Distance > _refineries[1].Distance) {
+            RefineryData temp = _refineries[0];
+            _refineries[0] = _refineries[1];
+            _refineries[1] = temp;
+        }
+    } else {
+        qsort(&_refineries[0], _refineries.Count(), sizeof(RefineryData), _refinery_compare);
+    }
+
+    // Impact of other harvesters is now baked into the distances, so just take the lowest.
+    if (ActiveCFEPatchConfig.EnableHarvyOptimize) {
+        return _refineries[0].Refinery;
+    }
+
+    // Evenly distribute harvesters among refineries.
+    int harvesters_per_refinery = (num_harvesters + _refineries.Count() - 1) / _refineries.Count();
+    for (int i = 0; i < _refineries.Count(); ++i) {
+        if (_refineries[i].Harvesters < harvesters_per_refinery) {
+            return _refineries[i].Refinery;
+        }
+    }
+
+    // Fall back on the closest refinery.
+    return _refineries[0].Refinery;
+}
+
+/***********************************************************************************************
+ * UnitClass::Reconsider_Refinery -- Makes a queued harvester pick its refinery again.         *
+ *                                                                                             *
+ *    CFE Patch Redux "optimize harvesters": called when a refinery finishes unloading. Only   *
+ *    affects a harvester heading home that isn't first in line (Status 2 is FINDHOME in       *
+ *    Mission_Harvest).                                                                        *
+ *=============================================================================================*/
+void UnitClass::Reconsider_Refinery(void)
+{
+    if (Target_Legal(NavCom) && TiberiumUnloadRefinery != TARGET_NONE && Mission == MISSION_HARVEST && Status == 2) {
+        Assign_Destination(TARGET_NONE);
+        Assign_Target(TARGET_NONE);
+        TiberiumUnloadRefinery = TARGET_NONE;
+    }
 }
 
 /***********************************************************************************************

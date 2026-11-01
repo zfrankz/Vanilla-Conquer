@@ -185,6 +185,8 @@ public:
     virtual FireErrorType Can_Fire(TARGET target, int which) const;
     virtual fixed Tiberium_Load(void) const;
     virtual BuildingClass* Find_Best_Refinery(void) const;
+    BuildingClass* Tiberium_Unload_Refinery(void) const;
+    void Reconsider_Refinery(void);
 
     /*
     **	Coordinate inquiry functions. These are used for both display and
