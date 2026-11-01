@@ -216,7 +216,14 @@ void Initialise_CFE_Patch_Config()
     INIClass ini;
     CCFileClass file(CFE_CONFIG_FILE_NAME);
     if (file.Is_Available()) {
-        ini.Load(file);
+        // Read_Line drops a last line with no line end, and people edit this file by hand.
+        const int size = file.Size();
+        char* text = new char[size + 1];
+        const int length = file.Read(text, size);
+        text[length] = '\n';
+        BufferStraw straw(text, length + 1);
+        ini.Load(straw);
+        delete[] text;
     }
     Populate_CFE_Patch_Config_From_INI(ini);
 }
