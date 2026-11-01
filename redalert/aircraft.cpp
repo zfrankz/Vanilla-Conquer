@@ -979,7 +979,8 @@ void AircraftClass::AI(void)
     /*
     **	CFE: rank 3 veteran aircraft repair for free while docked, at half the rate of a repair bay.
     */
-    if (Vet().Rank == 3 && (*this == AIRCRAFT_LONGBOW || *this == AIRCRAFT_HIND || *this == AIRCRAFT_MIG || *this == AIRCRAFT_YAK)
+    if (Vet().Rank == 3
+        && (*this == AIRCRAFT_LONGBOW || *this == AIRCRAFT_HIND || *this == AIRCRAFT_MIG || *this == AIRCRAFT_YAK)
         && Height == 0 && !IsLanding && !IsTakingOff && Health_Ratio() < Rule.ConditionGreen) {
         TechnoClass* tech = Contact_With_Whom();
         if (tech != NULL && tech->What_Am_I() == RTTI_BUILDING
@@ -1827,8 +1828,8 @@ int AircraftClass::Mission_Move(void)
         case TAKE_OFF:
 
             // CFE: with smarter aircraft, no ammo means no attack-move.
-            if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove && ActiveCFEPatchConfig.EnableSmarterAircraft
-                && !IsALoaner && !Ammo) {
+            if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove
+                && ActiveCFEPatchConfig.EnableSmarterAircraft && !IsALoaner && !Ammo) {
                 Reset_Attack_Move();
                 Clear_Navigation_List();
                 Enter_Idle_Mode();
@@ -1958,8 +1959,8 @@ int AircraftClass::Mission_Move(void)
     */
     case VALIDATE_LZ:
         // CFE: with smarter aircraft, no ammo means no attack-move.
-        if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove && ActiveCFEPatchConfig.EnableSmarterAircraft
-            && !IsALoaner && !Ammo) {
+        if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove
+            && ActiveCFEPatchConfig.EnableSmarterAircraft && !IsALoaner && !Ammo) {
             Memorize_Navigation_List();
             Reset_Attack_Move();
             Clear_Navigation_List();
@@ -2505,7 +2506,8 @@ void AircraftClass::Player_Assign_Mission(MissionType mission, TARGET target, TA
     /*
     **	CFE: Q-moves for aircraft.
     */
-    if (ActiveCFEPatchConfig.EnableAirQMove && (Keyboard->Down(Options.KeyQueueMove1) || Keyboard->Down(Options.KeyQueueMove2))) {
+    if (ActiveCFEPatchConfig.EnableAirQMove
+        && (Keyboard->Down(Options.KeyQueueMove1) || Keyboard->Down(Options.KeyQueueMove2))) {
         if (mission == MISSION_MOVE) {
             mission = MISSION_QMOVE;
         } else if (mission == MISSION_ATTACKMOVE) {
@@ -2606,7 +2608,8 @@ ActionType AircraftClass::What_Action(CELL cell) const
     ActionType action = FootClass::What_Action(cell);
 
     // using function for IsVisible so we have different results for different players - JAS 2019/09/30
-    if ((action == ACTION_MOVE || action == ACTION_ATTACK || action == ACTION_ATTACKMOVE) && !Map[cell].Is_Visible(PlayerPtr)) {
+    if ((action == ACTION_MOVE || action == ACTION_ATTACK || action == ACTION_ATTACKMOVE)
+        && !Map[cell].Is_Visible(PlayerPtr)) {
         action = ACTION_NOMOVE;
     }
 
@@ -4286,7 +4289,8 @@ FireErrorType AircraftClass::Can_Fire(TARGET target, int which) const
         if (Class->IsFixedWing) {
 
             // CFE: test against the target asked about, not always TarCom.
-            int diff = PrimaryFacing.Difference(Direction(ActiveCFEPatchConfig.EnableGeneralBugfixes ? target : TarCom));
+            int diff =
+                PrimaryFacing.Difference(Direction(ActiveCFEPatchConfig.EnableGeneralBugfixes ? target : TarCom));
             if (ABS(diff) > (fudge ? 16 : 8)) {
                 return (FIRE_FACING);
             }

@@ -68,11 +68,10 @@ unsigned int const EditorCodes[] = {0xA2C09326, // Erik Yeo
 **	a unit can have. The system initiated orders have no use for the ASCII name
 **	associated, but they are listed here for completeness sake.
 */
-char const* Missions[MISSION_COUNT] = {"Sleep",   "Attack", "Move",    "QMove",   "Retreat",    "Guard",
-                                       "Sticky",  "Enter",  "Capture", "Harvest", "Area Guard", "Return",
-                                       "Stop",    "Ambush", "Hunt",    "Unload",  "Sabotage",   "Construction",
-                                       "Selling", "Repair", "Rescue",  "Missile", "Harmless",
-                                       "Attack-Move", "Attack-QMove"};
+char const* Missions[MISSION_COUNT] = {
+    "Sleep",   "Attack",     "Move",   "QMove",   "Retreat",  "Guard",       "Sticky",      "Enter",    "Capture",
+    "Harvest", "Area Guard", "Return", "Stop",    "Ambush",   "Hunt",        "Unload",      "Sabotage", "Construction",
+    "Selling", "Repair",     "Rescue", "Missile", "Harmless", "Attack-Move", "Attack-QMove"};
 
 /***************************************************************************
 **	Special weapon names.

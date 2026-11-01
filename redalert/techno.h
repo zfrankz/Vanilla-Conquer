@@ -54,8 +54,8 @@ class TechnoTypeClass;
 /****************************************************************************
 **	This is the common data between building and units.
 */
-#define CFE_MAX_NAVQUEUE 10
-#define MAX_NAVQUEUE     CFE_MAX_NAVQUEUE
+#define CFE_MAX_NAVQUEUE   10
+#define MAX_NAVQUEUE       CFE_MAX_NAVQUEUE
 #define MAX_NAVQUEUE_INDEX (MAX_NAVQUEUE - 1)
 
 /*
@@ -72,8 +72,8 @@ struct CFEVeterancy
     bool QuadShooter = false;
     bool ReadyQuadShot = false;
     float ROFBias = 1.0f;
-    COORDINATE SecondaryZapTarget = 0;  // Chain lightning, rank 3 tesla units.
-    TARGET WhoLaidMe = TARGET_NONE;     // Land mines: the minelayer, which gets the XP.
+    COORDINATE SecondaryZapTarget = 0;      // Chain lightning, rank 3 tesla units.
+    TARGET WhoLaidMe = TARGET_NONE;         // Land mines: the minelayer, which gets the XP.
     unsigned short IronCurtainCooldown = 0; // Rank 3 mammoth tank.
     unsigned short Recharge = 0;            // Rank 3 minelayer ammo, rank 3 destroyer sonar, or target recheck.
 

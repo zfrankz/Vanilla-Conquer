@@ -413,7 +413,8 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
         **	CFE "optimize harvesters": harvesters of this house that are heading to a refinery
         **	but aren't first in line pick their refinery again.
         */
-        if (*this == STRUCT_REFINERY && ActiveCFEPatchConfig.EnableHarvyOptimize && IsActive && !IsInLimbo && HasOpened) {
+        if (*this == STRUCT_REFINERY && ActiveCFEPatchConfig.EnableHarvyOptimize && IsActive && !IsInLimbo
+            && HasOpened) {
             for (int index = 0; index < Units.Count(); index++) {
                 UnitClass* unit = Units.Ptr(index);
                 if (unit != NULL && unit->IsActive && !unit->IsInLimbo && unit->Class->IsToHarvest
@@ -2450,8 +2451,9 @@ void BuildingClass::Update_Buildables(void)
                     } else {
                         // CFE: an airstrip shouldn't offer helicopters or a helipad planes after an ally's MCV.
                         if (!ActiveCFEPatchConfig.EnableGeneralBugfixes
-                            || (AircraftTypeClass::As_Reference((AircraftType)a).IsFixedWing ? *this == STRUCT_AIRSTRIP
-                                                                                             : *this == STRUCT_HELIPAD)) {
+                            || (AircraftTypeClass::As_Reference((AircraftType)a).IsFixedWing
+                                    ? *this == STRUCT_AIRSTRIP
+                                    : *this == STRUCT_HELIPAD)) {
                             Map.Add(RTTI_AIRCRAFTTYPE, a, buildable_via_capture);
                         }
                     }
@@ -6329,7 +6331,8 @@ bool BuildingClass::Can_Have_Rally_Point(void) const
     if (ActiveCFEPatchConfig.EnableSmarterRepairBays && Class->Type == STRUCT_REPAIR) {
         return (true);
     }
-    return (Class->ToBuild == RTTI_INFANTRYTYPE || Class->ToBuild == RTTI_UNITTYPE || Class->ToBuild == RTTI_VESSELTYPE);
+    return (Class->ToBuild == RTTI_INFANTRYTYPE || Class->ToBuild == RTTI_UNITTYPE
+            || Class->ToBuild == RTTI_VESSELTYPE);
 }
 
 /*

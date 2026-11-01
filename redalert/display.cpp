@@ -709,8 +709,9 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
     //	ptr = CursorSize;
     CELL cell = trycell;
     //	CELL cell = ZoneCell;
-    bool cfegap = ActiveCFEPatchConfig.EnableLongGapFix
-                  || (ActiveCFEPatchConfig.BuildingGapOffset && building->Adjacent - ActiveCFEPatchConfig.BuildingGapOffset == 1);
+    bool cfegap =
+        ActiveCFEPatchConfig.EnableLongGapFix
+        || (ActiveCFEPatchConfig.BuildingGapOffset && building->Adjacent - ActiveCFEPatchConfig.BuildingGapOffset == 1);
     if (cfegap) {
 
         /*
@@ -734,13 +735,13 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
                     if (!In_Radar(nextcell)) {
                         continue;
                     }
-                    CellClass const& near = (*this)[nextcell];
-                    if (near.Owner == house
+                    CellClass const& nearby = (*this)[nextcell];
+                    if (nearby.Owner == house
                         && (building->IsWall
-                            || (near.Smudge != SMUDGE_NONE && SmudgeTypeClass::As_Reference(near.Smudge).IsBib))) {
+                            || (nearby.Smudge != SMUDGE_NONE && SmudgeTypeClass::As_Reference(nearby.Smudge).IsBib))) {
                         proximitypass = true;
                     }
-                    BuildingClass const* base = near.Cell_Building();
+                    BuildingClass const* base = nearby.Cell_Building();
                     if (base != NULL && base->IsActive && base->House->Class->House == house && base->Class->IsBase) {
                         proximitypass = true;
                     }
@@ -841,7 +842,9 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
     if (!retval && !noradar && building->IsWall && house != HOUSE_NONE && ActiveCFEPatchConfig.WallBuildLength > 1) {
         static FacingType const _cardinals[4] = {FACING_N, FACING_E, FACING_S, FACING_W};
         for (int d = 0; d < ARRAY_SIZE(_cardinals); d++) {
-            if (Scan_For_Overlay(trycell, _cardinals[d], building->Overlay_Type(), ActiveCFEPatchConfig.WallBuildLength, true, house) >= 0) {
+            if (Scan_For_Overlay(
+                    trycell, _cardinals[d], building->Overlay_Type(), ActiveCFEPatchConfig.WallBuildLength, true, house)
+                >= 0) {
                 retval = true;
                 break;
             }
@@ -1139,7 +1142,8 @@ void DisplayClass::Update_Placement_Cursor(void)
 
         for (int d = 0; d < ARRAY_SIZE(_cardinals); d++) {
             FacingType dir = _cardinals[d];
-            int scandist = Scan_For_Overlay(ZoneCell, dir, building->Overlay_Type(), ActiveCFEPatchConfig.WallBuildLength);
+            int scandist =
+                Scan_For_Overlay(ZoneCell, dir, building->Overlay_Type(), ActiveCFEPatchConfig.WallBuildLength);
             if (count + scandist > maxoffsets) {
                 break;
             }
@@ -3990,7 +3994,8 @@ void DisplayClass::Mouse_Left_Release(CELL cell, int x, int y, ObjectClass* obje
                 FormSpeed = SPEED_WHEEL;
                 FormMaxSpeed = MPH_LIGHT_SPEED;
 
-                if ((action == ACTION_MOVE || action == ACTION_NOMOVE || action == ACTION_ATTACKMOVE) && CurrentObject.Count()) {
+                if ((action == ACTION_MOVE || action == ACTION_NOMOVE || action == ACTION_ATTACKMOVE)
+                    && CurrentObject.Count()) {
 
                     /*
                     ** Scan all units.  If any are selected that shouldn't be, or aren't
@@ -5095,8 +5100,14 @@ void DisplayClass::Flag_Cell(CELL cell)
     CellRedraw[cell] = true;
 }
 
-static ActionType _priority_actions[] =
-    {ACTION_ATTACK, ACTION_ENTER, ACTION_HEAL, ACTION_REPAIR, ACTION_SABOTAGE, ACTION_CAPTURE, ACTION_MOVE, ACTION_ATTACKMOVE};
+static ActionType _priority_actions[] = {ACTION_ATTACK,
+                                         ACTION_ENTER,
+                                         ACTION_HEAL,
+                                         ACTION_REPAIR,
+                                         ACTION_SABOTAGE,
+                                         ACTION_CAPTURE,
+                                         ACTION_MOVE,
+                                         ACTION_ATTACKMOVE};
 
 static int get_action_priority(ActionType action)
 {

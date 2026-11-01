@@ -527,7 +527,8 @@ bool FootClass::Basic_Path(void)
         if (ActiveCFEPatchConfig.EnableASPathing) {
             // randomize so that colliding units won't always keep retrying oon the same frame
             PathDelay = Random_Pick(CFE_PATH_DELAY - 1, CFE_PATH_DELAY + 1);
-            Repath_Delay() = Random_Pick(3, 5); // Chthon CFE Note: how many cells to travel before automatically repathing
+            Repath_Delay() =
+                Random_Pick(3, 5); // Chthon CFE Note: how many cells to travel before automatically repathing
         } else {
             PathDelay = PATH_DELAY;
         }
@@ -1312,7 +1313,8 @@ ResultType FootClass::Take_Damage(int& damage, int distance, WarheadType warhead
                 &&
                 //				!Target_Legal(NavCom) &&
                 (Mission == MISSION_AMBUSH || Mission == MISSION_GUARD || Mission == MISSION_RESCUE
-                 || Mission == MISSION_GUARD_AREA || Mission == MISSION_ATTACK || Mission == MISSION_TIMED_HUNT
+                 || Mission == MISSION_GUARD_AREA || Mission == MISSION_ATTACK
+                 || Mission == MISSION_TIMED_HUNT
                  // CFE: computer controlled commandos break off sabotage to shoot back at infantry.
                  || (Mission == MISSION_SABOTAGE && ActiveCFEPatchConfig.SmarterCPUCommandos && !House->IsHuman
                      && source->What_Am_I() == RTTI_INFANTRY))) {
@@ -1473,9 +1475,8 @@ void FootClass::Active_Click_With(ActionType action, CELL cell)
     case ACTION_NOMOVE:
         // using function for IsVisible so we have different results for different players - JAS 2019/09/30
         if (What_Am_I() != RTTI_AIRCRAFT || Map[cell].Is_Visible(PlayerPtr)) {
-            Player_Assign_Mission(action == ACTION_ATTACKMOVE ? MISSION_ATTACKMOVE : MISSION_MOVE,
-                                  TARGET_NONE,
-                                  ::As_Target(cell));
+            Player_Assign_Mission(
+                action == ACTION_ATTACKMOVE ? MISSION_ATTACKMOVE : MISSION_MOVE, TARGET_NONE, ::As_Target(cell));
         }
         break;
 
@@ -2091,8 +2092,9 @@ void FootClass::Detach(TARGET target, bool all)
             }
             if (queue.Memorized[index] == target) {
                 removedmemorized = true;
-                memmove(
-                    &queue.Memorized[index], &queue.Memorized[index + 1], (MAX_NAVQUEUE_INDEX - index) * sizeof(TARGET));
+                memmove(&queue.Memorized[index],
+                        &queue.Memorized[index + 1],
+                        (MAX_NAVQUEUE_INDEX - index) * sizeof(TARGET));
                 queue.Memorized[MAX_NAVQUEUE_INDEX] = TARGET_NONE;
                 queue.MemorizedSize--;
             }
@@ -2376,8 +2378,8 @@ int FootClass::LeptonsPerTickSpeed(LandType landtype) const
         if (Health_Ratio() < 0x0080) {
             mythrottle *= 0.75;
         }
-        myMPH = MPHType(
-            min((int)((int)(meunit->Class->MaxSpeed * Vet().SpeedBias) * House->GroundspeedBias), (int)MPH_LIGHT_SPEED));
+        myMPH = MPHType(min((int)((int)(meunit->Class->MaxSpeed * Vet().SpeedBias) * House->GroundspeedBias),
+                            (int)MPH_LIGHT_SPEED));
     } else if (iamaircraft) {
         AircraftClass const* meair = (AircraftClass const*)this;
         myMPH = MPHType(
@@ -2650,7 +2652,8 @@ bool CFE_Save_Attack_Move(FileClass& file)
 
     int size = sizeof(CFEAttackMove);
     if (file.Write(&_cfe_am_marker, sizeof(_cfe_am_marker)) != sizeof(_cfe_am_marker)
-        || file.Write(&size, sizeof(size)) != sizeof(size) || file.Write(&records, sizeof(records)) != sizeof(records)) {
+        || file.Write(&size, sizeof(size)) != sizeof(size)
+        || file.Write(&records, sizeof(records)) != sizeof(records)) {
         return (false);
     }
 
@@ -2695,8 +2698,8 @@ void CFE_Load_Attack_Move(FileClass& file)
     unsigned int marker = 0;
     int size = 0;
     int records = 0;
-    if (file.Read(&marker, sizeof(marker)) != sizeof(marker)
-        || marker != _cfe_am_marker || file.Read(&size, sizeof(size)) != sizeof(size) || size != sizeof(CFEAttackMove)
+    if (file.Read(&marker, sizeof(marker)) != sizeof(marker) || marker != _cfe_am_marker
+        || file.Read(&size, sizeof(size)) != sizeof(size) || size != sizeof(CFEAttackMove)
         || file.Read(&records, sizeof(records)) != sizeof(records)) {
         return;
     }
@@ -2813,8 +2816,7 @@ bool FootClass::Handle_Navigation_List(void)
     **	Don't skip ahead while an attack-move hasn't reached its current waypoint.
     */
     CFEAttackMove const& attackmove = Attack_Move();
-    if (attackmove.IsOn && Target_Legal(attackmove.Destination)
-        && Distance(attackmove.Destination) > 3 * CELL_LEPTON_W
+    if (attackmove.IsOn && Target_Legal(attackmove.Destination) && Distance(attackmove.Destination) > 3 * CELL_LEPTON_W
         && (What_Am_I() == RTTI_AIRCRAFT
             || Find_Path_AStar(nullptr, Coord_Cell(Coord), As_Cell(attackmove.Destination), 1, MOVE_MOVING_BLOCK, -1)
                    != 0)) {
@@ -3080,7 +3082,8 @@ bool CFE_Save_Nav_Queues(FileClass& file)
 
     int size = sizeof(CFENavQueue);
     if (file.Write(&_cfe_nav_marker, sizeof(_cfe_nav_marker)) != sizeof(_cfe_nav_marker)
-        || file.Write(&size, sizeof(size)) != sizeof(size) || file.Write(&records, sizeof(records)) != sizeof(records)) {
+        || file.Write(&size, sizeof(size)) != sizeof(size)
+        || file.Write(&records, sizeof(records)) != sizeof(records)) {
         return (false);
     }
 

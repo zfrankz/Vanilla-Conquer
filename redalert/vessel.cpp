@@ -335,51 +335,50 @@ MoveType VesselClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveT
         // if building, then building
         if (cellptr->Flag.Occupy.Building) {
             BuildingClass* bb = cellptr->Cell_Building();
-            if (bb && bb->IsActive){
+            if (bb && bb->IsActive) {
                 // is it friendly?
                 if (House->Is_Ally(bb)) {
-                    return(MOVE_NO);
+                    return (MOVE_NO);
                 }
                 // enemy?
                 else {
                     // can we kill it?
                     // let's assume all the primary weapons that a vessel type can have can destroy a sea building
-                    if (Class->PrimaryWeapon){
-                        return(MOVE_DESTROYABLE);
-                    }
-                    else {
-                        return(MOVE_NO);
+                    if (Class->PrimaryWeapon) {
+                        return (MOVE_DESTROYABLE);
+                    } else {
+                        return (MOVE_NO);
                     }
                 }
             }
             // flag was wrong?! Let's just not go there to be safe
-            return(MOVE_NO);
+            return (MOVE_NO);
         }
 
         // if cloaked occupant
-        TechnoClass * techno = cellptr->Cell_Techno();
+        TechnoClass* techno = cellptr->Cell_Techno();
         if (techno != NULL && (techno != this) && techno->IsActive && techno->Is_Cloaked(this)) {
-            return(MOVE_CLOAK);
+            return (MOVE_CLOAK);
         }
 
         // if cloaked entrant
         FootClass* rv = cellptr->Reserving_Vehicle();
         if (rv && (rv != this) && rv->IsActive && rv->Is_Cloaked(this)) {
-            return(MOVE_CLOAK);
+            return (MOVE_CLOAK);
         }
 
         // non-cloaked occupant vessel
-        VesselClass* vv =cellptr->Cell_Vessel();
-        if (vv && (vv != this) && vv->IsActive){
+        VesselClass* vv = cellptr->Cell_Vessel();
+        if (vv && (vv != this) && vv->IsActive) {
             // is it friendly?
             if (House->Is_Ally(vv)) {
                 // is it moving?
-                if (Target_Legal(vv->NavCom) || vv->PrimaryFacing.Is_Rotating() || vv->IsDriving){
+                if (Target_Legal(vv->NavCom) || vv->PrimaryFacing.Is_Rotating() || vv->IsDriving) {
                     return (MOVE_MOVING_BLOCK);
                 }
                 // stationary
                 else {
-                    return(MOVE_TEMP);
+                    return (MOVE_TEMP);
                 }
             }
             // enemy?
@@ -388,24 +387,25 @@ MoveType VesselClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveT
                 // are we totally unarmed?
                 bool couldkill = Class->PrimaryWeapon ? true : false;
                 // is it a sub and we lack anti-sub weapon?
-                if (couldkill && ((*vv == VESSEL_SS) || (*vv == VESSEL_MISSILESUB))){
-                    bool canhitsub = ((Class->PrimaryWeapon && Class->PrimaryWeapon->Bullet && Class->PrimaryWeapon->Bullet->IsAntiSub) || (Class->SecondaryWeapon && Class->SecondaryWeapon->Bullet && Class->SecondaryWeapon->Bullet->IsAntiSub));
-                    if (!canhitsub){
+                if (couldkill && ((*vv == VESSEL_SS) || (*vv == VESSEL_MISSILESUB))) {
+                    bool canhitsub = ((Class->PrimaryWeapon && Class->PrimaryWeapon->Bullet
+                                       && Class->PrimaryWeapon->Bullet->IsAntiSub)
+                                      || (Class->SecondaryWeapon && Class->SecondaryWeapon->Bullet
+                                          && Class->SecondaryWeapon->Bullet->IsAntiSub));
+                    if (!canhitsub) {
                         couldkill = false;
                     }
                 }
-                if (couldkill){
+                if (couldkill) {
                     return MOVE_DESTROYABLE;
-                }
-                else {
+                } else {
                     return MOVE_NO;
                 }
             }
         }
 
-
         // entrant vessel, have a pointer
-        if (rv && (rv != this) && rv->IsActive ){
+        if (rv && (rv != this) && rv->IsActive) {
             // is it friendly?
             if (House->Is_Ally(rv)) {
                 return (MOVE_MOVING_BLOCK);
@@ -417,16 +417,19 @@ MoveType VesselClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveT
                 bool couldkill = Class->PrimaryWeapon ? true : false;
                 // is it a sub and we lack anti-sub weapon?
                 RTTIType whatrv = rv->What_Am_I();
-                if (couldkill && (whatrv == RTTI_VESSEL) && ((*((VesselClass*)rv) == VESSEL_SS) || (*((VesselClass*)rv) == VESSEL_MISSILESUB))){
-                    bool canhitsub = ((Class->PrimaryWeapon && Class->PrimaryWeapon->Bullet && Class->PrimaryWeapon->Bullet->IsAntiSub) || (Class->SecondaryWeapon && Class->SecondaryWeapon->Bullet && Class->SecondaryWeapon->Bullet->IsAntiSub));
-                    if (!canhitsub){
+                if (couldkill && (whatrv == RTTI_VESSEL)
+                    && ((*((VesselClass*)rv) == VESSEL_SS) || (*((VesselClass*)rv) == VESSEL_MISSILESUB))) {
+                    bool canhitsub = ((Class->PrimaryWeapon && Class->PrimaryWeapon->Bullet
+                                       && Class->PrimaryWeapon->Bullet->IsAntiSub)
+                                      || (Class->SecondaryWeapon && Class->SecondaryWeapon->Bullet
+                                          && Class->SecondaryWeapon->Bullet->IsAntiSub));
+                    if (!canhitsub) {
                         couldkill = false;
                     }
                 }
-                if (couldkill){
+                if (couldkill) {
                     return MOVE_DESTROYABLE;
-                }
-                else {
+                } else {
                     return MOVE_NO;
                 }
             }
@@ -434,57 +437,56 @@ MoveType VesselClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveT
 
         // entrant vessel, no pointer
         // this case should never happen if ReservingVehicle is behaving correctly
-        if ((!rv || !rv->IsActive) && cellptr->Flag.Occupy.Vehicle && (vv != this)){
+        if ((!rv || !rv->IsActive) && cellptr->Flag.Occupy.Vehicle && (vv != this)) {
             // have no idea if it's friendlyor not, so assume moving block (this is the vanilla behavior)
             retval = MOVE_MOVING_BLOCK;
         }
     }
 
-
     // CFE: we need to deal with the possibility of making a diagonal move perpendicular to another unit's diagonal move
     // The units will pass through the same spot at the corner, but it won't be noticed up till this point because neither of the cells involved in the other unit's move are involved in this unit's move.
-    if ((retval == MOVE_OK) && ((facing == FACING_NE) || (facing == FACING_SE) || (facing == FACING_SW) || (facing == FACING_NW))){
+    if ((retval == MOVE_OK)
+        && ((facing == FACING_NE) || (facing == FACING_SE) || (facing == FACING_SW) || (facing == FACING_NW))) {
         // the crossing point is the upper-left corner of the southeast cell
         COORDINATE crossingpoint = 0;
-        switch (facing){
-            case FACING_NE:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_S));
-                break;
-            case FACING_SE:
-                crossingpoint = Cell_Coord(cell);
-                break;
-            case FACING_SW:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_E));
-                break;
-            case FACING_NW:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_SE));
-                break;
-            default:
-                // should be unreachable
-                crossingpoint = Cell_Coord(cell);
+        switch (facing) {
+        case FACING_NE:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_S));
+            break;
+        case FACING_SE:
+            crossingpoint = Cell_Coord(cell);
+            break;
+        case FACING_SW:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_E));
+            break;
+        case FACING_NW:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_SE));
+            break;
+        default:
+            // should be unreachable
+            crossingpoint = Cell_Coord(cell);
         }
-        FacingType reversefacing = (FacingType)((char)facing ^4);
+        FacingType reversefacing = (FacingType)((char)facing ^ 4);
         // we can do this because FacingTypes have modular addition/subtraction
-        CELL xdcells[2] = {0,0};
+        CELL xdcells[2] = {0, 0};
         xdcells[0] = Adjacent_Cell(cell, reversefacing + (FacingType)1);
         xdcells[1] = Adjacent_Cell(cell, reversefacing - (FacingType)1);
-        if (Map.In_Radar(xdcells[0]) && Map.In_Radar(xdcells[1])){
-            for (int i=0; i<2; i++){
+        if (Map.In_Radar(xdcells[0]) && Map.In_Radar(xdcells[1])) {
+            for (int i = 0; i < 2; i++) {
                 CellClass* xdcellptr = &Map[xdcells[i]];
-                ObjectClass *xdobj = xdcellptr->Cell_Occupier();
+                ObjectClass* xdobj = xdcellptr->Cell_Occupier();
                 while (xdobj) {
-                    if ((xdobj != this) && xdobj->IsActive && !xdobj->IsInLimbo && xdobj->Strength){
+                    if ((xdobj != this) && xdobj->IsActive && !xdobj->IsInLimbo && xdobj->Strength) {
                         RTTIType xdrtti = xdobj->What_Am_I();
-                        if (xdrtti == RTTI_VESSEL){
+                        if (xdrtti == RTTI_VESSEL) {
                             FootClass* xdfoot = (FootClass*)xdobj;
                             COORDINATE xdhtcoord = xdfoot->Head_To_Coord();
                             CELL xdhtcell = Coord_Cell(xdhtcoord);
-                            CELL otherxdcell = xdcells[(i+1)%2];
+                            CELL otherxdcell = xdcells[(i + 1) % 2];
                             bool iscrossblocker = false;
-                            if (xdhtcell == otherxdcell){
+                            if (xdhtcell == otherxdcell) {
                                 iscrossblocker = true;
-                            }
-                            else if (xdhtcell == xdcells[i]){
+                            } else if (xdhtcell == xdcells[i]) {
                                 // in order to prevent "butt crossovers" we need to check
                                 // if the other unit just entered its destination cell but is still near the crossover point
                                 // So define a box from the crossing point to just short of the unit's headto
@@ -504,50 +506,51 @@ MoveType VesselClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveT
                                 int lowx;
                                 int highy;
                                 int lowy;
-                                if (xbhtx > xpx){
+                                if (xbhtx > xpx) {
                                     highx = xbhtx - 1; // shift by one because <= later
                                     lowx = xpx;
-                                }
-                                else {
+                                } else {
                                     highx = xpx;
                                     lowx = xbhtx + 1; // shift by one because >= later
                                 }
-                                if (xbhty > xpy){
+                                if (xbhty > xpy) {
                                     highy = xbhty - 1; // shift by one because <= later
                                     lowy = xpy;
-                                }
-                                else {
+                                } else {
                                     highy = xpy;
                                     lowy = xbhty + 1; // shift by one because >= later
                                 }
-                                if ((xbx >= lowx) && (xbx <= highx) && (xby >= lowy) && (xby <= highy)){
+                                if ((xbx >= lowx) && (xbx <= highx) && (xby >= lowy) && (xby <= highy)) {
                                     iscrossblocker = true;
                                 }
                             }
-                            if (iscrossblocker){
-                                if (House->Is_Ally(xdfoot)){
+                            if (iscrossblocker) {
+                                if (House->Is_Ally(xdfoot)) {
                                     return MOVE_MOVING_BLOCK;
-                                }
-                                else {
-                                    if (xdfoot->Is_Cloaked(this)){
+                                } else {
+                                    if (xdfoot->Is_Cloaked(this)) {
                                         return MOVE_CLOAK;
-                                    }
-                                    else {
+                                    } else {
                                         // can we kill it? This is a hard question for boats
                                         // are we totally unarmed?
                                         bool couldkill = Class->PrimaryWeapon ? true : false;
                                         // is it a sub and we lack anti-sub weapon?
                                         RTTIType whatxd = xdfoot->What_Am_I();
-                                        if (couldkill && (whatxd == RTTI_VESSEL) && ((*((VesselClass*)xdfoot) == VESSEL_SS) || (*((VesselClass*)xdfoot) == VESSEL_MISSILESUB))){
-                                            bool canhitsub = ((Class->PrimaryWeapon && Class->PrimaryWeapon->Bullet && Class->PrimaryWeapon->Bullet->IsAntiSub) || (Class->SecondaryWeapon && Class->SecondaryWeapon->Bullet && Class->SecondaryWeapon->Bullet->IsAntiSub));
-                                            if (!canhitsub){
+                                        if (couldkill && (whatxd == RTTI_VESSEL)
+                                            && ((*((VesselClass*)xdfoot) == VESSEL_SS)
+                                                || (*((VesselClass*)xdfoot) == VESSEL_MISSILESUB))) {
+                                            bool canhitsub =
+                                                ((Class->PrimaryWeapon && Class->PrimaryWeapon->Bullet
+                                                  && Class->PrimaryWeapon->Bullet->IsAntiSub)
+                                                 || (Class->SecondaryWeapon && Class->SecondaryWeapon->Bullet
+                                                     && Class->SecondaryWeapon->Bullet->IsAntiSub));
+                                            if (!canhitsub) {
                                                 couldkill = false;
                                             }
                                         }
-                                        if (couldkill){
+                                        if (couldkill) {
                                             return MOVE_DESTROYABLE;
-                                        }
-                                        else {
+                                        } else {
                                             return MOVE_NO;
                                         }
                                     }

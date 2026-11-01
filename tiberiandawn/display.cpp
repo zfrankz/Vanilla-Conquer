@@ -2911,8 +2911,7 @@ CELL DisplayClass::Nearest_Edge_Entry_Point(CELL input)
             }
 
             int distance = Distance(Cell_Coord(cell), coord);
-            if (distance < bestdistance && (*this)[cell].Is_Generally_Clear()
-                && (*this)[inward].Is_Generally_Clear()) {
+            if (distance < bestdistance && (*this)[cell].Is_Generally_Clear() && (*this)[inward].Is_Generally_Clear()) {
                 bestcell = cell;
                 bestdistance = distance;
             }

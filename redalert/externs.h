@@ -269,9 +269,9 @@ extern bool TimeQuake;
 
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
 extern bool PendingTimeQuake;
-extern bool GlobalTimeQuake;        // CFE: a timequake over the whole map.
+extern bool GlobalTimeQuake; // CFE: a timequake over the whole map.
 extern bool PendingGlobalTimeQuake;
-extern int CFE_Timeline_Damage;     // CFE cumulative timeline damage.
+extern int CFE_Timeline_Damage; // CFE cumulative timeline damage.
 extern int CFE_Permanent_Timeline_Damage;
 extern TARGET TimeQuakeCenter;
 extern fixed QuakeUnitDamage;

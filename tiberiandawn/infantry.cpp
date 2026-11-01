@@ -1231,8 +1231,8 @@ void InfantryClass::AI(void)
     /*
     **	Scatter infantry off buildings in guard modes.
     */
-    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving && !IsRotating
-        && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
+    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving
+        && !IsRotating && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
         && Map[Coord_Cell(Coord)].Cell_Building() != NULL) {
         Scatter(0, true, true);
     }
@@ -1624,8 +1624,8 @@ void InfantryClass::AI(void)
                 /*
                 **	Advance the infantry as far as it should go.
                 */
-                MPHType maxspeed = MPHType(
-                    min((unsigned)((int)(Class->MaxSpeed * Vet().SpeedBias) * House->GroundspeedBias), MPH_LIGHT_SPEED));
+                MPHType maxspeed = MPHType(min(
+                    (unsigned)((int)(Class->MaxSpeed * Vet().SpeedBias) * House->GroundspeedBias), MPH_LIGHT_SPEED));
                 Coord = Coord_Move(Coord, Direction(Head_To_Coord()), Fixed_To_Cardinal(maxspeed, movespeed));
             }
             Mark(MARK_DOWN);
@@ -1635,7 +1635,8 @@ void InfantryClass::AI(void)
 
     // CFE veterancy: a commando's cloak from veterancy only works while standing still.
     if (Vet().Cloak
-        && (IsDriving || Path[0] != FACING_NONE || Target_Legal(NavCom) || (Target_Legal(TarCom) && !In_Range(TarCom)))) {
+        && (IsDriving || Path[0] != FACING_NONE || Target_Legal(NavCom)
+            || (Target_Legal(TarCom) && !In_Range(TarCom)))) {
         Do_Uncloak();
     }
 }
@@ -2214,8 +2215,8 @@ FireErrorType InfantryClass::Can_Fire(TARGET target, int which) const
     */
     if (*this == INFANTRY_RAMBO && ActiveCFEPatchConfig.SmarterCPUCommandos) {
         TechnoClass* techno = As_Techno(TarCom);
-        if (techno && techno->IsActive && !techno->IsInLimbo && techno->Strength
-            && techno->What_Am_I() == RTTI_BUILDING && Owner() != techno->Owner()) {
+        if (techno && techno->IsActive && !techno->IsInLimbo && techno->Strength && techno->What_Am_I() == RTTI_BUILDING
+            && Owner() != techno->Owner()) {
             return (FIRE_RANGE);
         }
     }
@@ -3687,8 +3688,8 @@ int InfantryClass::Mission_Attack(void)
     // CFE: a computer controlled commando in attack mode goes to blow up a building target.
     if (*this == INFANTRY_RAMBO && !House->IsHuman && ActiveCFEPatchConfig.SmarterCPUCommandos) {
         TechnoClass* techno = As_Techno(TarCom);
-        if (techno && techno->IsActive && !techno->IsInLimbo && techno->Strength
-            && techno->What_Am_I() == RTTI_BUILDING && Owner() != techno->Owner()) {
+        if (techno && techno->IsActive && !techno->IsInLimbo && techno->Strength && techno->What_Am_I() == RTTI_BUILDING
+            && Owner() != techno->Owner()) {
             CFE_Commando_Go_Sabotage(TarCom);
             return (1);
         }

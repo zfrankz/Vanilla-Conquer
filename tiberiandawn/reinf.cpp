@@ -63,9 +63,8 @@ static bool CFE_House_Has_Any_Buildings_In_Map(HouseClass& house)
 */
 static bool CFE_A10_Allowed(TechnoTypeClass const& object, HousesType house)
 {
-    if (ActiveCFEPatchConfig.DisableCommandoAirstrikes && GameToPlay == GAME_NORMAL
-        && house != PlayerPtr->Class->House && object.What_Am_I() == RTTI_AIRCRAFTTYPE
-        && ((AircraftTypeClass const&)object).Type == AIRCRAFT_A10) {
+    if (ActiveCFEPatchConfig.DisableCommandoAirstrikes && GameToPlay == GAME_NORMAL && house != PlayerPtr->Class->House
+        && object.What_Am_I() == RTTI_AIRCRAFTTYPE && ((AircraftTypeClass const&)object).Type == AIRCRAFT_A10) {
         return (CFE_House_Has_Any_Buildings_In_Map(*PlayerPtr));
     }
     return (true);

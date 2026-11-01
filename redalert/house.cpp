@@ -2787,7 +2787,8 @@ static void CFE_Give_Iron_Curtain(TechnoClass* tech)
 
 static int CFE_Chrono_Duration(void)
 {
-    return (ActiveCFEPatchConfig.EnableQuickSupers ? 20 * TICKS_PER_SECOND : (int)(Rule.ChronoDuration * TICKS_PER_MINUTE));
+    return (ActiveCFEPatchConfig.EnableQuickSupers ? 20 * TICKS_PER_SECOND
+                                                   : (int)(Rule.ChronoDuration * TICKS_PER_MINUTE));
 }
 
 /*
@@ -2818,13 +2819,16 @@ static void CFE_Wide_Iron_Curtain(HouseClass* house, CELL cell)
         if (!Map.In_Radar(newcell)) {
             continue;
         }
-        for (ObjectClass* object = Map[newcell].Cell_Occupier(); object != NULL && extraunits < 4; object = object->Next) {
+        for (ObjectClass* object = Map[newcell].Cell_Occupier(); object != NULL && extraunits < 4;
+             object = object->Next) {
             RTTIType rtti = object->What_Am_I();
-            if (object->IsActive && (rtti == RTTI_UNIT || rtti == RTTI_BUILDING || rtti == RTTI_VESSEL || rtti == RTTI_AIRCRAFT)
+            if (object->IsActive
+                && (rtti == RTTI_UNIT || rtti == RTTI_BUILDING || rtti == RTTI_VESSEL || rtti == RTTI_AIRCRAFT)
                 && house->Is_Ally((TechnoClass*)object)) {
                 TechnoClass* tech = (TechnoClass*)object;
-                int duration = ActiveCFEPatchConfig.EnableQuickSupers ? 20 * TICKS_PER_SECOND
-                                                                      : (int)(Rule.IronCurtainDuration * TICKS_PER_SECOND);
+                int duration = ActiveCFEPatchConfig.EnableQuickSupers
+                                   ? 20 * TICKS_PER_SECOND
+                                   : (int)(Rule.IronCurtainDuration * TICKS_PER_SECOND);
                 if (tech->IronCurtainCountDown != duration) {
                     CFE_Give_Iron_Curtain(tech);
                     extraunits++;
@@ -2854,10 +2858,12 @@ static void CFE_Wide_Chrono(HouseClass* house, CELL fromcell, CELL tocell)
             ObjectClass* next = object->Next; // The teleport takes the object off this list.
             RTTIType rtti = object->What_Am_I();
             if (object->IsActive
-                && ((rtti == RTTI_UNIT && *(UnitClass*)object != UNIT_CHRONOTANK && *(UnitClass*)object != UNIT_DEMOTRUCK)
+                && ((rtti == RTTI_UNIT && *(UnitClass*)object != UNIT_CHRONOTANK
+                     && *(UnitClass*)object != UNIT_DEMOTRUCK)
                     || (rtti == RTTI_VESSEL && *(VesselClass*)object != VESSEL_TRANSPORT
                         && *(VesselClass*)object != VESSEL_CARRIER))
-                && house->Is_Ally((TechnoClass*)object) && ((TechnoClass*)object)->Can_Enter_Cell(newtocell, FACING_NONE) == MOVE_OK) {
+                && house->Is_Ally((TechnoClass*)object)
+                && ((TechnoClass*)object)->Can_Enter_Cell(newtocell, FACING_NONE) == MOVE_OK) {
                 DriveClass* drive = (DriveClass*)object;
                 drive->MoebiusCell = newfromcell;
                 drive->Teleport_To(newtocell);
@@ -2904,7 +2910,8 @@ static void CFE_Chrono_Disasters(TechnoClass* tech)
         quakebasechance = (quakebasechance * total) / 10;
     }
 
-    bool chronotank = !tech || !tech->IsActive || (tech->What_Am_I() == RTTI_UNIT && *(UnitClass*)tech == UNIT_CHRONOTANK);
+    bool chronotank =
+        !tech || !tech->IsActive || (tech->What_Am_I() == RTTI_UNIT && *(UnitClass*)tech == UNIT_CHRONOTANK);
     if (!chronotank) {
         if (ActiveCFEPatchConfig.EnableTimeQuakeFix && ActiveCFEPatchConfig.EnableSharedChronoDisasterOdds) {
             if (CFE_Patch_FullRange_Random_Pick(0, 99999) < disasterbasechance) {
@@ -2918,14 +2925,16 @@ static void CFE_Chrono_Disasters(TechnoClass* tech)
             if (CFE_Patch_FullRange_Random_Pick(0, 99999) < vortexbasechance) {
                 dovortex = true;
             }
-            if (ActiveCFEPatchConfig.EnableTimeQuakeFix && CFE_Patch_FullRange_Random_Pick(0, 99999) < quakebasechance) {
+            if (ActiveCFEPatchConfig.EnableTimeQuakeFix
+                && CFE_Patch_FullRange_Random_Pick(0, 99999) < quakebasechance) {
                 dotimequake = true;
             }
         }
     }
 
     // No timequake if disaster odds are shared and there's already a visible vortex.
-    if (dotimequake && !(ChronalVortex.Is_Active_And_Not_Hidden() && ActiveCFEPatchConfig.EnableSharedChronoDisasterOdds)) {
+    if (dotimequake
+        && !(ChronalVortex.Is_Active_And_Not_Hidden() && ActiveCFEPatchConfig.EnableSharedChronoDisasterOdds)) {
         PendingGlobalTimeQuake = true;
         if (ActiveCFEPatchConfig.EnableCumulativeTimelineDamage) {
             CFE_Timeline_Damage = 0;
@@ -4717,7 +4726,8 @@ void HouseClass::Sell_Wall(CELL cell)
                     }
 
                     // CFE: without full cost, a piece may have been free, so it refunds its share of a full run.
-                    if (!IsHuman || ActiveCFEPatchConfig.WallBuildLength <= 1 || ActiveCFEPatchConfig.WallsAlwaysHaveFullCost) {
+                    if (!IsHuman || ActiveCFEPatchConfig.WallBuildLength <= 1
+                        || ActiveCFEPatchConfig.WallsAlwaysHaveFullCost) {
                         Refund_Money(btype->Raw_Cost() * Rule.RefundPercent);
                     } else {
                         Refund_Money((btype->Raw_Cost() * Rule.RefundPercent) / ActiveCFEPatchConfig.WallBuildLength);

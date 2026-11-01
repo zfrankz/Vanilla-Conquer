@@ -1982,10 +1982,10 @@ void TechnoClass::AI(void)
         */
         // CFE veterancy: rank 3 stealth tanks cloak sooner and despite damage. Commandos only cloak standing still.
         bool bettercloak = Vet().Rank == 3 && What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_STANK;
-        bool movingcommando = Vet().Cloak && What_Am_I() == RTTI_INFANTRY
-                              && (((FootClass*)this)->IsDriving || ((FootClass*)this)->Path[0] != FACING_NONE
-                                  || Target_Legal(((FootClass*)this)->NavCom)
-                                  || (Target_Legal(TarCom) && !In_Range(TarCom)));
+        bool movingcommando =
+            Vet().Cloak && What_Am_I() == RTTI_INFANTRY
+            && (((FootClass*)this)->IsDriving || ((FootClass*)this)->Path[0] != FACING_NONE
+                || Target_Legal(((FootClass*)this)->NavCom) || (Target_Legal(TarCom) && !In_Range(TarCom)));
         if (Cloak == UNCLOAKED && !movingcommando) {
             // Changed for multiplayer so we can visually see the different players in the original renderer. ST -
             // 3/13/2019 5:40PM
@@ -2230,9 +2230,8 @@ FireErrorType TechnoClass::Can_Fire(TARGET target, int which) const
     /*
     **	CFE: mammoths always use their missiles on infantry.
     */
-    if (ActiveCFEPatchConfig.EnableSmarterMammoths && object && object->IsActive
-        && object->What_Am_I() == RTTI_INFANTRY && What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_HTANK
-        && weap == WEAPON_120MM) {
+    if (ActiveCFEPatchConfig.EnableSmarterMammoths && object && object->IsActive && object->What_Am_I() == RTTI_INFANTRY
+        && What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_HTANK && weap == WEAPON_120MM) {
         return (In_Range(target, 1, false) ? FIRE_FACING : FIRE_RANGE);
     }
 
@@ -2596,7 +2595,8 @@ bool CFE_Save_Veterancy(FileClass& file)
 
     int size = sizeof(CFEVeterancy);
     if (file.Write(&_cfe_vet_marker, sizeof(_cfe_vet_marker)) != sizeof(_cfe_vet_marker)
-        || file.Write(&size, sizeof(size)) != sizeof(size) || file.Write(&records, sizeof(records)) != sizeof(records)) {
+        || file.Write(&size, sizeof(size)) != sizeof(size)
+        || file.Write(&records, sizeof(records)) != sizeof(records)) {
         return (false);
     }
 
@@ -4991,7 +4991,8 @@ TARGET TechnoClass::Greatest_Threat_Wall(ThreatType method, bool adjacent) const
             if (cy - radius >= Map.MapCellY && Evaluate_Cell_For_Wall(XY_Cell(cx + x, cy - radius))) {
                 return (::As_Target(XY_Cell(cx + x, cy - radius)));
             }
-            if (cy + radius < Map.MapCellY + Map.MapCellHeight && Evaluate_Cell_For_Wall(XY_Cell(cx + x, cy + radius))) {
+            if (cy + radius < Map.MapCellY + Map.MapCellHeight
+                && Evaluate_Cell_For_Wall(XY_Cell(cx + x, cy + radius))) {
                 return (::As_Target(XY_Cell(cx + x, cy + radius)));
             }
         }

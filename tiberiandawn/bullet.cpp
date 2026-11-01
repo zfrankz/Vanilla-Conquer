@@ -448,7 +448,7 @@ void BulletClass::AI(void)
                     int str = Strength;
                     if (object)
                         CFE_Armor_Pen = CFE_Bullet_Pen[Bullets.ID(this)];
-                        object->Take_Damage(str, 0, Class->Warhead, Payback);
+                    object->Take_Damage(str, 0, Class->Warhead, Payback);
                 }
             }
 

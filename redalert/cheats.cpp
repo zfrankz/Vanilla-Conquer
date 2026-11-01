@@ -16,76 +16,77 @@
 #include "function.h"
 #include "cheats.h"
 
-namespace {
-
-enum CheatType
+namespace
 {
-    CHEAT_CREDITS,
-    CHEAT_REVEAL_MAP,
-    CHEAT_REVEAL_SHROUD,
-    CHEAT_SPAWN_COMMANDO,
-    CHEAT_FULL_CATALOG,
-    CHEAT_INSTANT_BUILD,
-    CHEAT_COUNT
-};
 
-struct CheatKeyEntry
-{
-    char const* Name;
-    KeyNumType Default;
-};
+    enum CheatType
+    {
+        CHEAT_CREDITS,
+        CHEAT_REVEAL_MAP,
+        CHEAT_REVEAL_SHROUD,
+        CHEAT_SPAWN_COMMANDO,
+        CHEAT_FULL_CATALOG,
+        CHEAT_INSTANT_BUILD,
+        CHEAT_COUNT
+    };
 
-const CheatKeyEntry CheatKeyEntries[CHEAT_COUNT] = {
-    {"KeyCredits", KN_F1},
-    {"KeyRevealMap", KN_F2},
-    {"KeyRevealShroud", KN_F3},
-    {"KeySpawnCommando", KN_F4},
-    {"KeyFullCatalog", KN_F5},
-    {"KeyInstantBuild", KN_F6},
-};
+    struct CheatKeyEntry
+    {
+        char const* Name;
+        KeyNumType Default;
+    };
 
-const int CheatCredits = 5000;
+    const CheatKeyEntry CheatKeyEntries[CHEAT_COUNT] = {
+        {"KeyCredits", KN_F1},
+        {"KeyRevealMap", KN_F2},
+        {"KeyRevealShroud", KN_F3},
+        {"KeySpawnCommando", KN_F4},
+        {"KeyFullCatalog", KN_F5},
+        {"KeyInstantBuild", KN_F6},
+    };
 
-bool CheatsEnabled = false;
-KeyNumType CheatKeys[CHEAT_COUNT];
-bool CheatInstantBuild = false;
-int CheatStartMission = 1;
+    const int CheatCredits = 5000;
 
-bool Cheats_Allowed()
-{
-    return CheatsEnabled && PlayerPtr != NULL && !Debug_Map
-           && (Session.Type == GAME_NORMAL || Session.Type == GAME_SKIRMISH);
-}
+    bool CheatsEnabled = false;
+    KeyNumType CheatKeys[CHEAT_COUNT];
+    bool CheatInstantBuild = false;
+    int CheatStartMission = 1;
 
-void Cheat_Message(char const* text)
-{
-    char buffer[MAX_MESSAGE_LENGTH];
-    snprintf(buffer, sizeof(buffer), "Cheat: %s", text);
-    Session.Messages.Add_Message(NULL,
-                                 0,
-                                 buffer,
-                                 PlayerPtr->RemapColor,
-                                 TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW,
-                                 TICKS_PER_SECOND * 4);
-    Map.Flag_To_Redraw(false);
-}
-
-void Cheat_Spawn_Commando()
-{
-    COORDINATE coord = Map.Pixel_To_Coord(Get_Mouse_X(), Get_Mouse_Y());
-    if (coord != 0) {
-        InfantryClass* infantry = new InfantryClass(INFANTRY_TANYA, PlayerPtr->Class->House);
-        if (infantry != NULL) {
-            if (infantry->Unlimbo(Cell_Coord(Coord_Cell(coord)), DIR_N)) {
-                infantry->Assign_Mission(MISSION_GUARD);
-                Cheat_Message("Tanya spawned");
-                return;
-            }
-            delete infantry;
-        }
+    bool Cheats_Allowed()
+    {
+        return CheatsEnabled && PlayerPtr != NULL && !Debug_Map
+               && (Session.Type == GAME_NORMAL || Session.Type == GAME_SKIRMISH);
     }
-    Cheat_Message("can't spawn Tanya there");
-}
+
+    void Cheat_Message(char const* text)
+    {
+        char buffer[MAX_MESSAGE_LENGTH];
+        snprintf(buffer, sizeof(buffer), "Cheat: %s", text);
+        Session.Messages.Add_Message(NULL,
+                                     0,
+                                     buffer,
+                                     PlayerPtr->RemapColor,
+                                     TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW,
+                                     TICKS_PER_SECOND * 4);
+        Map.Flag_To_Redraw(false);
+    }
+
+    void Cheat_Spawn_Commando()
+    {
+        COORDINATE coord = Map.Pixel_To_Coord(Get_Mouse_X(), Get_Mouse_Y());
+        if (coord != 0) {
+            InfantryClass* infantry = new InfantryClass(INFANTRY_TANYA, PlayerPtr->Class->House);
+            if (infantry != NULL) {
+                if (infantry->Unlimbo(Cell_Coord(Coord_Cell(coord)), DIR_N)) {
+                    infantry->Assign_Mission(MISSION_GUARD);
+                    Cheat_Message("Tanya spawned");
+                    return;
+                }
+                delete infantry;
+            }
+        }
+        Cheat_Message("can't spawn Tanya there");
+    }
 
 } // namespace
 
@@ -100,8 +101,7 @@ void Init_Cheats()
     static char const* const CHEATS = "Cheats";
     CheatsEnabled = ini.Get_Bool(CHEATS, "Enabled", false);
     for (int index = 0; index < CHEAT_COUNT; index++) {
-        CheatKeys[index] =
-            (KeyNumType)ini.Get_Int(CHEATS, CheatKeyEntries[index].Name, CheatKeyEntries[index].Default);
+        CheatKeys[index] = (KeyNumType)ini.Get_Int(CHEATS, CheatKeyEntries[index].Name, CheatKeyEntries[index].Default);
     }
 
     /*

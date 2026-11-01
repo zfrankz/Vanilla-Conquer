@@ -75,12 +75,13 @@ struct CFEPatchConfig
     int HarvyOptimizeCommunalismWeight = 13;
     int OreGrowthScale = 1;
     int OreToGemPromotionSlowFactor = 8;
-    int WallBuildLength = 1; // CFE's default is 5; 1 is the original game
+    int WallBuildLength = 1;            // CFE's default is 5; 1 is the original game
     int InverseBuildingPreviewMode = 0; // 0=off; 1= MP only; 2 = all game modes
     int BuildingGapOffset = 0;
     int OreCapacityOffset = 0;
     int SharedChronoDisasterOdds = 20;
-    int TurkeyFixMode = 1; // 0=no bonus (11/18/2024 Remastered patch behavior); 1=90% build time outside the campaign (unmodified VC, Remastered launch behavior); 2=110% build speed bonus from extra production structures (CFE patch rebalance)
+    int TurkeyFixMode =
+        1; // 0=no bonus (11/18/2024 Remastered patch behavior); 1=90% build time outside the campaign (unmodified VC, Remastered launch behavior); 2=110% build speed bonus from extra production structures (CFE patch rebalance)
 };
 
 extern CFEPatchConfig ActiveCFEPatchConfig;

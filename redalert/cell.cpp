@@ -2064,8 +2064,8 @@ void CellClass::Incoming(COORDINATE threat, bool forced, bool nokidding)
         */
         // CFE: veteran infantry always scatter.
         bool imavet = object->What_Am_I() == RTTI_INFANTRY && ((TechnoClass*)object)->Vet().Rank > 0;
-        if (nokidding || Rule.IsScatter
-            || (object->Is_Techno() && ((TechnoClass*)object)->House->IQ >= Rule.IQScatter) || imavet) {
+        if (nokidding || Rule.IsScatter || (object->Is_Techno() && ((TechnoClass*)object)->House->IQ >= Rule.IQScatter)
+            || imavet) {
             object->Scatter(threat, forced, nokidding || imavet);
         }
         object = object->Next;
@@ -3252,11 +3252,10 @@ bool CellClass::Spread_Tiberium(bool forced)
 static int CFE_Gem_Promotion_Max_Roll(void)
 {
     const int bugfixoffset = ActiveCFEPatchConfig.OreIndexBugfix ? 1 : 0;
-    int maxroll =
-        (((((Rule.GemValue * 4 * (3 + (3 * bugfixoffset))) / 3) - (Rule.GoldValue * (11 + bugfixoffset)))
-          * ActiveCFEPatchConfig.OreToGemPromotionSlowFactor)
-         / Rule.GoldValue)
-        - 1;
+    int maxroll = (((((Rule.GemValue * 4 * (3 + (3 * bugfixoffset))) / 3) - (Rule.GoldValue * (11 + bugfixoffset)))
+                    * ActiveCFEPatchConfig.OreToGemPromotionSlowFactor)
+                   / Rule.GoldValue)
+                  - 1;
     return (maxroll < 1) ? 99 : maxroll;
 }
 
@@ -3352,7 +3351,8 @@ bool CellClass::CFE_Ore_Mine_Spread_Tiberium(void)
                 return (true);
             } else if (backupcell == NULL && newcell->Can_Tiberium_Grow()) {
                 backupcell = newcell;
-            } else if (gembackupcell == NULL && Rule.IsTSpread && (Session.Type == GAME_NORMAL || Session.Options.Tiberium)
+            } else if (gembackupcell == NULL && Rule.IsTSpread
+                       && (Session.Type == GAME_NORMAL || Session.Options.Tiberium)
                        && newcell->Land_Type() == LAND_TIBERIUM && newcell->OverlayData >= 11
                        && (Overlay == OVERLAY_GOLD1 || Overlay == OVERLAY_GOLD2 || Overlay == OVERLAY_GOLD3
                            || Overlay == OVERLAY_GOLD4)) {

@@ -474,8 +474,7 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
             }
             return (RADIO_ROGER);
         }
-        if (*this == STRUCT_WEAP || *this == STRUCT_AIRSTRIP || *this == STRUCT_REPAIR
-            || Can_Have_Rally_Point())
+        if (*this == STRUCT_WEAP || *this == STRUCT_AIRSTRIP || *this == STRUCT_REPAIR || Can_Have_Rally_Point())
             return (RADIO_RUN_AWAY);
         return (RADIO_ROGER);
     }
@@ -1418,8 +1417,7 @@ const FacingType CFE_Cardinals[4] = {FACING_N, FACING_E, FACING_S, FACING_W};
 */
 bool CFE_Should_Extend_Walls(void)
 {
-    return (ActiveCFEPatchConfig.WallBuildLength > 1
-            && (GameToPlay != GAME_NORMAL || !Keyboard->Down(KN_LCTRL)));
+    return (ActiveCFEPatchConfig.WallBuildLength > 1 && (GameToPlay != GAME_NORMAL || !Keyboard->Down(KN_LCTRL)));
 }
 
 /***********************************************************************************************
@@ -4644,8 +4642,8 @@ int BuildingClass::Mission_Attack(void)
         case SAM_UNDERGROUND:
             IsReadyToCommence = true;
             if (ActiveCFEPatchConfig.EnableSmarterSAMs) {
-                _cfe_sam_ammo[Buildings.ID(this)] =
-                    ActiveCFEPatchConfig.SmarterSAMAmmo * (Vet().Rank == 3 ? 2 : 1); // Rank 3: four shots to the volley.
+                _cfe_sam_ammo[Buildings.ID(this)] = ActiveCFEPatchConfig.SmarterSAMAmmo
+                                                    * (Vet().Rank == 3 ? 2 : 1); // Rank 3: four shots to the volley.
                 _cfe_sam_lowering_delay[Buildings.ID(this)] = 0;
             } else if (Vet().Rank == 3) {
                 _cfe_sam_ammo[Buildings.ID(this)] = 4;
@@ -6112,7 +6110,8 @@ bool BuildingClass::Rally_Unit(TechnoClass& unit)
     **	Aircraft leaving a repair bay don't go to its rally point.
     */
     if (*this == STRUCT_REPAIR && unit.What_Am_I() == RTTI_AIRCRAFT) {
-        return (ActiveCFEPatchConfig.EnableSmarterRepairBays && static_cast<AircraftClass&>(unit).Do_Smarter_Run_Away());
+        return (ActiveCFEPatchConfig.EnableSmarterRepairBays
+                && static_cast<AircraftClass&>(unit).Do_Smarter_Run_Away());
     }
 
     /*

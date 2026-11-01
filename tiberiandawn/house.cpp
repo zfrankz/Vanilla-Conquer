@@ -706,8 +706,7 @@ bool HouseClass::Can_Build(TechnoTypeClass const* type, HousesType house) const
     **	GDI can build the sandbag wall only from scenario #9 onwards.
     */
     if (!ActiveCFEPatchConfig.JDExtraAdjustments && house == HOUSE_GOOD && level < 8
-        && type->What_Am_I() == RTTI_BUILDINGTYPE
-        && ((BuildingTypeClass const*)type)->Type == STRUCT_SANDBAG_WALL) {
+        && type->What_Am_I() == RTTI_BUILDINGTYPE && ((BuildingTypeClass const*)type)->Type == STRUCT_SANDBAG_WALL) {
 
         return (false);
     }
@@ -904,7 +903,8 @@ void HouseClass::AI(void)
     **	Tell the local player which mod this is.
     */
     if (Frame == 75 && this == PlayerPtr && ActiveCFEPatchConfig.EnableVersionAnnounce) {
-        Messages.Add_Message("CFE Patch Redux version 1.9",
+        char version_message[] = "CFE Patch Redux version 1.9";
+        Messages.Add_Message(version_message,
                              MPlayerTColors[RemapColor],
                              TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW,
                              TICKS_PER_SECOND * 20,

@@ -1724,9 +1724,9 @@ ResultType ObjectClass::Take_Damage(int& damage, int distance, WarheadType warhe
             if (ActiveCFEPatchConfig.EnableDeathsDoorFix && Is_Techno() // not for trees
                 && rawdamage < 100                                      // big hits always do the expected damage
                 && damage < maxstrength / 2                             // one- and two-shot kills stay kills
-                && overkill < damage / 2                                // don't negate half or more of the incoming damage
-                && overkill < maxstrength / 10                          // don't save from 110% dead
-                && oldstrength > 4                                      // at least ~3 seconds of healing since the last save
+                && overkill < damage / 2       // don't negate half or more of the incoming damage
+                && overkill < maxstrength / 10 // don't save from 110% dead
+                && oldstrength > 4             // at least ~3 seconds of healing since the last save
                 && (What_Am_I() != RTTI_BUILDING
                     || oldstrength > (3 * ((BuildingClass*)this)->Class->Repair_Step()) + 1)) {
                 damage = oldstrength - 1;

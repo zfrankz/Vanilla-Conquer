@@ -349,7 +349,8 @@ void UnitClass::AI(void)
     **	CFE harvester load balancing/optimize: clear the unload refinery if not harvesting or
     **	entering a refinery.
     */
-    if (Class->IsToHarvest && (ActiveCFEPatchConfig.EnableHarvyLoadBalancing || ActiveCFEPatchConfig.EnableHarvyOptimize)
+    if (Class->IsToHarvest
+        && (ActiveCFEPatchConfig.EnableHarvyLoadBalancing || ActiveCFEPatchConfig.EnableHarvyOptimize)
         && (House->IsHuman || GameToPlay != GAME_NORMAL)) {
         if (Mission != MISSION_HARVEST) {
             if (Mission != MISSION_ENTER || !In_Radio_Contact() || Contact_With_Whom()->What_Am_I() != RTTI_BUILDING
@@ -503,8 +504,8 @@ void UnitClass::AI(void)
     /*
     **	Scatter units off buildings in guard modes.
     */
-    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving && !IsRotating
-        && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
+    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving
+        && !IsRotating && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
         && Map[Coord_Cell(Coord)].Cell_Building() != NULL) {
         Scatter(0, true, true);
     }
@@ -2600,10 +2601,10 @@ int UnitClass::Meaner_Hunt(void)
 */
 static bool CFE_Tiberium_Can_Land(CellClass const* cellptr)
 {
-    return (Map.In_Radar(cellptr->Cell_Number()) && cellptr->Cell_Object() == NULL
-            && cellptr->Land_Type() == LAND_CLEAR && cellptr->Overlay == OVERLAY_NONE
-            && cellptr->TType != TEMPLATE_BRIDGE1 && cellptr->TType != TEMPLATE_BRIDGE2
-            && cellptr->TType != TEMPLATE_BRIDGE3 && cellptr->TType != TEMPLATE_BRIDGE4);
+    return (Map.In_Radar(cellptr->Cell_Number()) && cellptr->Cell_Object() == NULL && cellptr->Land_Type() == LAND_CLEAR
+            && cellptr->Overlay == OVERLAY_NONE && cellptr->TType != TEMPLATE_BRIDGE1
+            && cellptr->TType != TEMPLATE_BRIDGE2 && cellptr->TType != TEMPLATE_BRIDGE3
+            && cellptr->TType != TEMPLATE_BRIDGE4);
 }
 
 /***********************************************************************************************
@@ -3033,9 +3034,11 @@ BuildingClass* UnitClass::Find_Best_Refinery(void) const
     if (ActiveCFEPatchConfig.EnableHarvyOptimize) {
         for (int i = 0; i < _refineries.Count(); ++i) {
             if (_refineries[i].Distance < ActiveCFEPatchConfig.HarvyOptimizeThrashingCutoff) {
-                _refineries[i].Distance += _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeThrashingWeight;
+                _refineries[i].Distance +=
+                    _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeThrashingWeight;
             } else {
-                _refineries[i].Distance += _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeUnloadWaitWeight;
+                _refineries[i].Distance +=
+                    _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeUnloadWaitWeight;
             }
         }
     }
@@ -4167,7 +4170,8 @@ MoveType UnitClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveTyp
     **	A diagonal move can cross another unit's diagonal move at the shared corner without
     **	either unit using the other's cells.
     */
-    if (retval == MOVE_OK && (facing == FACING_NE || facing == FACING_SE || facing == FACING_SW || facing == FACING_NW)) {
+    if (retval == MOVE_OK
+        && (facing == FACING_NE || facing == FACING_SE || facing == FACING_SW || facing == FACING_NW)) {
 
         /*
         **	The crossing point is the upper-left corner of the southeast cell.

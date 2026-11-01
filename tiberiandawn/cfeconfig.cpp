@@ -26,24 +26,25 @@
 
 CFEPatchConfig ActiveCFEPatchConfig;
 
-namespace {
-
-// Sets target only when the entry is present, so absent entries keep their default.
-struct SettingReader
+namespace
 {
-    const INIClass& ini;
 
-    template <typename T> void operator()(T& target, const char* section, const char* entry) const
+    // Sets target only when the entry is present, so absent entries keep their default.
+    struct SettingReader
     {
-        const int value = ini.Get_Int(section, entry, InvalidSetting);
-        if (value != InvalidSetting)
-            target = value;
-    }
+        const INIClass& ini;
 
-    static const int InvalidSetting;
-};
+        template <typename T> void operator()(T& target, const char* section, const char* entry) const
+        {
+            const int value = ini.Get_Int(section, entry, InvalidSetting);
+            if (value != InvalidSetting)
+                target = value;
+        }
 
-const int SettingReader::InvalidSetting = std::numeric_limits<int>::min();
+        static const int InvalidSetting;
+    };
+
+    const int SettingReader::InvalidSetting = std::numeric_limits<int>::min();
 
 } // namespace
 
@@ -237,28 +238,36 @@ static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
     Normalize_CFE_Settings(ActiveCFEPatchConfig);
 }
 
-namespace {
-
-// FNV-1a over the settings that change the simulation. These ones only change what the local
-// player sees or hears, so peers may differ on them.
-struct SettingHasher
+namespace
 {
-    unsigned* hash;
 
-    template <typename T> void operator()(T& target, const char* section, const char* entry) const
+    // FNV-1a over the settings that change the simulation. These ones only change what the local
+    // player sees or hears, so peers may differ on them.
+    struct SettingHasher
     {
-        static const char* const local[] = {"VERSION_ANNOUNCE", "BUILDING_DEATH_ANNOUNCE_MODE", "QUIETER_AIRSTRIPS", "INVERSE_PREVIEW_MODE", "LEGACY_RENDER_DISABLE_MODE", "CUSTOM_MISSION_DEFAULT_SCENARIO",};
-        for (unsigned i = 0; i < ARRAY_SIZE(local); i++) {
-            if (strcmp(entry, local[i]) == 0) {
-                return;
+        unsigned* hash;
+
+        template <typename T> void operator()(T& target, const char* section, const char* entry) const
+        {
+            static const char* const local[] = {
+                "VERSION_ANNOUNCE",
+                "BUILDING_DEATH_ANNOUNCE_MODE",
+                "QUIETER_AIRSTRIPS",
+                "INVERSE_PREVIEW_MODE",
+                "LEGACY_RENDER_DISABLE_MODE",
+                "CUSTOM_MISSION_DEFAULT_SCENARIO",
+            };
+            for (unsigned i = 0; i < ARRAY_SIZE(local); i++) {
+                if (strcmp(entry, local[i]) == 0) {
+                    return;
+                }
+            }
+            const int value = (int)target;
+            for (int shift = 0; shift < 32; shift += 8) {
+                *hash = (*hash ^ ((unsigned)value >> shift & 0xFF)) * 16777619u;
             }
         }
-        const int value = (int)target;
-        for (int shift = 0; shift < 32; shift += 8) {
-            *hash = (*hash ^ ((unsigned)value >> shift & 0xFF)) * 16777619u;
-        }
-    }
-};
+    };
 
 } // namespace
 

@@ -4687,7 +4687,8 @@ static JoinEventType Get_NewGame_Responses(ColorListClass* playerlist, int* colo
         /*
         **	Don't allow joining if the rules.ini file or the CFE options don't appear to match.
         */
-        else if (Session.GPacket.PlayerInfo.CheatCheck != (RuleINI.Get_Unique_ID() ^ CFE_Patch_Config_Hash()) && !resend) {
+        else if (Session.GPacket.PlayerInfo.CheatCheck != (RuleINI.Get_Unique_ID() ^ CFE_Patch_Config_Hash())
+                 && !resend) {
             memset(&Session.GPacket, 0, sizeof(GlobalPacketType));
             Session.GPacket.Command = NET_REJECT_JOIN;
             Session.GPacket.Reject.Why = (int)REJECT_MISMATCH;

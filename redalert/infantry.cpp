@@ -1232,7 +1232,8 @@ void InfantryClass::Assign_Target(TARGET target)
     **	target specified.
     */
     // CFE: an engineer heads for a new capturable target at once, whatever it was doing.
-    if ((!Target_Legal(NavCom) || ActiveCFEPatchConfig.EnableGeneralBugfixes) && Class->IsCapture && !Is_Weapon_Equipped()) {
+    if ((!Target_Legal(NavCom) || ActiveCFEPatchConfig.EnableGeneralBugfixes) && Class->IsCapture
+        && !Is_Weapon_Equipped()) {
         BuildingClass const* building = As_Building(target);
         if (building != NULL && building->Can_Capture()) {
             Assign_Destination(target);
@@ -1355,7 +1356,8 @@ void InfantryClass::AI(void)
         */
         if (*this == INFANTRY_MEDIC && Vet().Rank == 3 && !IsDriving
             && (Doing == DO_NOTHING || MasterDoControls[Doing].Interrupt) && Health_Ratio() < Rule.ConditionGreen
-            && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && !Target_Legal(TarCom) && !Arm && !IsFiring) {
+            && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && !Target_Legal(TarCom) && !Arm
+            && !IsFiring) {
             if (IsProne) {
                 Do_Action(DO_FIRE_PRONE);
             } else {
@@ -1709,49 +1711,49 @@ MoveType InfantryClass::CFE_Diagonal_Crossing(CELL cell, FacingType facing) cons
 
     // CFE: we need to deal with the possibility of making a diagonal move perpendicular to another unit's diagonal move
     // The units will pass through the same spot at the corner, but it won't be noticed up till this point because neither of the cells involved in the other unit's move are involved in this unit's move.
-    if ((retval == MOVE_OK) && ((facing == FACING_NE) || (facing == FACING_SE) || (facing == FACING_SW) || (facing == FACING_NW))){
+    if ((retval == MOVE_OK)
+        && ((facing == FACING_NE) || (facing == FACING_SE) || (facing == FACING_SW) || (facing == FACING_NW))) {
         // the crossing point is the upper-left corner of the southeast cell
         COORDINATE crossingpoint = 0;
-        switch (facing){
-            case FACING_NE:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_S));
-                break;
-            case FACING_SE:
-                crossingpoint = Cell_Coord(cell);
-                break;
-            case FACING_SW:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_E));
-                break;
-            case FACING_NW:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_SE));
-                break;
-            default:
-                // should be unreachable
-                crossingpoint = Cell_Coord(cell);
+        switch (facing) {
+        case FACING_NE:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_S));
+            break;
+        case FACING_SE:
+            crossingpoint = Cell_Coord(cell);
+            break;
+        case FACING_SW:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_E));
+            break;
+        case FACING_NW:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_SE));
+            break;
+        default:
+            // should be unreachable
+            crossingpoint = Cell_Coord(cell);
         }
-        FacingType reversefacing = (FacingType)((char)facing ^4);
+        FacingType reversefacing = (FacingType)((char)facing ^ 4);
         // we can do this because FacingTypes have modular addition/subtraction
-        CELL xdcells[2] = {0,0};
+        CELL xdcells[2] = {0, 0};
         xdcells[0] = Adjacent_Cell(cell, reversefacing + (FacingType)1);
         xdcells[1] = Adjacent_Cell(cell, reversefacing - (FacingType)1);
-        if (Map.In_Radar(xdcells[0]) && Map.In_Radar(xdcells[1])){
+        if (Map.In_Radar(xdcells[0]) && Map.In_Radar(xdcells[1])) {
             bool doinfantrycount = false;
-            for (int i=0; i<2; i++){
+            for (int i = 0; i < 2; i++) {
                 CellClass* xdcellptr = &Map[xdcells[i]];
-                ObjectClass *xdobj = xdcellptr->Cell_Occupier();
+                ObjectClass* xdobj = xdcellptr->Cell_Occupier();
                 while (xdobj) {
-                    if ((xdobj != this) && xdobj->IsActive && !xdobj->IsInLimbo && xdobj->Strength){
+                    if ((xdobj != this) && xdobj->IsActive && !xdobj->IsInLimbo && xdobj->Strength) {
                         RTTIType xdrtti = xdobj->What_Am_I();
-                        if ((xdrtti == RTTI_UNIT) || (xdrtti == RTTI_INFANTRY)){
+                        if ((xdrtti == RTTI_UNIT) || (xdrtti == RTTI_INFANTRY)) {
                             FootClass* xdfoot = (FootClass*)xdobj;
                             COORDINATE xdhtcoord = xdfoot->Head_To_Coord();
                             CELL xdhtcell = Coord_Cell(xdhtcoord);
-                            CELL otherxdcell = xdcells[(i+1)%2];
+                            CELL otherxdcell = xdcells[(i + 1) % 2];
                             bool iscrossblocker = false;
-                            if (xdhtcell == otherxdcell){
+                            if (xdhtcell == otherxdcell) {
                                 iscrossblocker = true;
-                            }
-                            else if (xdhtcell == xdcells[i]){
+                            } else if (xdhtcell == xdcells[i]) {
                                 // in order to prevent "butt crossovers" we need to check
                                 // if the other unit just entered its destination cell but is still near the crossover point
                                 // So define a box from the crossing point to just short of the unit's headto
@@ -1771,65 +1773,55 @@ MoveType InfantryClass::CFE_Diagonal_Crossing(CELL cell, FacingType facing) cons
                                 int lowx;
                                 int highy;
                                 int lowy;
-                                if (xbhtx > xpx){
+                                if (xbhtx > xpx) {
                                     highx = xbhtx - 1; // shift by one because <= later
                                     lowx = xpx;
-                                }
-                                else {
+                                } else {
                                     highx = xpx;
                                     lowx = xbhtx + 1; // shift by one because >= later
                                 }
-                                if (xbhty > xpy){
+                                if (xbhty > xpy) {
                                     highy = xbhty - 1; // shift by one because <= later
                                     lowy = xpy;
-                                }
-                                else {
+                                } else {
                                     highy = xpy;
                                     lowy = xbhty + 1; // shift by one because >= later
                                 }
-                                if ((xbx >= lowx) && (xbx <= highx) && (xby >= lowy) && (xby <= highy)){
+                                if ((xbx >= lowx) && (xbx <= highx) && (xby >= lowy) && (xby <= highy)) {
                                     iscrossblocker = true;
                                 }
                             }
-                            if (iscrossblocker){
-                                if (xdrtti == RTTI_UNIT){
-                                    if (House->Is_Ally(xdfoot)){
+                            if (iscrossblocker) {
+                                if (xdrtti == RTTI_UNIT) {
+                                    if (House->Is_Ally(xdfoot)) {
                                         return MOVE_MOVING_BLOCK;
-                                    }
-                                    else {
-                                        if (xdfoot->Is_Cloaked(this)){
+                                    } else {
+                                        if (xdfoot->Is_Cloaked(this)) {
                                             return MOVE_CLOAK;
-                                        }
-                                        else {
-                                            if (Combat_Damage() > 0){
+                                        } else {
+                                            if (Combat_Damage() > 0) {
                                                 return MOVE_DESTROYABLE;
-                                            }
-                                            else {
+                                            } else {
                                                 return MOVE_NO;
                                             }
                                         }
                                     }
-                                }
-                                else if (xdrtti == RTTI_INFANTRY){
-                                    if (House->Is_Ally(xdfoot)){
+                                } else if (xdrtti == RTTI_INFANTRY) {
+                                    if (House->Is_Ally(xdfoot)) {
                                         // can't move through allied infrantry that aren't our own
-                                        if (House != xdfoot->House){
+                                        if (House != xdfoot->House) {
                                             return MOVE_MOVING_BLOCK;
-                                        }
-                                        else {
+                                        } else {
                                             // it's possible that there's an enemy vehicle coming to crush the allied infantry, so we must continue checking.
                                             doinfantrycount = true;
                                         }
-                                    }
-                                    else{
-                                        if (xdfoot->Is_Cloaked(this)){
+                                    } else {
+                                        if (xdfoot->Is_Cloaked(this)) {
                                             return MOVE_CLOAK;
-                                        }
-                                        else {
-                                            if (Combat_Damage() > 0){
+                                        } else {
+                                            if (Combat_Damage() > 0) {
                                                 return MOVE_DESTROYABLE;
-                                            }
-                                            else {
+                                            } else {
                                                 return MOVE_NO;
                                             }
                                         }
@@ -1844,16 +1836,21 @@ MoveType InfantryClass::CFE_Diagonal_Crossing(CELL cell, FacingType facing) cons
             // Since 5 infantry can share a cell, it would be weird to let a single friendly infantry crossing in front block
             // But it would also be weird to let 5 infantry pass diagonally through another 5
             // Best solution I can come up with is to block if more than 5 total infantry in the 4 squares involved
-            if (doinfantrycount){
+            if (doinfantrycount) {
                 CellClass* iccellptr = &Map[Coord_Cell(Coord)];
-                unsigned int icount = iccellptr->Flag.Occupy.Center + iccellptr->Flag.Occupy.NW + iccellptr->Flag.Occupy.NE + iccellptr->Flag.Occupy.SW + iccellptr->Flag.Occupy.SE;
+                unsigned int icount = iccellptr->Flag.Occupy.Center + iccellptr->Flag.Occupy.NW
+                                      + iccellptr->Flag.Occupy.NE + iccellptr->Flag.Occupy.SW
+                                      + iccellptr->Flag.Occupy.SE;
                 iccellptr = &Map[cell];
-                icount += iccellptr->Flag.Occupy.Center + iccellptr->Flag.Occupy.NW + iccellptr->Flag.Occupy.NE + iccellptr->Flag.Occupy.SW + iccellptr->Flag.Occupy.SE;
+                icount += iccellptr->Flag.Occupy.Center + iccellptr->Flag.Occupy.NW + iccellptr->Flag.Occupy.NE
+                          + iccellptr->Flag.Occupy.SW + iccellptr->Flag.Occupy.SE;
                 iccellptr = &Map[xdcells[0]];
-                icount += iccellptr->Flag.Occupy.Center + iccellptr->Flag.Occupy.NW + iccellptr->Flag.Occupy.NE + iccellptr->Flag.Occupy.SW + iccellptr->Flag.Occupy.SE;
+                icount += iccellptr->Flag.Occupy.Center + iccellptr->Flag.Occupy.NW + iccellptr->Flag.Occupy.NE
+                          + iccellptr->Flag.Occupy.SW + iccellptr->Flag.Occupy.SE;
                 iccellptr = &Map[xdcells[1]];
-                icount += iccellptr->Flag.Occupy.Center + iccellptr->Flag.Occupy.NW + iccellptr->Flag.Occupy.NE + iccellptr->Flag.Occupy.SW + iccellptr->Flag.Occupy.SE;
-                if (icount > 5){
+                icount += iccellptr->Flag.Occupy.Center + iccellptr->Flag.Occupy.NW + iccellptr->Flag.Occupy.NE
+                          + iccellptr->Flag.Occupy.SW + iccellptr->Flag.Occupy.SE;
+                if (icount > 5) {
                     return MOVE_MOVING_BLOCK;
                 }
             }
@@ -2114,7 +2111,8 @@ void InfantryClass::Enter_Idle_Mode(bool)
     if (order == MISSION_GUARD && ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove) {
         CFEVeterancy& cfe = Vet_Entry();
         if (!Target_Legal(cfe.RememberedNavCom) || Distance(cfe.RememberedNavCom) < Rule.CloseEnoughDistance
-            || !Find_Path_AStar(nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1)) {
+            || !Find_Path_AStar(
+                nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1)) {
             Reset_Attack_Move();
         } else {
             Attack_Move_Enter_Move_Mode();

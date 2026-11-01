@@ -408,7 +408,8 @@ void UnitClass::AI(void)
     **	CFE harvester load balancing/optimize: clear the unload refinery if not harvesting or
     **	entering a refinery.
     */
-    if (Class->IsToHarvest && (ActiveCFEPatchConfig.EnableHarvyLoadBalancing || ActiveCFEPatchConfig.EnableHarvyOptimize)) {
+    if (Class->IsToHarvest
+        && (ActiveCFEPatchConfig.EnableHarvyLoadBalancing || ActiveCFEPatchConfig.EnableHarvyOptimize)) {
         if (Mission != MISSION_HARVEST) {
             if (Mission != MISSION_ENTER || !In_Radio_Contact() || Contact_With_Whom()->What_Am_I() != RTTI_BUILDING
                 || *((BuildingClass*)Contact_With_Whom()) != STRUCT_REFINERY) {
@@ -439,8 +440,8 @@ void UnitClass::AI(void)
     /*
     **	Scatter units off buildings in guard modes.
     */
-    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving && !IsRotating
-        && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
+    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving
+        && !IsRotating && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
         && Map[Coord].Cell_Building() != NULL) {
         Scatter(0, true, true);
     }
@@ -466,7 +467,8 @@ void UnitClass::AI(void)
         ObjectClass const* object = Attached_Object();
         for (int pindex = 0; pindex < Class_Of().Max_Pips(); pindex++) {
             if (object) {
-                if (object->What_Am_I() == RTTI_INFANTRY && ((InfantryClass*)object)->Health_Ratio() < Rule.ConditionGreen) {
+                if (object->What_Am_I() == RTTI_INFANTRY
+                    && ((InfantryClass*)object)->Health_Ratio() < Rule.ConditionGreen) {
                     ((InfantryClass*)object)->Strength++;
                 }
                 object = object->Next;
@@ -3204,7 +3206,8 @@ int UnitClass::Mission_Harvest(void)
                 nearest = Find_Best_Refinery();
                 ScenarioInit--;
                 if (nearest != NULL) {
-                    if (ActiveCFEPatchConfig.EnableHarvyQueueJump && Transmit_Message(RADIO_HELLO, nearest) == RADIO_ROGER) {
+                    if (ActiveCFEPatchConfig.EnableHarvyQueueJump
+                        && Transmit_Message(RADIO_HELLO, nearest) == RADIO_ROGER) {
                         Status = HEADINGHOME;
                     } else {
                         Assign_Destination(::As_Target(Nearby_Location(nearest)));
@@ -3685,12 +3688,12 @@ MoveType UnitClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveTyp
     CellClass const* cellptr = &Map[cell];
     bool crusher = Class->IsCrusher;
 
-    if (retval == MOVE_OK){
+    if (retval == MOVE_OK) {
 
         // is there a unit heading there that isn't this unit?
         // to be consistent with the infantry case, if we have a pointer to the vehicle, we'll work with it
         FootClass* rv = cellptr->Reserving_Vehicle();
-        if (rv && (rv != this) && rv->IsActive){
+        if (rv && (rv != this) && rv->IsActive) {
             // is it allied?
             if (House->Is_Ally(rv)) {
                 retval = MOVE_MOVING_BLOCK;
@@ -3698,9 +3701,9 @@ MoveType UnitClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveTyp
             // enemy?
             else {
                 // maybe we can crush it? (only if crushable vehicles have been modded in...)
-                if (!(crusher && rv->Class_Of().IsCrushable)){
+                if (!(crusher && rv->Class_Of().IsCrushable)) {
                     // is it cloaked?
-                    if (rv->Is_Cloaked(this)){
+                    if (rv->Is_Cloaked(this)) {
                         retval = MOVE_CLOAK;
                     }
                     // maybe we can kill it?
@@ -3717,13 +3720,13 @@ MoveType UnitClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveTyp
 
         // a vehicle is entering the cell, but we don't have a pointer
         // this case should never happen if ReservingVehicle is operating properly.
-        if ((!rv || !rv->IsActive) && cellptr->Flag.Occupy.Vehicle && (cellptr->Cell_Unit() != this)){
+        if ((!rv || !rv->IsActive) && cellptr->Flag.Occupy.Vehicle && (cellptr->Cell_Unit() != this)) {
             // have no idea if it's friendly or not, so assume moving block (this is the vanilla behavior)
             retval = MOVE_MOVING_BLOCK;
         }
 
         // is there infantry heading there?
-        if ((cellptr->Flag.Composite & 0x1F) != 0){
+        if ((cellptr->Flag.Composite & 0x1F) != 0) {
             // is it allied?
             if (cellptr->InfType != HOUSE_NONE && House->Is_Ally(cellptr->InfType)) {
                 retval = MOVE_MOVING_BLOCK;
@@ -3731,64 +3734,63 @@ MoveType UnitClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveTyp
             // enemy?
             else {
                 // can we crush it?
-                if (!crusher){ // (this would be a bug if there was non-crushable infantry)
+                if (!crusher) { // (this would be a bug if there was non-crushable infantry)
                     // can we shoot it?
                     if (Class->PrimaryWeapon != NULL && Class->PrimaryWeapon->Bullet->IsAntiGround) {
                         retval = MOVE_DESTROYABLE;
-                    // can't shoot, can't crush
+                        // can't shoot, can't crush
                     } else {
-                        return(MOVE_NO);
+                        return (MOVE_NO);
                     }
                 }
             }
         }
     }
 
-
     // CFE: we need to deal with the possibility of making a diagonal move perpendicular to another unit's diagonal move
     // The units will pass through the same spot at the corner, but it won't be noticed up till this point because neither of the cells involved in the other unit's move are involved in this unit's move.
-    if ((retval == MOVE_OK) && ((facing == FACING_NE) || (facing == FACING_SE) || (facing == FACING_SW) || (facing == FACING_NW))){
+    if ((retval == MOVE_OK)
+        && ((facing == FACING_NE) || (facing == FACING_SE) || (facing == FACING_SW) || (facing == FACING_NW))) {
         // the crossing point is the upper-left corner of the southeast cell
         COORDINATE crossingpoint = 0;
-        switch (facing){
-            case FACING_NE:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_S));
-                break;
-            case FACING_SE:
-                crossingpoint = Cell_Coord(cell);
-                break;
-            case FACING_SW:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_E));
-                break;
-            case FACING_NW:
-                crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_SE));
-                break;
-            default:
-                // should be unreachable
-                crossingpoint = Cell_Coord(cell);
+        switch (facing) {
+        case FACING_NE:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_S));
+            break;
+        case FACING_SE:
+            crossingpoint = Cell_Coord(cell);
+            break;
+        case FACING_SW:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_E));
+            break;
+        case FACING_NW:
+            crossingpoint = Cell_Coord(Adjacent_Cell(cell, FACING_SE));
+            break;
+        default:
+            // should be unreachable
+            crossingpoint = Cell_Coord(cell);
         }
-        FacingType reversefacing = (FacingType)((char)facing ^4);
+        FacingType reversefacing = (FacingType)((char)facing ^ 4);
         // we can do this because FacingTypes have modular addition/subtraction
-        CELL xdcells[2] = {0,0};
+        CELL xdcells[2] = {0, 0};
         xdcells[0] = Adjacent_Cell(cell, reversefacing + (FacingType)1);
         xdcells[1] = Adjacent_Cell(cell, reversefacing - (FacingType)1);
-        if (Map.In_Radar(xdcells[0]) && Map.In_Radar(xdcells[1])){
-            for (int i=0; i<2; i++){
+        if (Map.In_Radar(xdcells[0]) && Map.In_Radar(xdcells[1])) {
+            for (int i = 0; i < 2; i++) {
                 CellClass* xdcellptr = &Map[xdcells[i]];
-                ObjectClass *xdobj = xdcellptr->Cell_Occupier();
+                ObjectClass* xdobj = xdcellptr->Cell_Occupier();
                 while (xdobj) {
-                    if ((xdobj != this) && xdobj->IsActive && !xdobj->IsInLimbo && xdobj->Strength){
+                    if ((xdobj != this) && xdobj->IsActive && !xdobj->IsInLimbo && xdobj->Strength) {
                         RTTIType xdrtti = xdobj->What_Am_I();
-                        if ((xdrtti == RTTI_UNIT) || (xdrtti == RTTI_INFANTRY)){
+                        if ((xdrtti == RTTI_UNIT) || (xdrtti == RTTI_INFANTRY)) {
                             FootClass* xdfoot = (FootClass*)xdobj;
                             COORDINATE xdhtcoord = xdfoot->Head_To_Coord();
                             CELL xdhtcell = Coord_Cell(xdhtcoord);
-                            CELL otherxdcell = xdcells[(i+1)%2];
+                            CELL otherxdcell = xdcells[(i + 1) % 2];
                             bool iscrossblocker = false;
-                            if (xdhtcell == otherxdcell){
+                            if (xdhtcell == otherxdcell) {
                                 iscrossblocker = true;
-                            }
-                            else if (xdhtcell == xdcells[i]){
+                            } else if (xdhtcell == xdcells[i]) {
                                 // in order to prevent "butt crossovers" we need to check
                                 // if the other unit just entered its destination cell but is still near the crossover point
                                 // So define a box from the crossing point to just short of the unit's headto
@@ -3808,62 +3810,55 @@ MoveType UnitClass::CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveTyp
                                 int lowx;
                                 int highy;
                                 int lowy;
-                                if (xbhtx > xpx){
+                                if (xbhtx > xpx) {
                                     highx = xbhtx - 1; // shift by one because <= later
                                     lowx = xpx;
-                                }
-                                else {
+                                } else {
                                     highx = xpx;
                                     lowx = xbhtx + 1; // shift by one because >= later
                                 }
-                                if (xbhty > xpy){
+                                if (xbhty > xpy) {
                                     highy = xbhty - 1; // shift by one because <= later
                                     lowy = xpy;
-                                }
-                                else {
+                                } else {
                                     highy = xpy;
                                     lowy = xbhty + 1; // shift by one because >= later
                                 }
-                                if ((xbx >= lowx) && (xbx <= highx) && (xby >= lowy) && (xby <= highy)){
+                                if ((xbx >= lowx) && (xbx <= highx) && (xby >= lowy) && (xby <= highy)) {
                                     iscrossblocker = true;
                                 }
                             }
-                            if (iscrossblocker){
-                                if (xdrtti == RTTI_UNIT){
-                                    if (House->Is_Ally(xdfoot)){
+                            if (iscrossblocker) {
+                                if (xdrtti == RTTI_UNIT) {
+                                    if (House->Is_Ally(xdfoot)) {
                                         return MOVE_MOVING_BLOCK;
-                                    }
-                                    else {
-                                        if (xdfoot->Is_Cloaked(this)){
+                                    } else {
+                                        if (xdfoot->Is_Cloaked(this)) {
                                             return MOVE_CLOAK;
-                                        }
-                                        else {
-                                            if (Class->PrimaryWeapon != NULL && Class->PrimaryWeapon->Bullet->IsAntiGround) {
+                                        } else {
+                                            if (Class->PrimaryWeapon != NULL
+                                                && Class->PrimaryWeapon->Bullet->IsAntiGround) {
                                                 return MOVE_DESTROYABLE;
-                                            }
-                                            else {
+                                            } else {
                                                 return MOVE_NO;
                                             }
                                         }
                                     }
-                                }
-                                else if (xdrtti == RTTI_INFANTRY){
-                                    if (House->Is_Ally(xdfoot)){
+                                } else if (xdrtti == RTTI_INFANTRY) {
+                                    if (House->Is_Ally(xdfoot)) {
                                         // it's possible that there's an enemy vehicle coming to crush the allied infantry, so we must continue checking.
                                         retval = MOVE_MOVING_BLOCK;
-                                    }
-                                    else{
+                                    } else {
                                         // Even though we can't actually crush the infantry in this situation, it would be odd to let them block something that ordinarily could crush them.
                                         // So we'll pretend we can crush them and hopefully get something that looks like a narrow escape from being crushed.
                                         if (!crusher) {
-                                            if (xdfoot->Is_Cloaked(this)){
+                                            if (xdfoot->Is_Cloaked(this)) {
                                                 return MOVE_CLOAK;
-                                            }
-                                            else {
-                                                if (Class->PrimaryWeapon != NULL && Class->PrimaryWeapon->Bullet->IsAntiGround) {
+                                            } else {
+                                                if (Class->PrimaryWeapon != NULL
+                                                    && Class->PrimaryWeapon->Bullet->IsAntiGround) {
                                                     return MOVE_DESTROYABLE;
-                                                }
-                                                else {
+                                                } else {
                                                     return MOVE_NO;
                                                 }
                                             }
@@ -5026,9 +5021,11 @@ BuildingClass* UnitClass::Find_Best_Refinery(void) const
     if (ActiveCFEPatchConfig.EnableHarvyOptimize) {
         for (int i = 0; i < _refineries.Count(); ++i) {
             if (_refineries[i].Distance < ActiveCFEPatchConfig.HarvyOptimizeThrashingCutoff) {
-                _refineries[i].Distance += _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeThrashingWeight;
+                _refineries[i].Distance +=
+                    _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeThrashingWeight;
             } else {
-                _refineries[i].Distance += _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeUnloadWaitWeight;
+                _refineries[i].Distance +=
+                    _refineries[i].Harvesters * ActiveCFEPatchConfig.HarvyOptimizeUnloadWaitWeight;
             }
         }
     }
@@ -5965,11 +5962,11 @@ int UnitClass::Mission_Guard_Area(void)
  *=============================================================================================*/
 bool UnitClass::Do_Smarter_Run_Away(void)
 {
-    if (Target_Legal(NavCom) && (Mission == MISSION_MOVE)){
+    if (Target_Legal(NavCom) && (Mission == MISSION_MOVE)) {
         return true;
     }
     BuildingClass* beneathme = Map[Coord].Cell_Building();
-    if (!beneathme || (*beneathme != STRUCT_REPAIR)){
+    if (!beneathme || (*beneathme != STRUCT_REPAIR)) {
         return false;
     }
 
@@ -5979,57 +5976,55 @@ bool UnitClass::Do_Smarter_Run_Away(void)
     FacingType bestdirection = FACING_NONE;
     for (FacingType face = FACING_N; face < FACING_COUNT; face++) {
         CELL newcell = Adjacent_Cell(mycell, face);
-        if (!Map.In_Radar(newcell)){
+        if (!Map.In_Radar(newcell)) {
             continue;
         }
-        if (((int)face) % 2 == 0){
+        if (((int)face) % 2 == 0) {
             newcell = Adjacent_Cell(newcell, face);
-            if (!Map.In_Radar(newcell)){
+            if (!Map.In_Radar(newcell)) {
                 continue;
             }
         }
         int score = 0;
         MoveType move = Can_Enter_Cell(newcell, FACING_NONE);
-        if (move == MOVE_OK){
+        if (move == MOVE_OK) {
             score += 104;
-        }
-        else if (move == MOVE_MOVING_BLOCK){
+        } else if (move == MOVE_MOVING_BLOCK) {
             score += 100;
-        }
-        else if (move == MOVE_TEMP){
+        } else if (move == MOVE_TEMP) {
             score += 10;
         }
-        if (score){
+        if (score) {
             int myface = Dir_Facing(PrimaryFacing.Current());
             int dista = (((int)face - myface) + 8) % 8;
             int distb = ((myface - (int)face) + 8) % 8;
-            if (dista < distb){
+            if (dista < distb) {
                 score = score + 4 - dista;
-            }
-            else {
+            } else {
                 score = score + 4 - distb;
             }
 
-            if (score > bestscore){
+            if (score > bestscore) {
                 bestscore = score;
                 bestcell = newcell;
                 bestdirection = face;
             }
         }
     }
-    if (bestscore){
+    if (bestscore) {
         Assign_Destination(::As_Target(bestcell));
         Assign_Mission(MISSION_MOVE);
-        if (bestscore < 100){
+        if (bestscore < 100) {
             CellClass* cellptr = &Map[bestcell];
             TechnoClass* blockage = cellptr->Cell_Techno();
             if (blockage && blockage->IsActive && House->Is_Ally(blockage)) {
                 cellptr->Incoming(Coord, true, true);
             }
             for (FacingType face = FACING_N; face < FACING_COUNT; face++) {
-                if ((face == bestdirection) || (face == bestdirection + (FacingType)1) || (face == bestdirection - (FacingType)1)){
+                if ((face == bestdirection) || (face == bestdirection + (FacingType)1)
+                    || (face == bestdirection - (FacingType)1)) {
                     CELL newcell = Adjacent_Cell(bestcell, face);
-                    if (!Map.In_Radar(newcell)){
+                    if (!Map.In_Radar(newcell)) {
                         continue;
                     }
                     cellptr = &Map[newcell];
@@ -6050,12 +6045,12 @@ bool UnitClass::Do_Smarter_Run_Away(void)
 */
 bool UnitClass::Minelayer_Poop_Time(void)
 {
-    if (!Ammo){
+    if (!Ammo) {
         Minelayer_Go_Home();
         return false;
     }
     BuildingClass* bldng = Map[Coord_Cell(Coord)].Cell_Building();
-    if (bldng){
+    if (bldng) {
         Minelayer_Find_Spot();
         return true;
     }
@@ -6066,54 +6061,48 @@ bool UnitClass::Minelayer_Go_Home(void)
 {
 
     bool returnvalue = false;
-    if (House->ActiveBScan & STRUCTF_REPAIR){
+    if (House->ActiveBScan & STRUCTF_REPAIR) {
         BuildingClass* closestpad = NULL;
         int bestscore = 0;
         for (int i = 0; i < Buildings.Count(); ++i) {
             BuildingClass* pad = Buildings.Ptr(i);
-            if ((pad != NULL) &&
-                pad->IsActive &&
-                !pad->IsInLimbo &&
-                (pad->House == House) &&
-                (pad->Mission != MISSION_DECONSTRUCTION) &&
-                (*pad == STRUCT_REPAIR) &&
-                (Map[pad->Center_Coord()].Zones[Techno_Type_Class()->MZone] == Map[Center_Coord()].Zones[Techno_Type_Class()->MZone])
-            ){
-                    int astar_result = Find_Path_AStar(nullptr, Coord_Cell(Coord), Coord_Cell(pad->Center_Coord()), 1, MOVE_NO, -1);
-                    if (!astar_result){
-                        int crowflies_result = Lepton_To_Cell(Distance(pad));
-                        if (crowflies_result <= 6){
-                           astar_result = crowflies_result;
-                        }
+            if ((pad != NULL) && pad->IsActive && !pad->IsInLimbo && (pad->House == House)
+                && (pad->Mission != MISSION_DECONSTRUCTION) && (*pad == STRUCT_REPAIR)
+                && (Map[pad->Center_Coord()].Zones[Techno_Type_Class()->MZone]
+                    == Map[Center_Coord()].Zones[Techno_Type_Class()->MZone])) {
+                int astar_result =
+                    Find_Path_AStar(nullptr, Coord_Cell(Coord), Coord_Cell(pad->Center_Coord()), 1, MOVE_NO, -1);
+                if (!astar_result) {
+                    int crowflies_result = Lepton_To_Cell(Distance(pad));
+                    if (crowflies_result <= 6) {
+                        astar_result = crowflies_result;
                     }
-                    if (astar_result && (!bestscore || (astar_result < bestscore))){
-                            bestscore = astar_result;
-                            closestpad = pad;
-                    }
+                }
+                if (astar_result && (!bestscore || (astar_result < bestscore))) {
+                    bestscore = astar_result;
+                    closestpad = pad;
+                }
             }
         }
-        if (closestpad){
+        if (closestpad) {
             Assign_Mission(MISSION_ENTER);
             Assign_Destination(closestpad->As_Target());
             returnvalue = true;
         }
-    }
-    else if (Target_Legal(Vet_Entry().MinelayerOrigin)){
+    } else if (Target_Legal(Vet_Entry().MinelayerOrigin)) {
         Assign_Destination(Vet_Entry().MinelayerOrigin);
         Assign_Mission(MISSION_MOVE);
         returnvalue = true;
-    }
-    else {
+    } else {
         Assign_Mission(MISSION_GUARD);
     }
     Reset_Attack_Move(0);
 
     return returnvalue;
-
 }
 bool UnitClass::Minelayer_Find_Spot(void)
 {
-    if (!Ammo){
+    if (!Ammo) {
         Minelayer_Go_Home();
         return false;
     }
@@ -6125,50 +6114,47 @@ bool UnitClass::Minelayer_Find_Spot(void)
     int scany;
     int bestscore = 0;
     CELL bestcell = 0;
-    for (int i=-2; i<=2; i++){
+    for (int i = -2; i <= 2; i++) {
         scanx = cellx + i;
-        if (scanx <0 ){
+        if (scanx < 0) {
             continue;
         }
-        if (scanx > MAP_CELL_W){
+        if (scanx > MAP_CELL_W) {
             continue;
         }
 
-        for (int j=-2; j<=2; j++){
+        for (int j = -2; j <= 2; j++) {
             scany = celly + j;
-            if (scany < 0){
+            if (scany < 0) {
                 continue;
             }
-            if (scany > MAP_CELL_H){
+            if (scany > MAP_CELL_H) {
                 continue;
             }
 
             CELL newcell = XY_Cell(scanx, scany);
-            if (!Map.In_Radar(newcell)){
+            if (!Map.In_Radar(newcell)) {
                 continue;
             }
-            if (cell == newcell){
+            if (cell == newcell) {
                 continue;
             }
             MoveType move = Can_Enter_Cell(newcell, FACING_NONE);
-            if (   (move <= MOVE_MOVING_BLOCK) &&
-                    !Map[newcell].Cell_Building() &&
-                    !(  (Map[newcell].Smudge != SMUDGE_NONE) &&
-                        SmudgeTypeClass::As_Reference(Map[newcell].Smudge).IsBib
-                    )
-               ){
+            if ((move <= MOVE_MOVING_BLOCK) && !Map[newcell].Cell_Building()
+                && !((Map[newcell].Smudge != SMUDGE_NONE)
+                     && SmudgeTypeClass::As_Reference(Map[newcell].Smudge).IsBib)) {
                 int score = Find_Path_AStar(nullptr, cell, newcell, 1, MOVE_MOVING_BLOCK, -1);
-                if (score){
+                if (score) {
                     score = 1000 - (10 * score) + Random_Pick(0, 10);
                 }
-                if (score > bestscore){
+                if (score > bestscore) {
                     bestscore = score;
                     bestcell = newcell;
                 }
             }
         }
     }
-    if (bestscore){
+    if (bestscore) {
         Assign_Destination(::As_Target(bestcell));
         Assign_Mission(MISSION_MOVE);
         return true;
@@ -6176,4 +6162,3 @@ bool UnitClass::Minelayer_Find_Spot(void)
     Minelayer_Go_Home();
     return false;
 }
-

@@ -87,7 +87,8 @@ static_assert(sizeof(((FootClass*)0)->NavQueue) / sizeof(TARGET) == MAX_NAVQUEUE
 */
 static bool CFE_Nav_Overhaul(void)
 {
-    return (ActiveCFEPatchConfig.EnableQMoveLoops || ActiveCFEPatchConfig.EnableAttackMove || ActiveCFEPatchConfig.EnableAirQMove);
+    return (ActiveCFEPatchConfig.EnableQMoveLoops || ActiveCFEPatchConfig.EnableAttackMove
+            || ActiveCFEPatchConfig.EnableAirQMove);
 }
 
 /***********************************************************************************************
@@ -518,7 +519,8 @@ int FootClass::Mission_Move(void)
             **	a queue is advanced by going idle instead. Otherwise go back to moving.
             */
             if (!Target_Legal(cfe.RememberedNavCom) || Distance(cfe.RememberedNavCom) < Rule.CloseEnoughDistance
-                || !Find_Path_AStar(nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1)) {
+                || !Find_Path_AStar(
+                    nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1)) {
                 if (cfe.NavSize > 0) {
                     Enter_Idle_Mode();
                 } else {
@@ -1534,7 +1536,8 @@ void FootClass::Per_Cell_Process(PCPType why)
         **	Trigger event associated with the player entering the cell.
         */
         // CFE: units cloaked by a veterancy bonus still trip cell triggers; missions break otherwise.
-        if (Cloak != CLOAKED || (Vet().Rank == 3 && What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)this) == INFANTRY_TANYA)) {
+        if (Cloak != CLOAKED
+            || (Vet().Rank == 3 && What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)this) == INFANTRY_TANYA)) {
             TriggerClass* trigger = Map[Coord].Trigger;
             if (trigger != NULL) {
                 trigger->Spring(TEVENT_PLAYER_ENTERED, this, Coord_Cell(Coord));
@@ -2805,7 +2808,7 @@ bool FootClass::CFE_Handle_Navigation_List(void)
 {
     CFEVeterancy& cfe = Vet_Entry();
 
-    if (cfe.SkipNavQueueUpdate){
+    if (cfe.SkipNavQueueUpdate) {
         return false;
     }
 
@@ -2813,40 +2816,36 @@ bool FootClass::CFE_Handle_Navigation_List(void)
     **    The navigation queue only needs to be processed if there is
     **    currently no navigation target for this object.
     */
-    if (Target_Legal(NavCom)){
+    if (Target_Legal(NavCom)) {
         return false;
     }
-    if (cfe.NavSize == 0){
+    if (cfe.NavSize == 0) {
         IsNavQueueLoop = false; // just in case it's somehow still set
         return false;
     }
-    if (   cfe.AttackMove &&
-            Target_Legal(cfe.RememberedNavCom) &&
-            (Distance(cfe.RememberedNavCom) >= Rule.CloseEnoughDistance) &&
-            (
-                (What_Am_I() == RTTI_AIRCRAFT) ||
-                (Find_Path_AStar(nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1) != 0)
-            )
-    ){
+    if (cfe.AttackMove && Target_Legal(cfe.RememberedNavCom)
+        && (Distance(cfe.RememberedNavCom) >= Rule.CloseEnoughDistance)
+        && ((What_Am_I() == RTTI_AIRCRAFT)
+            || (Find_Path_AStar(nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1)
+                != 0))) {
         return false;
     }
     bool consumed = false;
     int failcount = 0;
-    while (true){
+    while (true) {
         TARGET target = NavQueue[cfe.NavIndex];
         cfe.NavIndex++;
-        if ((cfe.NavIndex >= cfe.NavSize) || (cfe.NavIndex > MAX_NAVQUEUE_INDEX)){
-            if (IsNavQueueLoop){
+        if ((cfe.NavIndex >= cfe.NavSize) || (cfe.NavIndex > MAX_NAVQUEUE_INDEX)) {
+            if (IsNavQueueLoop) {
                 cfe.NavIndex = 0;
-            }
-            else {
+            } else {
                 Clear_Navigation_List();
                 consumed = true;
             }
         }
         if (Target_Legal(target)) {
             bool isgood = false;
-            if (What_Am_I() == RTTI_AIRCRAFT){
+            if (What_Am_I() == RTTI_AIRCRAFT) {
                 COORDINATE coord;
                 if (Is_Target_Building(target)) {
                     coord = As_Building(target)->Docking_Coord();
@@ -2855,79 +2854,72 @@ bool FootClass::CFE_Handle_Navigation_List(void)
                 }
                 int distance = Distance(coord);
                 int threshhold = Rule.CloseEnoughDistance;
-                if (distance >= threshhold){
+                if (distance >= threshhold) {
                     isgood = true;
                 }
-            }
-            else if (   (::As_Cell(target) != Coord_Cell(Coord)) &&
-                            (   (Distance(target) >= Rule.CloseEnoughDistance) ||
-                                (Can_Enter_Cell(::As_Cell(target)) == MOVE_OK)
-                            )
-            ){
+            } else if ((::As_Cell(target) != Coord_Cell(Coord))
+                       && ((Distance(target) >= Rule.CloseEnoughDistance)
+                           || (Can_Enter_Cell(::As_Cell(target)) == MOVE_OK))) {
                 isgood = true;
             }
-            if (isgood){
+            if (isgood) {
                 Assign_Destination(target);
-                if (cfe.AttackMove){
+                if (cfe.AttackMove) {
                     cfe.RememberedNavCom = target;
                 }
                 return true;
             }
         }
         failcount++;
-        if (consumed || (failcount >= cfe.NavSize) || (failcount > MAX_NAVQUEUE_INDEX)){
+        if (consumed || (failcount >= cfe.NavSize) || (failcount > MAX_NAVQUEUE_INDEX)) {
             Clear_Navigation_List();
             Assign_Destination(TARGET_NONE);
             return false;
         }
     }
     return false;
-
 }
 
 void FootClass::CFE_Queue_Navigation_List(TARGET target)
 {
     CFEVeterancy& cfe = Vet_Entry();
 
-    if (!Target_Legal(target)){
+    if (!Target_Legal(target)) {
         return;
     }
-    if (!IsNavQueueLoop && (cfe.NavIndex > 0)){
-        memmove(&NavQueue[0], &NavQueue[cfe.NavIndex], sizeof(NavQueue[0]) * (MAX_NAVQUEUE - cfe.NavIndex) );
-        for (int i=0; i<cfe.NavIndex; i++){
+    if (!IsNavQueueLoop && (cfe.NavIndex > 0)) {
+        memmove(&NavQueue[0], &NavQueue[cfe.NavIndex], sizeof(NavQueue[0]) * (MAX_NAVQUEUE - cfe.NavIndex));
+        for (int i = 0; i < cfe.NavIndex; i++) {
             NavQueue[MAX_NAVQUEUE_INDEX - i] = TARGET_NONE;
         }
         cfe.NavSize -= cfe.NavIndex;
         cfe.NavIndex = 0;
     }
-    TARGET currentdestination = (cfe.AttackMove && Target_Legal(TarCom) && Target_Legal(cfe.RememberedNavCom)) ? cfe.RememberedNavCom : NavCom;
+    TARGET currentdestination =
+        (cfe.AttackMove && Target_Legal(TarCom) && Target_Legal(cfe.RememberedNavCom)) ? cfe.RememberedNavCom : NavCom;
     bool is_loop_request = false;
-    if (ActiveCFEPatchConfig.EnableQMoveLoops){
-        if ((target == currentdestination) || (target == cfe.UnmodifiedNavCom)){
+    if (ActiveCFEPatchConfig.EnableQMoveLoops) {
+        if ((target == currentdestination) || (target == cfe.UnmodifiedNavCom)) {
             is_loop_request = true;
-        }
-        else {
+        } else {
             CELL tcell = ::As_Cell(target);
-            for (int i=0; i<cfe.NavSize; i++){
-                if (tcell == ::As_Cell(NavQueue[i])){
+            for (int i = 0; i < cfe.NavSize; i++) {
+                if (tcell == ::As_Cell(NavQueue[i])) {
                     is_loop_request = true;
                     break;
                 }
             }
         }
     }
-    if (is_loop_request){
-        if (    cfe.AttackMove &&
-                (What_Am_I() == RTTI_UNIT) &&
-                (*((UnitClass*)this) == UNIT_MINELAYER)
-        ){
+    if (is_loop_request) {
+        if (cfe.AttackMove && (What_Am_I() == RTTI_UNIT) && (*((UnitClass*)this) == UNIT_MINELAYER)) {
             return;
         }
-        if (!IsNavQueueLoop){
-            if (Target_Legal(currentdestination)){
-                if (cfe.NavSize < MAX_NAVQUEUE){
-                    if (cfe.NavSize > 0){
-                        memmove(&NavQueue[1], &NavQueue[0], sizeof(NavQueue)-sizeof(NavQueue[0]));
+        if (!IsNavQueueLoop) {
+            if (Target_Legal(currentdestination)) {
+                if (cfe.NavSize < MAX_NAVQUEUE) {
+                    if (cfe.NavSize > 0) {
+                        memmove(&NavQueue[1], &NavQueue[0], sizeof(NavQueue) - sizeof(NavQueue[0]));
                         cfe.NavIndex++;
                     }
                     NavQueue[0] = currentdestination;
@@ -2935,41 +2927,32 @@ void FootClass::CFE_Queue_Navigation_List(TARGET target)
                 }
             }
         }
-        if (cfe.NavSize > 0){
+        if (cfe.NavSize > 0) {
             IsNavQueueLoop = true;
         }
 
-    }
-    else {
-        if (    IsNavQueueLoop &&
-                (   (cfe.NavSize == 0) ||
-                    (
-                        cfe.AttackMove &&
-                        (What_Am_I() == RTTI_UNIT) &&
-                        (*((UnitClass*)this) == UNIT_MINELAYER)
-                    )
-                )
-        ) {
+    } else {
+        if (IsNavQueueLoop
+            && ((cfe.NavSize == 0)
+                || (cfe.AttackMove && (What_Am_I() == RTTI_UNIT) && (*((UnitClass*)this) == UNIT_MINELAYER)))) {
             IsNavQueueLoop = false;
         }
-        if (cfe.NavSize < MAX_NAVQUEUE){
-            if (IsNavQueueLoop && (cfe.NavSize == 1) && (NavQueue[0] == currentdestination)){
+        if (cfe.NavSize < MAX_NAVQUEUE) {
+            if (IsNavQueueLoop && (cfe.NavSize == 1) && (NavQueue[0] == currentdestination)) {
                 cfe.NavIndex++;
             }
             NavQueue[cfe.NavSize] = target;
             cfe.NavSize++;
 
-        }
-        else{
-            if (ActiveCFEPatchConfig.EnableQMoveLoops){
-                memmove(&NavQueue[0], &NavQueue[1], sizeof(NavQueue)-sizeof(NavQueue[0]));
-                if (cfe.NavIndex > 0){
+        } else {
+            if (ActiveCFEPatchConfig.EnableQMoveLoops) {
+                memmove(&NavQueue[0], &NavQueue[1], sizeof(NavQueue) - sizeof(NavQueue[0]));
+                if (cfe.NavIndex > 0) {
                     cfe.NavIndex--;
                 }
             }
             NavQueue[MAX_NAVQUEUE_INDEX] = target;
         }
-
     }
 
     /*
@@ -2981,20 +2964,14 @@ void FootClass::CFE_Queue_Navigation_List(TARGET target)
     }
 
     return;
-
 }
 
 void FootClass::Memorize_Navigation_List(void)
 {
     CFEVeterancy& cfe = Vet_Entry();
 
-    if (    !ActiveCFEPatchConfig.EnableAirQAMLRecall ||
-             !cfe.AttackMove ||
-             !IsNavQueueLoop ||
-             (cfe.NavSize < 2) ||
-             !Target_Legal(NavQueue[0]) ||
-             !Target_Legal(NavQueue[1])
-    ){
+    if (!ActiveCFEPatchConfig.EnableAirQAMLRecall || !cfe.AttackMove || !IsNavQueueLoop || (cfe.NavSize < 2)
+        || !Target_Legal(NavQueue[0]) || !Target_Legal(NavQueue[1])) {
         return;
     }
     memcpy(&cfe.Memorized[0], &NavQueue[0], sizeof(cfe.Memorized));
@@ -3008,8 +2985,7 @@ void FootClass::Recall_Navigation_List(void)
 {
     CFEVeterancy& cfe = Vet_Entry();
 
-
-    if (!cfe.HasMemorized || (cfe.MemorizedSize < 2)){
+    if (!cfe.HasMemorized || (cfe.MemorizedSize < 2)) {
         Clear_Memorized_Navigation_List();
         return;
     }
@@ -3047,47 +3023,45 @@ void FootClass::CFE_Detach_Navigation(TARGET target)
     bool pullback = false;
     for (int index = MAX_NAVQUEUE_INDEX; index >= 0; index--) {
         if (NavQueue[index] == target) {
-            if (pullback){
-                memmove(&NavQueue[index], &NavQueue[index+1], (MAX_NAVQUEUE - index - 1) * sizeof(NavQueue[0]));
+            if (pullback) {
+                memmove(&NavQueue[index], &NavQueue[index + 1], (MAX_NAVQUEUE - index - 1) * sizeof(NavQueue[0]));
                 NavQueue[MAX_NAVQUEUE_INDEX] = TARGET_NONE;
-            }
-            else {
+            } else {
                 NavQueue[index] = TARGET_NONE;
-                if ((index > 0) && (index == cfe.NavIndex)){
+                if ((index > 0) && (index == cfe.NavIndex)) {
                     cfe.NavIndex--;
                 }
             }
             cfe.NavSize--;
-        }
-        else if (NavQueue[index] != TARGET_NONE){
+        } else if (NavQueue[index] != TARGET_NONE) {
             pullback = true;
         }
     }
-    if (cfe.NavSize == 0){
+    if (cfe.NavSize == 0) {
         Clear_Navigation_List();
     }
 
     pullback = false;
     for (int index = MAX_NAVQUEUE_INDEX; index >= 0; index--) {
         if (cfe.Memorized[index] == target) {
-            if (pullback){
-                memmove(&cfe.Memorized[index], &cfe.Memorized[index+1], (MAX_NAVQUEUE - index - 1) * sizeof(cfe.Memorized[0]));
+            if (pullback) {
+                memmove(&cfe.Memorized[index],
+                        &cfe.Memorized[index + 1],
+                        (MAX_NAVQUEUE - index - 1) * sizeof(cfe.Memorized[0]));
                 cfe.Memorized[MAX_NAVQUEUE_INDEX] = TARGET_NONE;
-            }
-            else {
+            } else {
                 cfe.Memorized[index] = TARGET_NONE;
             }
             cfe.MemorizedSize--;
-        }
-        else if (cfe.Memorized[index] != TARGET_NONE){
+        } else if (cfe.Memorized[index] != TARGET_NONE) {
             pullback = true;
         }
     }
-    if (cfe.MemorizedSize == 0){
+    if (cfe.MemorizedSize == 0) {
         Clear_Memorized_Navigation_List();
     }
 
-    if (cfe.UnmodifiedNavCom == target){
+    if (cfe.UnmodifiedNavCom == target) {
         cfe.UnmodifiedNavCom = TARGET_NONE;
     }
 }

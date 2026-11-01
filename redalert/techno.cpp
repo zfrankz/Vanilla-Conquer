@@ -2736,7 +2736,8 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
                         CloakingDevice.Set_Stage(0); // re-start the stage counter
                         Cloak = UNCLOAKED;
                         CloakDelay = Rule.CloakDelay * TICKS_PER_MINUTE;
-                        if (Vet().Rank == 3 && What_Am_I() == RTTI_VESSEL && *((VesselClass*)this) == VESSEL_MISSILESUB) {
+                        if (Vet().Rank == 3 && What_Am_I() == RTTI_VESSEL
+                            && *((VesselClass*)this) == VESSEL_MISSILESUB) {
                             CloakDelay = (Rule.CloakDelay * TICKS_PER_MINUTE) / 2;
                         }
                         Mark(MARK_CHANGE);
@@ -3520,8 +3521,12 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
                     Vet_Entry().SecondaryZapTarget = 0;
                     TARGET secondarytarget = Find_Chain_Lightning_Target(target, which, 0.66f);
                     if (Target_Legal(secondarytarget)) {
-                        BulletClass* secondarybullet = new BulletClass(
-                            weapon->Bullet->Type, secondarytarget, this, firepower, WarheadType(weapon->WarheadPtr->ID), firespeed);
+                        BulletClass* secondarybullet = new BulletClass(weapon->Bullet->Type,
+                                                                       secondarytarget,
+                                                                       this,
+                                                                       firepower,
+                                                                       WarheadType(weapon->WarheadPtr->ID),
+                                                                       firespeed);
                         if (secondarybullet != NULL) {
                             COORDINATE secondary_target_coord = As_Object(secondarytarget)->Target_Coord();
                             DirType secondary_dir = ::Direction(target_coord, secondary_target_coord);
@@ -5298,7 +5303,8 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
             FootClass* foot = Detach_Object();
             if (foot != NULL) {
                 if (source != NULL && source->IsActive && !House->Is_Ally(source)) {
-                    source->Gain_Veterancy_XP((foot->Strength * foot->Class_Of().Cost_Of()) / foot->Class_Of().MaxStrength);
+                    source->Gain_Veterancy_XP((foot->Strength * foot->Class_Of().Cost_Of())
+                                              / foot->Class_Of().MaxStrength);
                 }
                 foot->Record_The_Kill(source);
                 delete foot;
@@ -7500,493 +7506,490 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
 **	objects beyond these tables simply get no veterancy.
 */
 #define CFE_VET_TABLE_MAX 2048
-static CFEVeterancy _cfe_unit_vet[CFE_VET_TABLE_MAX];
-static CFEVeterancy _cfe_infantry_vet[CFE_VET_TABLE_MAX];
-static CFEVeterancy _cfe_building_vet[CFE_VET_TABLE_MAX];
-static CFEVeterancy _cfe_aircraft_vet[CFE_VET_TABLE_MAX];
-static CFEVeterancy _cfe_vessel_vet[CFE_VET_TABLE_MAX];
-static unsigned char _cfe_bullet_pen[CFE_VET_TABLE_MAX];
-int CFE_Armor_Pen = CFE_ARMORPEN_NONE;
-TARGET CFE_Indirect_Source = TARGET_NONE;
+    static CFEVeterancy _cfe_unit_vet[CFE_VET_TABLE_MAX];
+    static CFEVeterancy _cfe_infantry_vet[CFE_VET_TABLE_MAX];
+    static CFEVeterancy _cfe_building_vet[CFE_VET_TABLE_MAX];
+    static CFEVeterancy _cfe_aircraft_vet[CFE_VET_TABLE_MAX];
+    static CFEVeterancy _cfe_vessel_vet[CFE_VET_TABLE_MAX];
+    static unsigned char _cfe_bullet_pen[CFE_VET_TABLE_MAX];
+    int CFE_Armor_Pen = CFE_ARMORPEN_NONE;
+    TARGET CFE_Indirect_Source = TARGET_NONE;
 
-void CFE_Set_Bullet_Armor_Pen(int id, int pen)
-{
-    if (id >= 0 && id < CFE_VET_TABLE_MAX) {
-        _cfe_bullet_pen[id] = pen;
+    void CFE_Set_Bullet_Armor_Pen(int id, int pen)
+    {
+        if (id >= 0 && id < CFE_VET_TABLE_MAX) {
+            _cfe_bullet_pen[id] = pen;
+        }
     }
-}
 
-int CFE_Get_Bullet_Armor_Pen(int id)
-{
-    return ((id >= 0 && id < CFE_VET_TABLE_MAX) ? _cfe_bullet_pen[id] : CFE_ARMORPEN_NONE);
-}
-
-static CFEVeterancy* CFE_Vet_Table(RTTIType rtti, int& count)
-{
-    switch (rtti) {
-    case RTTI_UNIT:
-        count = CFE_VET_TABLE_MAX;
-        return (_cfe_unit_vet);
-    case RTTI_INFANTRY:
-        count = CFE_VET_TABLE_MAX;
-        return (_cfe_infantry_vet);
-    case RTTI_BUILDING:
-        count = CFE_VET_TABLE_MAX;
-        return (_cfe_building_vet);
-    case RTTI_AIRCRAFT:
-        count = CFE_VET_TABLE_MAX;
-        return (_cfe_aircraft_vet);
-    case RTTI_VESSEL:
-        count = CFE_VET_TABLE_MAX;
-        return (_cfe_vessel_vet);
-    default:
-        count = 0;
-        return (NULL);
+    int CFE_Get_Bullet_Armor_Pen(int id)
+    {
+        return ((id >= 0 && id < CFE_VET_TABLE_MAX) ? _cfe_bullet_pen[id] : CFE_ARMORPEN_NONE);
     }
-}
 
-/*
+    static CFEVeterancy* CFE_Vet_Table(RTTIType rtti, int& count)
+    {
+        switch (rtti) {
+        case RTTI_UNIT:
+            count = CFE_VET_TABLE_MAX;
+            return (_cfe_unit_vet);
+        case RTTI_INFANTRY:
+            count = CFE_VET_TABLE_MAX;
+            return (_cfe_infantry_vet);
+        case RTTI_BUILDING:
+            count = CFE_VET_TABLE_MAX;
+            return (_cfe_building_vet);
+        case RTTI_AIRCRAFT:
+            count = CFE_VET_TABLE_MAX;
+            return (_cfe_aircraft_vet);
+        case RTTI_VESSEL:
+            count = CFE_VET_TABLE_MAX;
+            return (_cfe_vessel_vet);
+        default:
+            count = 0;
+            return (NULL);
+        }
+    }
+
+    /*
 **	This object's veterancy record, whether or not veterancy is on. Use Vet() to read bonuses.
 */
-CFEVeterancy& TechnoClass::Vet_Entry(void) const
-{
-    static CFEVeterancy _none;
-    int count = 0;
-    CFEVeterancy* table = CFE_Vet_Table(What_Am_I(), count);
-    int id = ID;
-    return ((table != NULL && id >= 0 && id < count) ? table[id] : _none);
-}
+    CFEVeterancy& TechnoClass::Vet_Entry(void) const
+    {
+        static CFEVeterancy _none;
+        int count = 0;
+        CFEVeterancy* table = CFE_Vet_Table(What_Am_I(), count);
+        int id = ID;
+        return ((table != NULL && id >= 0 && id < count) ? table[id] : _none);
+    }
 
-/***********************************************************************************************
+    /***********************************************************************************************
  * TechnoClass::Vet -- Fetches this object's veterancy state.                                  *
  *                                                                                             *
  *    With veterancy off this is always the default state: rank 0 and no bonuses.              *
  *=============================================================================================*/
-CFEVeterancy const& TechnoClass::Vet(void) const
-{
-    static CFEVeterancy const _off;
+    CFEVeterancy const& TechnoClass::Vet(void) const
+    {
+        static CFEVeterancy const _off;
 
-    if (ActiveCFEPatchConfig.EnableVeterancy == 2
-        || (ActiveCFEPatchConfig.EnableVeterancy == 1 && Session.Type != GAME_NORMAL)) {
-        return (Vet_Entry());
+        if (ActiveCFEPatchConfig.EnableVeterancy == 2
+            || (ActiveCFEPatchConfig.EnableVeterancy == 1 && Session.Type != GAME_NORMAL)) {
+            return (Vet_Entry());
+        }
+        return (_off);
     }
-    return (_off);
-}
 
-/*
+    /*
 **	Call from the constructor of the final class, since it needs What_Am_I().
 */
-void TechnoClass::Reset_Veterancy(void)
-{
-    Vet_Entry() = CFEVeterancy();
-}
+    void TechnoClass::Reset_Veterancy(void)
+    {
+        Vet_Entry() = CFEVeterancy();
+    }
 
-/***********************************************************************************************
+    /***********************************************************************************************
  * TechnoClass::Gain_Veterancy_XP -- Adds experience and handles promotion.                    *
  *                                                                                             *
  *    Ranks come at 1, 3 and 6 times the object's cost. Each adds 5% firepower, 10% damage     *
  *    reduction, speed and 5% rate of fire; rank 3 also gives a bonus that depends on the      *
  *    object, most of it handled where it applies.                                             *
  *=============================================================================================*/
-void TechnoClass::Gain_Veterancy_XP(unsigned short xp)
-{
-    if (!(ActiveCFEPatchConfig.EnableVeterancy == 2
-          || (ActiveCFEPatchConfig.EnableVeterancy == 1 && Session.Type != GAME_NORMAL))) {
-        return;
-    }
+    void TechnoClass::Gain_Veterancy_XP(unsigned short xp)
+    {
+        if (!(ActiveCFEPatchConfig.EnableVeterancy == 2
+              || (ActiveCFEPatchConfig.EnableVeterancy == 1 && Session.Type != GAME_NORMAL))) {
+            return;
+        }
 
-    CFEVeterancy& vet = Vet_Entry();
-    if (vet.Rank >= 3) {
-        return;
-    }
+        CFEVeterancy& vet = Vet_Entry();
+        if (vet.Rank >= 3) {
+            return;
+        }
 
-    // Super nukes would be a bit insane.
-    if (What_Am_I() == RTTI_BUILDING && *((BuildingClass*)this) == STRUCT_MSLO) {
-        return;
-    }
+        // Super nukes would be a bit insane.
+        if (What_Am_I() == RTTI_BUILDING && *((BuildingClass*)this) == STRUCT_MSLO) {
+            return;
+        }
 
-    // 50% more XP during chronoshift or iron curtain.
-    if (IronCurtainCountDown
-        || ((What_Am_I() == RTTI_UNIT || What_Am_I() == RTTI_VESSEL) && ((DriveClass*)this)->IsMoebius)) {
-        xp *= 1.5;
-    }
+        // 50% more XP during chronoshift or iron curtain.
+        if (IronCurtainCountDown
+            || ((What_Am_I() == RTTI_UNIT || What_Am_I() == RTTI_VESSEL) && ((DriveClass*)this)->IsMoebius)) {
+            xp *= 1.5;
+        }
 
-    unsigned short oldxp = vet.XP;
-    vet.XP += xp;
-    int oldrank = vet.Rank;
-    bool rolledover = oldxp > vet.XP;
-    unsigned int cost = Class_Of().Cost_Of();
+        unsigned short oldxp = vet.XP;
+        vet.XP += xp;
+        int oldrank = vet.Rank;
+        bool rolledover = oldxp > vet.XP;
+        unsigned int cost = Class_Of().Cost_Of();
 
-    const fixed five_percent(1, 20);
-    const fixed ten_percent(1, 10);
+        const fixed five_percent(1, 20);
+        const fixed ten_percent(1, 10);
 
-    if (vet.XP >= 6 * cost || rolledover) {
-        vet.Rank = 3;
+        if (vet.XP >= 6 * cost || rolledover) {
+            vet.Rank = 3;
 
-        if (What_Am_I() == RTTI_INFANTRY) {
-            if (*((InfantryClass*)this) == INFANTRY_E3) {
-                ((FootClass*)this)->SpeedBias += fixed(13, 14); // Matches a rank 3 grenadier.
-            } else if (*((InfantryClass*)this) == INFANTRY_TANYA) {
-                IsCloakable = true;
+            if (What_Am_I() == RTTI_INFANTRY) {
+                if (*((InfantryClass*)this) == INFANTRY_E3) {
+                    ((FootClass*)this)->SpeedBias += fixed(13, 14); // Matches a rank 3 grenadier.
+                } else if (*((InfantryClass*)this) == INFANTRY_TANYA) {
+                    IsCloakable = true;
+                }
+            } else if (What_Am_I() == RTTI_UNIT) {
+                UnitClass* unit = (UnitClass*)this;
+                if (*unit == UNIT_MTANK || *unit == UNIT_HTANK) {
+                    vet.QuadShooter = true;
+                    vet.ReadyQuadShot = true;
+                } else if (*unit == UNIT_LTANK || *unit == UNIT_MTANK2) {
+                    vet.TwoShooter = true;
+                    IsSecondShot = false;
+                } else if (*unit == UNIT_CHRONOTANK) {
+                    ArmorBias -= fixed(1, 5);
+                } else if (*unit == UNIT_HARVESTER) {
+                    ArmorBias -= fixed(3, 10);
+                }
+                if (ArmorBias < ten_percent) {
+                    ArmorBias = ten_percent;
+                }
+            } else if (What_Am_I() == RTTI_VESSEL) {
+                VesselClass* vessel = (VesselClass*)this;
+                if (*vessel == VESSEL_SS || *vessel == VESSEL_PT) {
+                    vet.TwoShooter = true;
+                    IsSecondShot = false;
+                } else if (*vessel == VESSEL_CA) {
+                    vet.QuadShooter = true;
+                    vet.ReadyQuadShot = true;
+                }
+            } else if (What_Am_I() == RTTI_BUILDING) {
+                if (*((BuildingClass*)this) == STRUCT_TURRET) {
+                    vet.TwoShooter = true;
+                    IsSecondShot = false;
+                }
             }
-        } else if (What_Am_I() == RTTI_UNIT) {
-            UnitClass* unit = (UnitClass*)this;
-            if (*unit == UNIT_MTANK || *unit == UNIT_HTANK) {
-                vet.QuadShooter = true;
-                vet.ReadyQuadShot = true;
-            } else if (*unit == UNIT_LTANK || *unit == UNIT_MTANK2) {
-                vet.TwoShooter = true;
-                IsSecondShot = false;
-            } else if (*unit == UNIT_CHRONOTANK) {
-                ArmorBias -= fixed(1, 5);
-            } else if (*unit == UNIT_HARVESTER) {
-                ArmorBias -= fixed(3, 10);
+        } else if (vet.Rank < 2 && vet.XP >= 3 * cost) {
+            vet.Rank = 2;
+        } else if (vet.Rank < 1 && vet.XP >= cost) {
+            vet.Rank = 1;
+        }
+
+        if (vet.Rank != oldrank) {
+            for (int i = oldrank; i < vet.Rank; i++) {
+                FirepowerBias += five_percent;
+                ArmorBias -= ten_percent;
+                if (ArmorBias < ten_percent) {
+                    ArmorBias = ten_percent;
+                }
+
+                // Too much speed makes fixed-wing aircraft overshoot on landing.
+                if (What_Am_I() == RTTI_INFANTRY || What_Am_I() == RTTI_UNIT || What_Am_I() == RTTI_VESSEL
+                    || (What_Am_I() == RTTI_AIRCRAFT && !((AircraftClass*)this)->Class->IsFixedWing)) {
+                    ((FootClass*)this)->SpeedBias += ten_percent;
+                }
             }
-            if (ArmorBias < ten_percent) {
-                ArmorBias = ten_percent;
+            vet.ROFBias = 1.0f / (1.0f + (0.05f * vet.Rank));
+
+            // Tell the owner. (CFE plays a sound of its own, which VC doesn't have.)
+            if ((HouseClass*)House == PlayerPtr) {
+                Sound_Effect(VOC_RADAR_ON, Coord);
             }
-        } else if (What_Am_I() == RTTI_VESSEL) {
-            VesselClass* vessel = (VesselClass*)this;
-            if (*vessel == VESSEL_SS || *vessel == VESSEL_PT) {
-                vet.TwoShooter = true;
-                IsSecondShot = false;
-            } else if (*vessel == VESSEL_CA) {
-                vet.QuadShooter = true;
-                vet.ReadyQuadShot = true;
-            }
-        } else if (What_Am_I() == RTTI_BUILDING) {
-            if (*((BuildingClass*)this) == STRUCT_TURRET) {
-                vet.TwoShooter = true;
-                IsSecondShot = false;
+            Clicked_As_Target(Owner(), 18);
+            if (Is_Selected_By_Player(House)) {
+                Mark(MARK_CHANGE);
             }
         }
-    } else if (vet.Rank < 2 && vet.XP >= 3 * cost) {
-        vet.Rank = 2;
-    } else if (vet.Rank < 1 && vet.XP >= cost) {
-        vet.Rank = 1;
     }
 
-    if (vet.Rank != oldrank) {
-        for (int i = oldrank; i < vet.Rank; i++) {
-            FirepowerBias += five_percent;
-            ArmorBias -= ten_percent;
-            if (ArmorBias < ten_percent) {
-                ArmorBias = ten_percent;
-            }
-
-            // Too much speed makes fixed-wing aircraft overshoot on landing.
-            if (What_Am_I() == RTTI_INFANTRY || What_Am_I() == RTTI_UNIT || What_Am_I() == RTTI_VESSEL
-                || (What_Am_I() == RTTI_AIRCRAFT && !((AircraftClass*)this)->Class->IsFixedWing)) {
-                ((FootClass*)this)->SpeedBias += ten_percent;
-            }
-        }
-        vet.ROFBias = 1.0f / (1.0f + (0.05f * vet.Rank));
-
-        // Tell the owner. (CFE plays a sound of its own, which VC doesn't have.)
-        if ((HouseClass*)House == PlayerPtr) {
-            Sound_Effect(VOC_RADAR_ON, Coord);
-        }
-        Clicked_As_Target(Owner(), 18);
-        if (Is_Selected_By_Player(House)) {
-            Mark(MARK_CHANGE);
-        }
-    }
-}
-
-/*
+    /*
 **	XP boost when a rank 3 veteran mechanic heals a unit: the smaller of 1/4 of what the mechanic
 **	would have gained and a fraction of the way to the next rank, so that a mechanic can't level a
 **	unit all on his own by repairing self-inflicted damage.
 */
-void TechnoClass::Gain_Mechanic_XP_Boost(int delta)
-{
-    CFEVeterancy const& vet = Vet();
-    if (vet.Rank >= 3 || !ActiveCFEPatchConfig.EnableVeterancy) {
-        return;
+    void TechnoClass::Gain_Mechanic_XP_Boost(int delta)
+    {
+        CFEVeterancy const& vet = Vet();
+        if (vet.Rank >= 3 || !ActiveCFEPatchConfig.EnableVeterancy) {
+            return;
+        }
+
+        int cost = Class_Of().Cost_Of();
+        int basicboost = ((delta * cost) / Class_Of().MaxStrength) * 0.25;
+
+        // Sometimes give a pity XP point to compensate for rounding to zero.
+        if (basicboost < 1 && Random_Pick(0, 3) == 0) {
+            basicboost = 1;
+        }
+
+        int limit = 0;
+        if (vet.Rank == 0) {
+            limit = (cost - vet.XP) / 2;
+        } else if (vet.Rank == 1) {
+            limit = ((cost * 3) - vet.XP) / 4;
+        } else if (vet.Rank == 2) {
+            limit = ((cost * 6) - vet.XP) / 6;
+        }
+        Gain_Veterancy_XP(min(basicboost, limit));
     }
 
-    int cost = Class_Of().Cost_Of();
-    int basicboost = ((delta * cost) / Class_Of().MaxStrength) * 0.25;
-
-    // Sometimes give a pity XP point to compensate for rounding to zero.
-    if (basicboost < 1 && Random_Pick(0, 3) == 0) {
-        basicboost = 1;
-    }
-
-    int limit = 0;
-    if (vet.Rank == 0) {
-        limit = (cost - vet.XP) / 2;
-    } else if (vet.Rank == 1) {
-        limit = ((cost * 3) - vet.XP) / 4;
-    } else if (vet.Rank == 2) {
-        limit = ((cost * 6) - vet.XP) / 6;
-    }
-    Gain_Veterancy_XP(min(basicboost, limit));
-}
-
-/*
+    /*
 **	Finds a target for chain lightning to bounce to (rank 3 veteran tesla units).
 */
-TARGET TechnoClass::Find_Chain_Lightning_Target(TARGET primarytarget, int which, float rangescalar)
-{
+    TARGET TechnoClass::Find_Chain_Lightning_Target(TARGET primarytarget, int which, float rangescalar)
+    {
 
-    ObjectClass* primaryobject = As_Object(primarytarget);
-    COORDINATE primary_target_coord;
-    if (primaryobject != NULL) {
-		primary_target_coord = primaryobject->Target_Coord();
-	} else {
-		primary_target_coord = As_Coord(primarytarget);
-	}
-
-    int bestval = 0;
-    ObjectClass const * bestobject = NULL;
-
-    // unit types we might want to shoot  (include aircraft since they might be landed and Cell_Occupier will only give things on ground)
-    const int mask = (1 << RTTI_BUILDING) | (1 << RTTI_INFANTRY) | (1 << RTTI_UNIT) | (1 << RTTI_VESSEL) | (1 << RTTI_AIRCRAFT);
-
-    // scale weapon range by the given scalar (the assumption here is that chain lightning would probably be really unbalanced if it doubled range)
-    // then convert to cell range for scan
-    const int range = Weapon_Range(which) * rangescalar;
-    int cellrange = ceil((double)range/(double)ICON_LEPTON_W); // round up!
-    if (cellrange == 0){
-        cellrange = 1;
-    }
-
-    const CELL cell = Coord_Cell(primary_target_coord);
-    const int cellx = Cell_X(cell);
-    const int celly = Cell_Y(cell);
-    int scanx;
-    int scany;
-
-    // scan a box of cells around the primary_target_coord
-    for (int i=(-1*cellrange); i<=cellrange; i++){
-        scanx = cellx + i;
-
-        // skip if out of bounds
-        if (scanx <0 ){
-            continue;
-        }
-        if (scanx > MAP_CELL_W){
-            continue;
+        ObjectClass* primaryobject = As_Object(primarytarget);
+        COORDINATE primary_target_coord;
+        if (primaryobject != NULL) {
+            primary_target_coord = primaryobject->Target_Coord();
+        } else {
+            primary_target_coord = As_Coord(primarytarget);
         }
 
-        for (int j=(-1*cellrange); j<=cellrange; j++){
-            scany = celly + j;
+        int bestval = 0;
+        ObjectClass const* bestobject = NULL;
+
+        // unit types we might want to shoot  (include aircraft since they might be landed and Cell_Occupier will only give things on ground)
+        const int mask =
+            (1 << RTTI_BUILDING) | (1 << RTTI_INFANTRY) | (1 << RTTI_UNIT) | (1 << RTTI_VESSEL) | (1 << RTTI_AIRCRAFT);
+
+        // scale weapon range by the given scalar (the assumption here is that chain lightning would probably be really unbalanced if it doubled range)
+        // then convert to cell range for scan
+        const int range = Weapon_Range(which) * rangescalar;
+        int cellrange = ceil((double)range / (double)ICON_LEPTON_W); // round up!
+        if (cellrange == 0) {
+            cellrange = 1;
+        }
+
+        const CELL cell = Coord_Cell(primary_target_coord);
+        const int cellx = Cell_X(cell);
+        const int celly = Cell_Y(cell);
+        int scanx;
+        int scany;
+
+        // scan a box of cells around the primary_target_coord
+        for (int i = (-1 * cellrange); i <= cellrange; i++) {
+            scanx = cellx + i;
 
             // skip if out of bounds
-            if (scany < 0){
+            if (scanx < 0) {
                 continue;
             }
-            if (scany > MAP_CELL_H){
-                continue;
-            }
-
-            CELL newcell = XY_Cell(scanx, scany);
-
-            // skip if off playable map
-            if (!Map.In_Radar(newcell)){
+            if (scanx > MAP_CELL_W) {
                 continue;
             }
 
-            CellClass* cellptr = &Map[newcell];
+            for (int j = (-1 * cellrange); j <= cellrange; j++) {
+                scany = celly + j;
 
-            // check if we can shoot at something in this cell
-            ObjectClass* someobj = cellptr->Cell_Occupier();
-            while (someobj != NULL) {
-                if (someobj->Is_Techno()){
-                    TechnoClass* tentative = (TechnoClass*)someobj;
+                // skip if out of bounds
+                if (scany < 0) {
+                    continue;
+                }
+                if (scany > MAP_CELL_H) {
+                    continue;
+                }
 
-                    // steal applicable legality/scoring logic from Evaluate_Object()
-                    if (
-                        (tentative != this) &&                       // don't target yourself
-                        (tentative != primaryobject) &&       // don't retarget the first target
-                        tentative->IsActive &&
-                        !tentative->IsInLimbo &&
-                        //tentative->Is_Techno() &&
-                        !House->Is_Ally(tentative) &&
-                        !tentative->Is_Cloaked(this) &&
-                        ((tentative->Mission == MISSION_NONE) || !MissionControl[tentative->Mission].IsNoThreat) &&
-                        (((1 << tentative->What_Am_I()) & mask) != 0) &&       // acceptable unit type
-                        tentative->Techno_Type_Class()->IsLegalTarget &&      // unit type is one that can be targeted
-                        !((tentative->What_Am_I() == RTTI_INFANTRY) && (*((InfantryClass*)tentative) == INFANTRY_SPY)) &&
-                        //(primaryobject->Distance(tentative) <= range)
-                        (::Distance(primary_target_coord, tentative->Target_Coord()) <= range)
-                    ) {
-                        int tentativevalue = tentative->Value(); // + tentative->Crew.Kills; // Crew.Kills appears to be part of an unimplemented veterancy system!
-                        // Do we want to increase target priority for veterancy (both here and generally)?
-                        // I'm thinking not because it makes no sense to hide the veterancy pips from other players, but then "show" them via targeting priority
-                        if (House->Enemy != HOUSE_NONE && House->Enemy == tentative->House->Class->House) {
-                            tentativevalue += 500;
-                            tentativevalue *= 3;
-                        }
-                        if (House->Which_Zone(tentative) != ZONE_NONE) {
-                            tentativevalue *= Rule.NervousBias;
-                        }
-                        if (tentativevalue) {
-                            // fall off with distance
-                            tentativevalue = (tentativevalue * 32000) / ((Distance(tentative)/ICON_LEPTON_W)+1);
-                            tentativevalue = max(tentativevalue, 1);
-                            // randomize a bit because this is chain lightning
-                            tentativevalue = (tentativevalue * Random_Pick(512, 1536)) / 1024;
-                            tentativevalue = max(tentativevalue, 1);
-                        }
-                        if (tentativevalue > bestval){
-                            bestval = tentativevalue;
-                            bestobject = tentative;
+                CELL newcell = XY_Cell(scanx, scany);
+
+                // skip if off playable map
+                if (!Map.In_Radar(newcell)) {
+                    continue;
+                }
+
+                CellClass* cellptr = &Map[newcell];
+
+                // check if we can shoot at something in this cell
+                ObjectClass* someobj = cellptr->Cell_Occupier();
+                while (someobj != NULL) {
+                    if (someobj->Is_Techno()) {
+                        TechnoClass* tentative = (TechnoClass*)someobj;
+
+                        // steal applicable legality/scoring logic from Evaluate_Object()
+                        if ((tentative != this) &&          // don't target yourself
+                            (tentative != primaryobject) && // don't retarget the first target
+                            tentative->IsActive && !tentative->IsInLimbo &&
+                            //tentative->Is_Techno() &&
+                            !House->Is_Ally(tentative) && !tentative->Is_Cloaked(this)
+                            && ((tentative->Mission == MISSION_NONE) || !MissionControl[tentative->Mission].IsNoThreat)
+                            && (((1 << tentative->What_Am_I()) & mask) != 0) && // acceptable unit type
+                            tentative->Techno_Type_Class()->IsLegalTarget &&    // unit type is one that can be targeted
+                            !((tentative->What_Am_I() == RTTI_INFANTRY)
+                              && (*((InfantryClass*)tentative) == INFANTRY_SPY))
+                            &&
+                            //(primaryobject->Distance(tentative) <= range)
+                            (::Distance(primary_target_coord, tentative->Target_Coord()) <= range)) {
+                            int tentativevalue =
+                                tentative
+                                    ->Value(); // + tentative->Crew.Kills; // Crew.Kills appears to be part of an unimplemented veterancy system!
+                            // Do we want to increase target priority for veterancy (both here and generally)?
+                            // I'm thinking not because it makes no sense to hide the veterancy pips from other players, but then "show" them via targeting priority
+                            if (House->Enemy != HOUSE_NONE && House->Enemy == tentative->House->Class->House) {
+                                tentativevalue += 500;
+                                tentativevalue *= 3;
+                            }
+                            if (House->Which_Zone(tentative) != ZONE_NONE) {
+                                tentativevalue *= Rule.NervousBias;
+                            }
+                            if (tentativevalue) {
+                                // fall off with distance
+                                tentativevalue = (tentativevalue * 32000) / ((Distance(tentative) / ICON_LEPTON_W) + 1);
+                                tentativevalue = max(tentativevalue, 1);
+                                // randomize a bit because this is chain lightning
+                                tentativevalue = (tentativevalue * Random_Pick(512, 1536)) / 1024;
+                                tentativevalue = max(tentativevalue, 1);
+                            }
+                            if (tentativevalue > bestval) {
+                                bestval = tentativevalue;
+                                bestobject = tentative;
+                            }
                         }
                     }
-                }
-                // there might be more than 1 infantry in a cell. If so, check the next one
-                someobj = someobj->Next;
-            } // end while tentative is not null
-        } // end for j
-    } // end for i
+                    // there might be more than 1 infantry in a cell. If so, check the next one
+                    someobj = someobj->Next;
+                } // end while tentative is not null
+            }     // end for j
+        }         // end for i
 
-    // return the best target, if we found one
-    if (bestobject){
-        return bestobject->As_Target();
+        // return the best target, if we found one
+        if (bestobject) {
+            return bestobject->As_Target();
+        }
+        // otherwise
+        return TARGET_NONE;
     }
-    // otherwise
-    return TARGET_NONE;
-}
 
-/*
+    /*
 **	Veterancy block at the end of the save: a marker, the size of a record and the number of records,
 **	then the records. Older saves simply end before the marker.
 */
-static const unsigned int _cfe_vet_marker = 0x56455643; // "CVEV"
-static RTTIType const _cfe_vet_types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_BUILDING, RTTI_AIRCRAFT, RTTI_VESSEL};
+    static const unsigned int _cfe_vet_marker = 0x56455643; // "CVEV"
+    static RTTIType const _cfe_vet_types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_BUILDING, RTTI_AIRCRAFT, RTTI_VESSEL};
 
-static bool CFE_Vet_Is_Blank(CFEVeterancy const& vet)
-{
-    return (vet.XP == 0 && vet.Rank == 0 && vet.WhoLaidMe == TARGET_NONE && !vet.AttackMove && !vet.NavSize
-            && !vet.HasMemorized && vet.UnmodifiedNavCom == TARGET_NONE && vet.RallyPoint == TARGET_NONE);
-}
+    static bool CFE_Vet_Is_Blank(CFEVeterancy const& vet)
+    {
+        return (vet.XP == 0 && vet.Rank == 0 && vet.WhoLaidMe == TARGET_NONE && !vet.AttackMove && !vet.NavSize
+                && !vet.HasMemorized && vet.UnmodifiedNavCom == TARGET_NONE && vet.RallyPoint == TARGET_NONE);
+    }
 
-void CFE_Save_Veterancy(Pipe& file)
-{
-    int records = 0;
-    for (int t = 0; t < ARRAY_SIZE(_cfe_vet_types); t++) {
-        int count;
-        CFEVeterancy const* table = CFE_Vet_Table(_cfe_vet_types[t], count);
-        for (int id = 0; id < count; id++) {
-            if (!CFE_Vet_Is_Blank(table[id])) {
-                records++;
+    void CFE_Save_Veterancy(Pipe & file)
+    {
+        int records = 0;
+        for (int t = 0; t < ARRAY_SIZE(_cfe_vet_types); t++) {
+            int count;
+            CFEVeterancy const* table = CFE_Vet_Table(_cfe_vet_types[t], count);
+            for (int id = 0; id < count; id++) {
+                if (!CFE_Vet_Is_Blank(table[id])) {
+                    records++;
+                }
             }
         }
-    }
 
-    int size = sizeof(CFEVeterancy);
-    file.Put(&_cfe_vet_marker, sizeof(_cfe_vet_marker));
-    file.Put(&size, sizeof(size));
-    file.Put(&records, sizeof(records));
+        int size = sizeof(CFEVeterancy);
+        file.Put(&_cfe_vet_marker, sizeof(_cfe_vet_marker));
+        file.Put(&size, sizeof(size));
+        file.Put(&records, sizeof(records));
 
-    for (int t = 0; t < ARRAY_SIZE(_cfe_vet_types); t++) {
-        int count;
-        CFEVeterancy const* table = CFE_Vet_Table(_cfe_vet_types[t], count);
-        int rtti = _cfe_vet_types[t];
-        for (int id = 0; id < count; id++) {
-            if (!CFE_Vet_Is_Blank(table[id])) {
-                file.Put(&rtti, sizeof(rtti));
-                file.Put(&id, sizeof(id));
-                file.Put(&table[id], sizeof(CFEVeterancy));
+        for (int t = 0; t < ARRAY_SIZE(_cfe_vet_types); t++) {
+            int count;
+            CFEVeterancy const* table = CFE_Vet_Table(_cfe_vet_types[t], count);
+            int rtti = _cfe_vet_types[t];
+            for (int id = 0; id < count; id++) {
+                if (!CFE_Vet_Is_Blank(table[id])) {
+                    file.Put(&rtti, sizeof(rtti));
+                    file.Put(&id, sizeof(id));
+                    file.Put(&table[id], sizeof(CFEVeterancy));
+                }
             }
         }
+        file.Put(&CFE_Timeline_Damage, sizeof(CFE_Timeline_Damage));
+        file.Put(&CFE_Permanent_Timeline_Damage, sizeof(CFE_Permanent_Timeline_Damage));
     }
-    file.Put(&CFE_Timeline_Damage, sizeof(CFE_Timeline_Damage));
-    file.Put(&CFE_Permanent_Timeline_Damage, sizeof(CFE_Permanent_Timeline_Damage));
-}
 
-void CFE_Load_Veterancy(Straw& file)
-{
-    for (int t = 0; t < ARRAY_SIZE(_cfe_vet_types); t++) {
-        int count;
-        CFEVeterancy* table = CFE_Vet_Table(_cfe_vet_types[t], count);
-        for (int id = 0; id < count; id++) {
-            table[id] = CFEVeterancy();
+    void CFE_Load_Veterancy(Straw & file)
+    {
+        for (int t = 0; t < ARRAY_SIZE(_cfe_vet_types); t++) {
+            int count;
+            CFEVeterancy* table = CFE_Vet_Table(_cfe_vet_types[t], count);
+            for (int id = 0; id < count; id++) {
+                table[id] = CFEVeterancy();
+            }
         }
-    }
 
-    unsigned int marker = 0;
-    int size = 0;
-    int records = 0;
-    if (file.Get(&marker, sizeof(marker)) != sizeof(marker) || marker != _cfe_vet_marker
-        || file.Get(&size, sizeof(size)) != sizeof(size) || size != sizeof(CFEVeterancy)
-        || file.Get(&records, sizeof(records)) != sizeof(records)) {
-        return;
-    }
-
-    for (int i = 0; i < records; i++) {
-        int rtti;
-        int id;
-        CFEVeterancy record;
-        if (file.Get(&rtti, sizeof(rtti)) != sizeof(rtti) || file.Get(&id, sizeof(id)) != sizeof(id)
-            || file.Get(&record, sizeof(record)) != sizeof(record)) {
+        unsigned int marker = 0;
+        int size = 0;
+        int records = 0;
+        if (file.Get(&marker, sizeof(marker)) != sizeof(marker) || marker != _cfe_vet_marker
+            || file.Get(&size, sizeof(size)) != sizeof(size) || size != sizeof(CFEVeterancy)
+            || file.Get(&records, sizeof(records)) != sizeof(records)) {
             return;
         }
-        int count;
-        CFEVeterancy* table = CFE_Vet_Table((RTTIType)rtti, count);
-        if (table != NULL && id >= 0 && id < count) {
-            table[id] = record;
-        }
-    }
-    file.Get(&CFE_Timeline_Damage, sizeof(CFE_Timeline_Damage));
-    file.Get(&CFE_Permanent_Timeline_Damage, sizeof(CFE_Permanent_Timeline_Damage));
-}
 
-/*
+        for (int i = 0; i < records; i++) {
+            int rtti;
+            int id;
+            CFEVeterancy record;
+            if (file.Get(&rtti, sizeof(rtti)) != sizeof(rtti) || file.Get(&id, sizeof(id)) != sizeof(id)
+                || file.Get(&record, sizeof(record)) != sizeof(record)) {
+                return;
+            }
+            int count;
+            CFEVeterancy* table = CFE_Vet_Table((RTTIType)rtti, count);
+            if (table != NULL && id >= 0 && id < count) {
+                table[id] = record;
+            }
+        }
+        file.Get(&CFE_Timeline_Damage, sizeof(CFE_Timeline_Damage));
+        file.Get(&CFE_Permanent_Timeline_Damage, sizeof(CFE_Permanent_Timeline_Damage));
+    }
+
+    /*
 **	CFE attack-move: is the key held that turns a move into an attack-move, and can this object do it?
 */
-bool TechnoClass::Attack_Move_Key(void) const
-{
-    return (ActiveCFEPatchConfig.EnableAttackMove
-            && (Techno_Type_Class()->PrimaryWeapon != NULL
-                || (What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_MINELAYER))
-            && (Keyboard->Down(Options.KeySelect1) || Keyboard->Down(Options.KeySelect2)));
-}
+    bool TechnoClass::Attack_Move_Key(void) const
+    {
+        return (ActiveCFEPatchConfig.EnableAttackMove
+                && (Techno_Type_Class()->PrimaryWeapon != NULL
+                    || (What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_MINELAYER))
+                && (Keyboard->Down(Options.KeySelect1) || Keyboard->Down(Options.KeySelect2)));
+    }
 
-/***********************************************************************************************
+    /***********************************************************************************************
  * TechnoClass::CFE_Attack_Move_AI -- Looks for targets during an attack-move.                 *
  *                                                                                             *
  *    Minelayers aren't handled here: they have their own logic. Chronotanks teleport when     *
  *    charged, and boats alternate short attacks and moves, so as not to get stuck on targets  *
  *    they can't hit.                                                                          *
  *=============================================================================================*/
-void TechnoClass::CFE_Attack_Move_AI(void)
-{
-    if (!ActiveCFEPatchConfig.EnableAttackMove) {
-        return;
-    }
-    CFEVeterancy& cfe = Vet_Entry();
-    if (!cfe.AttackMove || !Strength
-        || !((What_Am_I() == RTTI_UNIT && *(UnitClass*)this != UNIT_MINELAYER) || What_Am_I() == RTTI_INFANTRY
-             || What_Am_I() == RTTI_AIRCRAFT || What_Am_I() == RTTI_VESSEL)) {
-        return;
-    }
+    void TechnoClass::CFE_Attack_Move_AI(void)
+    {
+        if (!ActiveCFEPatchConfig.EnableAttackMove) {
+            return;
+        }
+        CFEVeterancy& cfe = Vet_Entry();
+        if (!cfe.AttackMove || !Strength
+            || !((What_Am_I() == RTTI_UNIT && *(UnitClass*)this != UNIT_MINELAYER) || What_Am_I() == RTTI_INFANTRY
+                 || What_Am_I() == RTTI_AIRCRAFT || What_Am_I() == RTTI_VESSEL)) {
+            return;
+        }
 
-        if (   ActiveCFEPatchConfig.EnableChronoTankAttackMove &&
-                (What_Am_I() == RTTI_UNIT) &&
-                (*((UnitClass*)this) == UNIT_CHRONOTANK) &&
-                (Mission == MISSION_MOVE) &&
-                !((UnitClass*)this)->MoebiusCountDown &&
-                Target_Legal(cfe.RememberedNavCom)
-        ){
+        if (ActiveCFEPatchConfig.EnableChronoTankAttackMove && (What_Am_I() == RTTI_UNIT)
+            && (*((UnitClass*)this) == UNIT_CHRONOTANK) && (Mission == MISSION_MOVE)
+            && !((UnitClass*)this)->MoebiusCountDown && Target_Legal(cfe.RememberedNavCom)) {
             bool tpok = false;
             CELL tpdestination = ::As_Cell(cfe.RememberedNavCom);
-            if (Can_Enter_Cell(tpdestination, FACING_NONE) == MOVE_OK){
+            if (Can_Enter_Cell(tpdestination, FACING_NONE) == MOVE_OK) {
                 tpok = true;
-            }
-            else {
+            } else {
                 tpdestination = Map.Nearby_Location(tpdestination, Techno_Type_Class()->Speed);
-                if (    Map.In_Radar(tpdestination) &&
-                        (Can_Enter_Cell(tpdestination, FACING_NONE) == MOVE_OK) &&
-                        (Lepton_To_Cell(::Distance(Cell_Coord(::As_Cell(cfe.RememberedNavCom)), Cell_Coord(tpdestination))) <= 6)
-                ){
+                if (Map.In_Radar(tpdestination) && (Can_Enter_Cell(tpdestination, FACING_NONE) == MOVE_OK)
+                    && (Lepton_To_Cell(
+                            ::Distance(Cell_Coord(::As_Cell(cfe.RememberedNavCom)), Cell_Coord(tpdestination)))
+                        <= 6)) {
                     tpok = true;
                 }
             }
-            if (tpok){
-                ((UnitClass*)this)->MoebiusCell = Coord_Cell(Coord); // probably pointless, but house.cpp sets this even on chronotanks (maybe lefover from earlier version in which they'd revert positions too?)
+            if (tpok) {
+                ((UnitClass*)this)->MoebiusCell = Coord_Cell(
+                    Coord); // probably pointless, but house.cpp sets this even on chronotanks (maybe lefover from earlier version in which they'd revert positions too?)
                 Sound_Effect(VOC_CHRONO, Coord); // let's try having sound at both ends?
                 cfe.SkipNavQueueUpdate = true;
                 ((UnitClass*)this)->Teleport_To(tpdestination);
@@ -7998,29 +8001,28 @@ void TechnoClass::CFE_Attack_Move_AI(void)
                 ((UnitClass*)this)->MoebiusCountDown = ChronoTankDuration * TICKS_PER_MINUTE;
                 Scen.Do_BW_Fade();
                 Sound_Effect(VOC_CHRONO, Coord);
-                if (cfe.NavSize == 0){
+                if (cfe.NavSize == 0) {
                     Reset_Attack_Move();
                 }
             }
         }
         bool AttackMoveBoatMoveLock = false;
-        if (What_Am_I() == RTTI_VESSEL && (*(VesselClass *)this != VESSEL_SS)){
+        if (What_Am_I() == RTTI_VESSEL && (*(VesselClass*)this != VESSEL_SS)) {
 
-            if (cfe.BoatClock > 0){
+            if (cfe.BoatClock > 0) {
                 cfe.BoatClock--;
-                if (cfe.BoatClock > 0 && cfe.BoatClock < 91){
+                if (cfe.BoatClock > 0 && cfe.BoatClock < 91) {
                     AttackMoveBoatMoveLock = true;
-                    if (Mission != MISSION_MOVE){
+                    if (Mission != MISSION_MOVE) {
                         Attack_Move_Enter_Move_Mode();
                     }
                 }
             }
-            if ((!Target_Legal(TarCom) || !In_Range(TarCom)) && (*(VesselClass *)this != VESSEL_MISSILESUB)) {
+            if ((!Target_Legal(TarCom) || !In_Range(TarCom)) && (*(VesselClass*)this != VESSEL_MISSILESUB)) {
                 Assign_Target(TARGET_NONE);
-                if (!AttackMoveBoatMoveLock && Target_Something_Nearby(THREAT_RANGE)){
+                if (!AttackMoveBoatMoveLock && Target_Something_Nearby(THREAT_RANGE)) {
                     Attack_Move_Enter_Attack_Mode();
-                }
-                else {
+                } else {
                     Attack_Move_Enter_Move_Mode();
                 }
             }
@@ -8029,105 +8031,98 @@ void TechnoClass::CFE_Attack_Move_AI(void)
             int primary = What_Weapon_Should_I_Use(TarCom);
             if (!In_Range(TarCom, primary)) {
                 Assign_Target(TARGET_NONE);
-                if (!AttackMoveBoatMoveLock && Target_Something_Nearby(THREAT_RANGE)){
+                if (!AttackMoveBoatMoveLock && Target_Something_Nearby(THREAT_RANGE)) {
                     Attack_Move_Enter_Attack_Mode();
-                }
-                else {
+                } else {
                     Attack_Move_Enter_Move_Mode();
                 }
             }
         }
-        if (Target_Legal(TarCom) && !(What_Am_I() == RTTI_INFANTRY && ((InfantryClass*)this)->Class->IsDog) && !(What_Am_I() == RTTI_AIRCRAFT) && !AttackMoveBoatMoveLock) {
+        if (Target_Legal(TarCom) && !(What_Am_I() == RTTI_INFANTRY && ((InfantryClass*)this)->Class->IsDog)
+            && !(What_Am_I() == RTTI_AIRCRAFT) && !AttackMoveBoatMoveLock) {
             TARGET oldtarcom = TarCom;
-            if (Target_Something_Nearby(THREAT_RANGE)){
-                if (TarCom != oldtarcom){
+            if (Target_Something_Nearby(THREAT_RANGE)) {
+                if (TarCom != oldtarcom) {
                     Attack_Move_Enter_Attack_Mode();
                 }
             }
         }
-        if (!Target_Legal(TarCom) && !AttackMoveBoatMoveLock){
-            if (Target_Something_Nearby(THREAT_RANGE)){
+        if (!Target_Legal(TarCom) && !AttackMoveBoatMoveLock) {
+            if (Target_Something_Nearby(THREAT_RANGE)) {
                 Attack_Move_Enter_Attack_Mode();
             }
         }
-        if (   (What_Am_I() != RTTI_AIRCRAFT) &&
-                (Mission != MISSION_MOVE) &&
-                (Mission != MISSION_ATTACK) &&
-                (MissionQueue != MISSION_MOVE) &&
-                (MissionQueue != MISSION_ATTACK) &&
-                cfe.RememberedNavCom &&
-                Target_Legal(cfe.RememberedNavCom) &&
-                (Distance(cfe.RememberedNavCom) >= Rule.CloseEnoughDistance)
-        ){
+        if ((What_Am_I() != RTTI_AIRCRAFT) && (Mission != MISSION_MOVE) && (Mission != MISSION_ATTACK)
+            && (MissionQueue != MISSION_MOVE) && (MissionQueue != MISSION_ATTACK) && cfe.RememberedNavCom
+            && Target_Legal(cfe.RememberedNavCom) && (Distance(cfe.RememberedNavCom) >= Rule.CloseEnoughDistance)) {
             Attack_Move_Enter_Move_Mode();
         }
+    }
 
-}
+    void TechnoClass::Reset_Attack_Move(int minelayercommand)
+    {
+        CFEVeterancy& cfe = Vet_Entry();
 
-void TechnoClass::Reset_Attack_Move(int minelayercommand)
-{
-    CFEVeterancy& cfe = Vet_Entry();
-
-    if ((What_Am_I() == RTTI_UNIT) && (*((UnitClass*)this) == UNIT_MINELAYER)){
-        if (cfe.AttackMove){
-            if (minelayercommand == 1){
-                if (Target_Legal(cfe.RememberedNavCom) && (Distance(cfe.RememberedNavCom) < 2*Rule.CloseEnoughDistance)){
-                    cfe.MinelayerMode = 1;
+        if ((What_Am_I() == RTTI_UNIT) && (*((UnitClass*)this) == UNIT_MINELAYER)) {
+            if (cfe.AttackMove) {
+                if (minelayercommand == 1) {
+                    if (Target_Legal(cfe.RememberedNavCom)
+                        && (Distance(cfe.RememberedNavCom) < 2 * Rule.CloseEnoughDistance)) {
+                        cfe.MinelayerMode = 1;
+                    }
+                    if (Ammo && cfe.MinelayerMode) {
+                        ((UnitClass*)this)->Minelayer_Poop_Time();
+                    } else {
+                        ((UnitClass*)this)->Minelayer_Go_Home();
+                    }
+                    return;
+                } else if (minelayercommand == 2) {
+                    ((UnitClass*)this)
+                        ->Minelayer_Go_Home(); // Minelayer_Go_Home() will call Reset_Attack_Move again with special command 0
+                    return;
                 }
-                if (Ammo && cfe.MinelayerMode){
-                    ((UnitClass*)this)->Minelayer_Poop_Time();
-                }
-                else {
-                    ((UnitClass*)this)->Minelayer_Go_Home();
-                }
-                return;
             }
-            else if (minelayercommand == 2){
-                ((UnitClass*)this)->Minelayer_Go_Home(); // Minelayer_Go_Home() will call Reset_Attack_Move again with special command 0
-                return;
+            cfe.MinelayerOrigin = TARGET_NONE;
+            cfe.MinelayerMode = 0;
+        }
+        cfe.RememberedNavCom = TARGET_NONE; //0
+        cfe.AttackMove = 0;
+        cfe.BoatClock = 0;
+    }
+
+    void TechnoClass::Attack_Move_Enter_Move_Mode(void)
+    {
+        CFEVeterancy& cfe = Vet_Entry();
+        if (!Target_Legal(cfe.RememberedNavCom)) {
+            Reset_Attack_Move();
+            Enter_Idle_Mode();
+            return;
+        }
+        Assign_Target(TARGET_NONE);
+
+        Assign_Mission(
+            MISSION_MOVE); //Set_Mission() is bad because it makes Commence() not work, and then we end up with units in impossible mission/status combinations
+        Assign_Destination(cfe.RememberedNavCom);
+        if (What_Am_I() == RTTI_AIRCRAFT) {
+            AircraftClass* meplane = (AircraftClass*)this;
+            if (!meplane->CFE_Is_Flight_Transition()) {
+                Commence();
+                if (meplane->Height == FLIGHT_LEVEL) {
+                    if (meplane->Class->IsFixedWing) {
+                        Status = 1; //FLY_TOWARD_TARGET
+                    }
+                }
             }
         }
-        cfe.MinelayerOrigin = TARGET_NONE;
-        cfe.MinelayerMode = 0;
     }
-    cfe.RememberedNavCom = TARGET_NONE; //0
-    cfe.AttackMove = 0;
-    cfe.BoatClock = 0;
-}
 
-void TechnoClass::Attack_Move_Enter_Move_Mode(void)
-{
-    CFEVeterancy& cfe = Vet_Entry();
-    if (!Target_Legal(cfe.RememberedNavCom)){
-        Reset_Attack_Move();
-        Enter_Idle_Mode();
-        return;
-    }
-    Assign_Target(TARGET_NONE);
-
-    Assign_Mission(MISSION_MOVE); //Set_Mission() is bad because it makes Commence() not work, and then we end up with units in impossible mission/status combinations
-    Assign_Destination(cfe.RememberedNavCom);
-    if (What_Am_I() == RTTI_AIRCRAFT){
-        AircraftClass* meplane = (AircraftClass*)this;
-        if (!meplane->CFE_Is_Flight_Transition()) {
-            Commence();
-            if (meplane->Height == FLIGHT_LEVEL){
-                if (meplane->Class->IsFixedWing){
-                    Status = 1; //FLY_TOWARD_TARGET
-                }
-            }
+    void TechnoClass::Attack_Move_Enter_Attack_Mode(void)
+    {
+        CFEVeterancy& cfe = Vet_Entry();
+        Assign_Destination(TARGET_NONE);
+        Assign_Mission(
+            MISSION_ATTACK); //Set_Mission() is bad because it makes Commence() not work, and then we end up with units in impossible mission/status combinations
+        if (What_Am_I() == RTTI_VESSEL) {
+            cfe.BoatClock = 180;
         }
     }
-
-}
-
-void TechnoClass::Attack_Move_Enter_Attack_Mode(void)
-{
-    CFEVeterancy& cfe = Vet_Entry();
-    Assign_Destination(TARGET_NONE);
-    Assign_Mission(MISSION_ATTACK); //Set_Mission() is bad because it makes Commence() not work, and then we end up with units in impossible mission/status combinations
-    if (What_Am_I() == RTTI_VESSEL){
-        cfe.BoatClock = 180;
-    }
-}
-

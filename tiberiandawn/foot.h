@@ -65,7 +65,7 @@ struct CellBlockerPair
 /*
 **	CFE attack-move state of one foot object; see FootClass::Attack_Move.
 */
-#define MAX_NAVQUEUE 10
+#define MAX_NAVQUEUE       10
 #define MAX_NAVQUEUE_INDEX (MAX_NAVQUEUE - 1)
 
 /*

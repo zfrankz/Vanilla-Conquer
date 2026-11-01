@@ -2462,7 +2462,8 @@ void MapClass::CFE_Logic(void)
                                         }
                                         CellClass* newnewcell = newcell->Adjacent_Cell(k);
                                         if (newnewcell && Map.In_Radar(newnewcell->Cell_Number())
-                                            && newnewcell->Cell_Object() == NULL && newnewcell->TType != TEMPLATE_BRIDGE1
+                                            && newnewcell->Cell_Object() == NULL
+                                            && newnewcell->TType != TEMPLATE_BRIDGE1
                                             && newnewcell->TType != TEMPLATE_BRIDGE2
                                             && newnewcell->TType != TEMPLATE_BRIDGE3
                                             && newnewcell->TType != TEMPLATE_BRIDGE4) {

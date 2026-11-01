@@ -746,8 +746,7 @@ void AircraftClass::AI(void)
     **	CFE: with the ammo back, restart a memorized attack-move loop.
     */
     if (Nav_Queue().HasMemorized && Class->Primary != WEAPON_NONE && Class->MaxAmmo > 0 && Ammo == Class->MaxAmmo
-        && Altitude == 0 && !IsLanding && !IsTakingOff
-        && (Vet().Rank < 3 || Strength >= Class_Of().MaxStrength)) {
+        && Altitude == 0 && !IsLanding && !IsTakingOff && (Vet().Rank < 3 || Strength >= Class_Of().MaxStrength)) {
         Recall_Navigation_List();
     }
 

@@ -985,7 +985,7 @@ typedef enum MissionType : char
     MISSION_REPAIR,         // Repair process mission.
     MISSION_RESCUE,
     MISSION_MISSILE,
-    MISSION_HARMLESS, // Sit around and don't appear like a threat.
+    MISSION_HARMLESS,    // Sit around and don't appear like a threat.
     MISSION_ATTACKMOVE,  // CFE: travels in the event queue, becomes MISSION_MOVE on arrival.
     MISSION_QATTACKMOVE, // CFE: adds an attack-move waypoint; same as above.
 
