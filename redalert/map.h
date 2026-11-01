@@ -101,6 +101,12 @@ public:
     void CFE_Logic(void);
     static void Clear_CFE_Cell_State(void);
     void Cleanup_Vehicle_Reservations(void);
+    int Scan_For_Overlay(CELL origin,
+                         FacingType dir,
+                         OverlayType overlay,
+                         int maxlength,
+                         bool limittohouse = false,
+                         HousesType whichhouse = HOUSE_NONE) const;
     void Rebuild_Vehicle_Reservations(void);
     virtual void Set_Map_Dimensions(int x, int y, int w, int h);
 

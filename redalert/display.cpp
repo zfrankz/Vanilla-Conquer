@@ -709,7 +709,48 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
     //	ptr = CursorSize;
     CELL cell = trycell;
     //	CELL cell = ZoneCell;
-    if (building->Adjacent == 1) {
+    bool cfegap = ActiveCFEPatchConfig.EnableLongGapFix
+                  || (ActiveCFEPatchConfig.BuildingGapOffset && building->Adjacent - ActiveCFEPatchConfig.BuildingGapOffset == 1);
+    if (cfegap) {
+
+        /*
+        **	CFE: a building can go this many cells from a friendly building, or from a cell owned by
+        **	the house, in a square around each cell of its foundation.
+        */
+        bool proximitypass = false;
+        while (*ptr != REFRESH_EOL && (retval == -1)) {
+            cell = trycell + *ptr++;
+            if (!In_Radar(cell)) {
+                retval = false;
+                noradar = true;
+                break;
+            }
+            int cellx = Cell_X(cell);
+            int celly = Cell_Y(cell);
+            int radius = building->Adjacent;
+            for (int y = max(celly - radius, 0); y <= celly + radius && y < MAP_CELL_H && !proximitypass; ++y) {
+                for (int x = max(cellx - radius, 0); x <= cellx + radius && x < MAP_CELL_W && !proximitypass; ++x) {
+                    CELL nextcell = XY_Cell(x, y);
+                    if (!In_Radar(nextcell)) {
+                        continue;
+                    }
+                    CellClass const& near = (*this)[nextcell];
+                    if (near.Owner == house
+                        && (building->IsWall
+                            || (near.Smudge != SMUDGE_NONE && SmudgeTypeClass::As_Reference(near.Smudge).IsBib))) {
+                        proximitypass = true;
+                    }
+                    BuildingClass const* base = near.Cell_Building();
+                    if (base != NULL && base->IsActive && base->House->Class->House == house && base->Class->IsBase) {
+                        proximitypass = true;
+                    }
+                }
+            }
+        }
+        if (retval == -1) {
+            retval = proximitypass;
+        }
+    } else if (building->Adjacent == 1) {
         while (*ptr != REFRESH_EOL && (retval == -1)) {
             cell = trycell + *ptr++;
             //			cell = ZoneCell + ZoneOffset + *ptr++;
@@ -794,6 +835,19 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
     if (retval == -1)
         retval = false;
 
+    /*
+    **	CFE: TS-style walls can be built off a friendly wall in line with them.
+    */
+    if (!retval && !noradar && building->IsWall && house != HOUSE_NONE && ActiveCFEPatchConfig.WallBuildLength > 1) {
+        static FacingType const _cardinals[4] = {FACING_N, FACING_E, FACING_S, FACING_W};
+        for (int d = 0; d < ARRAY_SIZE(_cardinals); d++) {
+            if (Scan_For_Overlay(trycell, _cardinals[d], building->Overlay_Type(), ActiveCFEPatchConfig.WallBuildLength, true, house) >= 0) {
+                retval = true;
+                break;
+            }
+        }
+    }
+
     if (house == PlayerPtr->Class->House) {
         PassedProximity = (retval != false);
     }
@@ -806,7 +860,7 @@ bool DisplayClass::Passes_Proximity_Check(ObjectTypeClass const* object,
     if (!retval && !noradar && object->What_Am_I() == RTTI_BUILDINGTYPE) {
 
         // For land mines, let's make it check proximity within 10 squares
-        if (building->Adjacent > 1) {
+        if (!cfegap && building->Adjacent - ActiveCFEPatchConfig.BuildingGapOffset > 1) {
             for (int index = 0; index < Buildings.Count(); index++) {
                 BuildingClass* obj = Buildings.Ptr(index);
                 if (obj != NULL && !obj->IsInLimbo && obj->House->Class->House == house && obj->Class->IsBase) {
@@ -1059,6 +1113,47 @@ void DisplayClass::AI(KeyNumType& input, int x, int y)
     }
 
     MapClass::AI(input, x, y);
+    Update_Placement_Cursor();
+}
+
+/***********************************************************************************************
+ * DisplayClass::Update_Placement_Cursor -- Previews the cells a wall will fill.               *
+ *                                                                                             *
+ *    CFE TS-style walls: while placing a wall, the cursor also covers the gaps it would fill  *
+ *    in. Holding Ctrl places a single piece, and the cursor goes back to one cell.            *
+ *=============================================================================================*/
+void DisplayClass::Update_Placement_Cursor(void)
+{
+    if (ActiveCFEPatchConfig.WallBuildLength <= 1 || !PendingObject || !CursorSize
+        || PendingObject->What_Am_I() != RTTI_BUILDINGTYPE || !((BuildingTypeClass const*)PendingObject)->IsWall) {
+        return;
+    }
+
+    BuildingTypeClass const* building = (BuildingTypeClass const*)PendingObject;
+    if (CFE_Should_Extend_Walls() && In_Radar(ZoneCell)) {
+        static short offsetlist[50];
+        static FacingType const _cardinals[4] = {FACING_N, FACING_E, FACING_S, FACING_W};
+        int const maxoffsets = ARRAY_SIZE(offsetlist) - 1;
+        int count = 1;
+        offsetlist[0] = 0;
+
+        for (int d = 0; d < ARRAY_SIZE(_cardinals); d++) {
+            FacingType dir = _cardinals[d];
+            int scandist = Scan_For_Overlay(ZoneCell, dir, building->Overlay_Type(), ActiveCFEPatchConfig.WallBuildLength);
+            if (count + scandist > maxoffsets) {
+                break;
+            }
+            CELL current = ZoneCell;
+            for (int i = 0; i < scandist; ++i) {
+                current = Adjacent_Cell(current, dir);
+                offsetlist[count++] = current - ZoneCell - ZoneOffset;
+            }
+        }
+        offsetlist[count] = REFRESH_EOL;
+        Set_Cursor_Shape(offsetlist);
+    } else if (CursorSize[1] != REFRESH_EOL) {
+        Set_Cursor_Shape(building->Occupy_List(true));
+    }
 }
 
 /***********************************************************************************************

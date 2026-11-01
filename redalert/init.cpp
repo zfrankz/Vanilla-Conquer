@@ -315,6 +315,16 @@ bool Init_Game(int, char*[])
     Session.MaxPlayers = Rule.MaxPlayers;
 
     /*
+    **	CFE: the building gap, patched here so that it doesn't stack across INI files.
+    */
+    if (ActiveCFEPatchConfig.BuildingGapOffset) {
+        for (int bindex = 0; bindex < BuildingTypes.Count(); ++bindex) {
+            BuildingTypeClass* building = BuildingTypes.Ptr(bindex);
+            building->Adjacent = max(building->Adjacent + ActiveCFEPatchConfig.BuildingGapOffset, 0);
+        }
+    }
+
+    /*
     **	Initialize the game object heaps as well as other rules-dependant buffer allocations.
     */
     Init_Heaps();

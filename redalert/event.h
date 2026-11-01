@@ -94,6 +94,7 @@ public:
 
         TIMING,       // new timing values for all systems to use
         PROCESS_TIME, // a system's average processing time, in ticks per frame
+        SET_RALLY,    // CFE: sets the rally point of a building.
 
 #ifdef FIXIT_VERSION_3 //	Stalemate games.
         PROPOSE_DRAW,  //	Players proposes that 2-player game be called a stalemate.

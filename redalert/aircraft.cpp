@@ -4660,3 +4660,33 @@ unsigned AircraftClass::Spied_By() const
 
     return spiedby;
 }
+
+/***********************************************************************************************
+ * AircraftClass::Do_Smarter_Run_Away -- Sends a repaired aircraft to a helipad or airstrip.   *
+ *                                                                                             *
+ *    A helicopter can land next to a full helipad, or scatter. False means a fixed wing plane *
+ *    with no open airstrip, which has to stay put or it would crash.                          *
+ *=============================================================================================*/
+bool AircraftClass::Do_Smarter_Run_Away(void)
+{
+    BuildingClass* building = Find_Docking_Bay(Class->Building, false);
+    if (building != NULL && Transmit_Message(RADIO_HELLO, building) == RADIO_ROGER) {
+        Assign_Destination(building->As_Target());
+        Assign_Target(TARGET_NONE);
+        Assign_Mission(MISSION_ENTER);
+        return (true);
+    }
+
+    if (!Class->IsFixedWing) {
+        TARGET goodenough = Good_LZ();
+        if (Target_Legal(goodenough) && goodenough != ::As_Target(Coord_Cell(Coord))) {
+            Assign_Destination(goodenough);
+            Assign_Target(TARGET_NONE);
+            Assign_Mission(MISSION_MOVE);
+        } else {
+            Scatter(0, true);
+        }
+        return (true);
+    }
+    return (false);
+}

@@ -2816,3 +2816,36 @@ void MapClass::Rebuild_Vehicle_Reservations(void)
         }
     }
 }
+
+/***********************************************************************************************
+ * MapClass::Scan_For_Overlay -- Looks along a straight line for a clear path to an overlay.   *
+ *                                                                                             *
+ * OUTPUT:  Returns with the number of clear cells before the overlay, or -1 if not found.     *
+ *=============================================================================================*/
+int MapClass::Scan_For_Overlay(CELL origin,
+                               FacingType dir,
+                               OverlayType overlay,
+                               int maxlength,
+                               bool limittohouse,
+                               HousesType whichhouse) const
+{
+    if ((limittohouse && whichhouse == HOUSE_NONE) || !In_Radar(origin)) {
+        return (-1);
+    }
+
+    CELL current = origin;
+    for (int i = 0; i < maxlength; ++i) {
+        current = Adjacent_Cell(current, dir);
+        if (!In_Radar(current)) {
+            break;
+        }
+        CellClass const& cell = (*this)[current];
+        if (cell.Overlay == overlay) {
+            return ((!limittohouse || whichhouse == cell.Owner) ? i : -1);
+        }
+        if (!cell.Is_Clear_To_Build(SPEED_NONE)) {
+            break;
+        }
+    }
+    return (-1);
+}

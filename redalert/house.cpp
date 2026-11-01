@@ -4506,7 +4506,12 @@ void HouseClass::Sell_Wall(CELL cell)
                         Sound_Effect(VOC_CASHTURN);
                     }
 
-                    Refund_Money(btype->Raw_Cost() * Rule.RefundPercent);
+                    // CFE: without full cost, a piece may have been free, so it refunds its share of a full run.
+                    if (!IsHuman || ActiveCFEPatchConfig.WallBuildLength <= 1 || ActiveCFEPatchConfig.WallsAlwaysHaveFullCost) {
+                        Refund_Money(btype->Raw_Cost() * Rule.RefundPercent);
+                    } else {
+                        Refund_Money((btype->Raw_Cost() * Rule.RefundPercent) / ActiveCFEPatchConfig.WallBuildLength);
+                    }
                     Map[cell].Overlay = OVERLAY_NONE;
                     Map[cell].OverlayData = 0;
                     Map[cell].Owner = HOUSE_NONE;

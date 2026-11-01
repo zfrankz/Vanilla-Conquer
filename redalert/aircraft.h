@@ -50,6 +50,7 @@ class TechnoClass;
 class AircraftClass : public FootClass, public FlyClass
 {
 public:
+    bool Do_Smarter_Run_Away(void);
     bool CFE_Is_Flight_Transition(void) const
     {
         return (IsLanding || IsTakingOff);

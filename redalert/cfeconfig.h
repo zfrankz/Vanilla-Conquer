@@ -75,7 +75,7 @@ struct CFEPatchConfig
     int HarvyOptimizeCommunalismWeight = 13;
     int OreGrowthScale = 1;
     int OreToGemPromotionSlowFactor = 8;
-    int WallBuildLength = 5;
+    int WallBuildLength = 1; // CFE's default is 5; 1 is the original game
     int InverseBuildingPreviewMode = 0; // 0=off; 1= MP only; 2 = all game modes
     int BuildingGapOffset = 0;
     int OreCapacityOffset = 0;

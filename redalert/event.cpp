@@ -88,6 +88,7 @@ unsigned char EventClass::EventLength[EventClass::LAST_EVENT] = {
     size_of(EventClass, Data.Variable.Size),   // ADDPLAYER
     size_of(EventClass, Data.Timing),          // TIMING
     size_of(EventClass, Data.ProcessTime),     // PROCESS_TIME
+    size_of(EventClass, Data.NavCom),          // SET_RALLY
 #ifdef FIXIT_VERSION_3                         //	Stalemate games.
     0,                                         //	PROPOSE_DRAW
     0,                                         //	RETRACT_DRAW
@@ -99,7 +100,7 @@ const char* EventClass::EventNames[EventClass::LAST_EVENT] = {
     "DEPLOY",       "PLACE",         "OPTIONS",      "GAMESPEED",     "PRODUCE",   "SUSPEND",  "ABANDON",
     "PRIMARY",      "SPECIAL_PLACE", "EXIT",         "ANIMATION",     "REPAIR",    "SELL",     "SELLCELL",
     "SPECIAL",      "FRAMESYNC",     "MESSAGE",      "RESPONSE_TIME", "FRAMEINFO", "SAVEGAME", "ARCHIVE",
-    "ADDPLAYER",    "TIMING",        "PROCESS_TIME",
+    "ADDPLAYER",    "TIMING",        "PROCESS_TIME", "SET_RALLY",
 #ifdef FIXIT_VERSION_3 //	Stalemate games.
     "PROPOSE_DRAW", "RETRACT_DRAW",
 #endif
@@ -843,6 +844,9 @@ void EventClass::Execute(void)
             if (techno->Is_Foot()) {
                 ((FootClass*)techno)->Clear_Navigation_List();
             }
+        } else if (techno != NULL && techno->IsActive && !techno->IsInLimbo && techno->What_Am_I() == RTTI_BUILDING
+                   && ((BuildingClass*)techno)->Can_Have_Rally_Point()) {
+            techno->Assign_Target(TARGET_NONE); // CFE: stopping a building clears its rally point.
         }
         break;
 
@@ -982,6 +986,17 @@ void EventClass::Execute(void)
     // timing requirements are; it's used to compute a desired frame rate
     // for the game.
     //
+    case SET_RALLY:
+        if (BuildingClass* const building = Data.NavCom.Whom.As_Building()) {
+            TARGET rally = Data.NavCom.Where.As_TARGET();
+            rally = (building->As_Target() != rally) ? rally : TARGET_NONE;
+            if (building->Vet_Entry().RallyPoint != rally) {
+                building->Vet_Entry().RallyPoint = rally;
+                Map.Flag_To_Redraw(true);
+            }
+        }
+        break;
+
     case PROCESS_TIME:
         for (i = 0; i < Session.Players.Count(); i++) {
             if (ID == Session.Players[i]->Player.ID) {

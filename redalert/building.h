@@ -305,6 +305,15 @@ public:
     virtual void const* Remap_Table(void);
     virtual int Exit_Object(TechnoClass* base);
     virtual void Draw_It(int x, int y, WindowNumberType window) const;
+
+    /*
+    **	CFE rally points and walls.
+    */
+    bool Can_Have_Rally_Point(void) const;
+    TARGET Target_For_Rally_Point(SpeedType speed = SPEED_TRACK) const;
+    bool Rally_Unit(TechnoClass& unit);
+    virtual void Set_Unselected_By_Player(HouseClass* player = NULL);
+    bool Unlimbo_Wall(COORDINATE coord);
     virtual bool Mark(MarkType mark = MARK_CHANGE);
     virtual void Fire_Out(void);
     void Begin_Mode(BStateType bstate);

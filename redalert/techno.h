@@ -93,6 +93,7 @@ struct CFEVeterancy
     TARGET UnmodifiedNavCom = TARGET_NONE;
     TARGET MinelayerOrigin = TARGET_NONE;
     TARGET Memorized[CFE_MAX_NAVQUEUE] = {};
+    TARGET RallyPoint = TARGET_NONE;
 };
 
 class Pipe;

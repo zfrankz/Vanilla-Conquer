@@ -1019,7 +1019,12 @@ RadioMessageType TechnoClass::Receive_Message(RadioClass* from, RadioMessageType
             if (ActiveCFEPatchConfig.EnableSmarterRepairBays && Health_Ratio() >= Rule.ConditionGreen
                 && !Target_Legal(((UnitClass*)this)->NavCom) && from != NULL && from->What_Am_I() == RTTI_BUILDING
                 && *((BuildingClass*)from) == STRUCT_REPAIR) {
-                if (!((UnitClass*)this)->Do_Smarter_Run_Away()) {
+                TARGET rallyto = ((BuildingClass*)from)->Vet_Entry().RallyPoint;
+                if (Target_Legal(rallyto) && As_Target() != rallyto && ::As_Target(Coord_Cell(Coord)) != rallyto) {
+                    Assign_Target(TARGET_NONE);
+                    Assign_Destination(rallyto);
+                    Assign_Mission(MISSION_MOVE);
+                } else if (!((UnitClass*)this)->Do_Smarter_Run_Away()) {
                     Scatter(0, true, true);
                 }
                 if (In_Radio_Contact() && Contact_With_Whom() == from) {
@@ -7855,7 +7860,7 @@ static RTTIType const _cfe_vet_types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_BUILDIN
 static bool CFE_Vet_Is_Blank(CFEVeterancy const& vet)
 {
     return (vet.XP == 0 && vet.Rank == 0 && vet.WhoLaidMe == TARGET_NONE && !vet.AttackMove && !vet.NavSize
-            && !vet.HasMemorized && vet.UnmodifiedNavCom == TARGET_NONE);
+            && !vet.HasMemorized && vet.UnmodifiedNavCom == TARGET_NONE && vet.RallyPoint == TARGET_NONE);
 }
 
 void CFE_Save_Veterancy(Pipe& file)

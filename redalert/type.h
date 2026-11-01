@@ -853,6 +853,7 @@ public:
         return (BuildupData);
     };
 
+    OverlayType Overlay_Type(void) const;
     bool Is_Factory(void) const
     {
         return (ToBuild != RTTI_NONE);
