@@ -379,7 +379,7 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Repair bay with a rally point: repaired units go there; helicopters go to a pad.
 - [ ] Place a wall in line with another up to 5 cells away: the cursor covers the gap and it fills in. Ctrl places one piece.
 - [ ] With a gap offset, buildings can go further from the base.
-- [ ] Rally points on barracks, kennel, war factory, sub pen and shipyard. Click the building itself to clear it.
+- [ ] Rally points on barracks, kennel, war factory, sub pen and shipyard.
 - [ ] Rally point onto a unit or building: it's dropped when the target dies, and when the factory is captured.
 - [ ] Harvesters ignore rally points.
 - [ ] Minelayer re-armed on a bay with a rally point goes there.
