@@ -703,6 +703,13 @@ void BulletClass::Init(void)
  * HISTORY:                                                                                    *
  *   09/24/1994 JLB : Created.                                                                 *
  *=============================================================================================*/
+void BulletClass::Minimal_Detach(TARGET target)
+{
+    if (target == TarCom) {
+        TarCom = TARGET_NONE;
+    }
+}
+
 void BulletClass::Detach(TARGET target, bool all)
 {
     assert(Bullets.ID(this) == ID);

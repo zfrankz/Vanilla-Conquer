@@ -91,6 +91,18 @@ public:
     /*
     ** Returns true of vortex is currently active.
     */
+    bool Is_Hidden(void)
+    {
+        return (Hidden != 0);
+    }
+    bool Is_Active_And_Not_Hidden(void)
+    {
+        return (Is_Active() && !Hidden);
+    }
+    void CFE_Show(void)
+    {
+        Show();
+    }
     bool Is_Active(void)
     {
         return (Active);

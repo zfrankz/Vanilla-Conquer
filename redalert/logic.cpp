@@ -334,7 +334,7 @@ void LogicClass::AI(void)
     /*
     ** If there's a time quake, handle it here.
     */
-    if (TimeQuake) {
+    if (TimeQuake || GlobalTimeQuake) {
         Sound_Effect(VOC_KABOOM15);
         Shake_The_Screen(8);
     }
@@ -350,6 +350,12 @@ void LogicClass::AI(void)
         BStart(BENCH_AI);
         obj->AI();
         BEnd(BENCH_AI);
+
+        // CFE: the global timequake, which Aftermath's PendingTimeQuake broke in the original.
+        if (GlobalTimeQuake && obj != NULL && obj->IsActive && !obj->IsInLimbo && obj->Strength) {
+            int damage = (int)obj->Class_Of().MaxStrength * Rule.QuakeDamagePercent;
+            obj->Take_Damage(damage, 0, WARHEAD_AP, 0, true);
+        }
 
         if (TimeQuake && obj != NULL && obj->IsActive && !obj->IsInLimbo && obj->Strength) {
             int damage = (int)obj->Class_Of().MaxStrength * Rule.QuakeDamagePercent;

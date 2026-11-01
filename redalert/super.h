@@ -84,6 +84,11 @@ public:
         return (RechargeTime);
     };
 
+    void Set_Recharge_Time(int time) // CFE OpenRA-style supers.
+    {
+        RechargeTime = time;
+    }
+
 private:
     bool Recharge(bool player = false);
 

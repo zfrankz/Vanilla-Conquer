@@ -728,6 +728,12 @@ HouseClass::HouseClass(HousesType house)
     new (&SuperWeapon[SPC_GPS])
         SuperClass(TICKS_PER_MINUTE * Rule.GPSTime, true, VOX_NONE, VOX_NONE, VOX_NOT_READY, VOX_INSUFFICIENT_POWER);
 
+    // CFE: shorter recharges with OpenRA-style supers.
+    if (ActiveCFEPatchConfig.EnableQuickSupers) {
+        SuperWeapon[SPC_CHRONOSPHERE].Set_Recharge_Time(2 * TICKS_PER_MINUTE);
+        SuperWeapon[SPC_IRON_CURTAIN].Set_Recharge_Time(2 * TICKS_PER_MINUTE);
+    }
+
     memset(UnitsKilled, '\0', sizeof(UnitsKilled));
     memset(BuildingsKilled, '\0', sizeof(BuildingsKilled));
     memset(BQuantity, '\0', sizeof(BQuantity));
@@ -2761,6 +2767,192 @@ void HouseClass::Special_Weapon_AI(SpecialWeaponType id)
     }
 }
 
+/*
+**	CFE OpenRA-style supers.
+*/
+static void CFE_Give_Iron_Curtain(TechnoClass* tech)
+{
+    if (ActiveCFEPatchConfig.EnableQuickSupers) {
+        tech->IronCurtainCountDown = 20 * TICKS_PER_SECOND;
+    } else {
+        tech->IronCurtainCountDown = Rule.IronCurtainDuration * TICKS_PER_MINUTE;
+    }
+#ifdef FIXIT_CSII //	checked - ajw 9/28/98
+    if (tech->What_Am_I() == RTTI_UNIT && *(UnitClass*)tech == UNIT_DEMOTRUCK) {
+        tech->IronCurtainCountDown = Rule.IronCurtainDuration * TICKS_PER_SECOND;
+    }
+#endif
+    tech->Mark(MARK_CHANGE);
+}
+
+static int CFE_Chrono_Duration(void)
+{
+    return (ActiveCFEPatchConfig.EnableQuickSupers ? 20 * TICKS_PER_SECOND : (int)(Rule.ChronoDuration * TICKS_PER_MINUTE));
+}
+
+/*
+**	The eight neighbours in the order wide supers scan them: the sides, then the corners from a
+**	random one so as not to favour the northeast.
+*/
+static void CFE_Wide_Super_Order(FacingType order[8])
+{
+    static FacingType const _sides[4] = {FACING_N, FACING_E, FACING_S, FACING_W};
+    static FacingType const _corners[4] = {FACING_NE, FACING_SE, FACING_SW, FACING_NW};
+    int const shuffle = Random_Pick(0, 3);
+    for (int i = 0; i < 4; i++) {
+        order[i] = _sides[i];
+        order[i + 4] = _corners[(i + shuffle) % 4];
+    }
+}
+
+/*
+**	The iron curtain also takes up to 4 friendly objects around the target.
+*/
+static void CFE_Wide_Iron_Curtain(HouseClass* house, CELL cell)
+{
+    FacingType order[8];
+    CFE_Wide_Super_Order(order);
+    int extraunits = 0;
+    for (int i = 0; i < 8 && extraunits < 4; i++) {
+        CELL newcell = Adjacent_Cell(cell, order[i]);
+        if (!Map.In_Radar(newcell)) {
+            continue;
+        }
+        for (ObjectClass* object = Map[newcell].Cell_Occupier(); object != NULL && extraunits < 4; object = object->Next) {
+            RTTIType rtti = object->What_Am_I();
+            if (object->IsActive && (rtti == RTTI_UNIT || rtti == RTTI_BUILDING || rtti == RTTI_VESSEL || rtti == RTTI_AIRCRAFT)
+                && house->Is_Ally((TechnoClass*)object)) {
+                TechnoClass* tech = (TechnoClass*)object;
+                int duration = ActiveCFEPatchConfig.EnableQuickSupers ? 20 * TICKS_PER_SECOND
+                                                                      : (int)(Rule.IronCurtainDuration * TICKS_PER_SECOND);
+                if (tech->IronCurtainCountDown != duration) {
+                    CFE_Give_Iron_Curtain(tech);
+                    extraunits++;
+                }
+            }
+        }
+    }
+}
+
+/*
+**	The chronosphere also takes up to 4 friendly vehicles or ships around the target, keeping their
+**	places around it.
+*/
+static void CFE_Wide_Chrono(HouseClass* house, CELL fromcell, CELL tocell)
+{
+    FacingType order[8];
+    CFE_Wide_Super_Order(order);
+    int extraunits = 0;
+    for (int i = 0; i < 8 && extraunits < 4; i++) {
+        CELL newfromcell = Adjacent_Cell(fromcell, order[i]);
+        CELL newtocell = Adjacent_Cell(tocell, order[i]);
+        if (!Map.In_Radar(newfromcell) || !Map.In_Radar(newtocell)) {
+            continue;
+        }
+        ObjectClass* object = Map[newfromcell].Cell_Occupier();
+        while (object != NULL && extraunits < 4) {
+            ObjectClass* next = object->Next; // The teleport takes the object off this list.
+            RTTIType rtti = object->What_Am_I();
+            if (object->IsActive
+                && ((rtti == RTTI_UNIT && *(UnitClass*)object != UNIT_CHRONOTANK && *(UnitClass*)object != UNIT_DEMOTRUCK)
+                    || (rtti == RTTI_VESSEL && *(VesselClass*)object != VESSEL_TRANSPORT
+                        && *(VesselClass*)object != VESSEL_CARRIER))
+                && house->Is_Ally((TechnoClass*)object) && ((TechnoClass*)object)->Can_Enter_Cell(newtocell, FACING_NONE) == MOVE_OK) {
+                DriveClass* drive = (DriveClass*)object;
+                drive->MoebiusCell = newfromcell;
+                drive->Teleport_To(newtocell);
+                drive->IsMoebius = true;
+                drive->MoebiusCountDown = CFE_Chrono_Duration();
+                if (ActiveCFEPatchConfig.EnableSmarterChrono) {
+                    drive->Unselect_All_Players_Except_Owner();
+                    Minimal_Detach_This_From_All(drive->As_Target(), true);
+                }
+                extraunits++;
+            }
+            object = next;
+        }
+    }
+}
+
+/*
+**	CFE: the odds of a chrono disaster, in thousandths of a percent. The timequake fix makes the
+**	timequake happen at all (Aftermath's PendingTimeQuake broke it); the odds can be shared by
+**	timequakes and vortexes, scale down with shorter recharges, and grow with each use.
+*/
+static void CFE_Chrono_Disasters(TechnoClass* tech)
+{
+    bool dovortex = false;
+    bool dotimequake = false;
+    int vortexpercent = Rule.VortexChance * 100;
+    int quakepercent = Rule.QuakeChance * 100;
+    int vortexbasechance = vortexpercent * 1000;
+    int quakebasechance = quakepercent * 1000;
+    int disasterbasechance = ActiveCFEPatchConfig.SharedChronoDisasterOdds * 1000;
+
+    if (ActiveCFEPatchConfig.EnableQuickSupers) {
+        int chronotime = max((int)Rule.ChronoTime, 1);
+        vortexbasechance = (vortexbasechance * 2) / chronotime;
+        quakebasechance = (quakebasechance * 2) / chronotime;
+        disasterbasechance = (disasterbasechance * 2) / chronotime;
+    }
+
+    if (ActiveCFEPatchConfig.EnableCumulativeTimelineDamage) {
+        CFE_Timeline_Damage++;
+        int total = CFE_Timeline_Damage + CFE_Permanent_Timeline_Damage;
+        disasterbasechance = (disasterbasechance * total) / 10;
+        vortexbasechance = (vortexbasechance * total) / 10;
+        quakebasechance = (quakebasechance * total) / 10;
+    }
+
+    bool chronotank = !tech || !tech->IsActive || (tech->What_Am_I() == RTTI_UNIT && *(UnitClass*)tech == UNIT_CHRONOTANK);
+    if (!chronotank) {
+        if (ActiveCFEPatchConfig.EnableTimeQuakeFix && ActiveCFEPatchConfig.EnableSharedChronoDisasterOdds) {
+            if (CFE_Patch_FullRange_Random_Pick(0, 99999) < disasterbasechance) {
+                if (Random_Pick(1, max(vortexpercent + quakepercent, 1)) <= vortexpercent) {
+                    dovortex = true;
+                } else {
+                    dotimequake = true;
+                }
+            }
+        } else {
+            if (CFE_Patch_FullRange_Random_Pick(0, 99999) < vortexbasechance) {
+                dovortex = true;
+            }
+            if (ActiveCFEPatchConfig.EnableTimeQuakeFix && CFE_Patch_FullRange_Random_Pick(0, 99999) < quakebasechance) {
+                dotimequake = true;
+            }
+        }
+    }
+
+    // No timequake if disaster odds are shared and there's already a visible vortex.
+    if (dotimequake && !(ChronalVortex.Is_Active_And_Not_Hidden() && ActiveCFEPatchConfig.EnableSharedChronoDisasterOdds)) {
+        PendingGlobalTimeQuake = true;
+        if (ActiveCFEPatchConfig.EnableCumulativeTimelineDamage) {
+            CFE_Timeline_Damage = 0;
+            CFE_Permanent_Timeline_Damage++;
+        }
+    }
+
+    if (!chronotank && dovortex) {
+        if (!ChronalVortex.Is_Active()) {
+            int x = Random_Pick(0, Map.MapCellWidth - 1);
+            int y = Random_Pick(0, Map.MapCellHeight - 1);
+            ChronalVortex.Appear(Cell_Coord(XY_Cell(Map.MapCellX + x, Map.MapCellY + y)));
+            if (ActiveCFEPatchConfig.EnableCumulativeTimelineDamage) {
+                CFE_Timeline_Damage = 0;
+                CFE_Permanent_Timeline_Damage++;
+            }
+        } else if (ChronalVortex.Is_Hidden()) {
+            // Wake up a hidden vortex: the odds are scaled, so it should count.
+            ChronalVortex.CFE_Show();
+            if (ActiveCFEPatchConfig.EnableCumulativeTimelineDamage) {
+                CFE_Timeline_Damage = 0;
+                CFE_Permanent_Timeline_Damage++;
+            }
+        }
+    }
+}
+
 /***********************************************************************************************
  * HouseClass::Place_Special_Blast -- Place a special blast effect at location specified.      *
  *                                                                                             *
@@ -2951,13 +3143,10 @@ bool HouseClass::Place_Special_Blast(SpecialWeaponType id, CELL cell)
                 case RTTI_BUILDING:
                 case RTTI_VESSEL:
                 case RTTI_AIRCRAFT:
-                    tech->IronCurtainCountDown = Rule.IronCurtainDuration * TICKS_PER_MINUTE;
-#ifdef FIXIT_CSII //	checked - ajw 9/28/98
-                    if (tech->What_Am_I() == RTTI_UNIT && *(UnitClass*)tech == UNIT_DEMOTRUCK) {
-                        tech->IronCurtainCountDown = Rule.IronCurtainDuration * TICKS_PER_SECOND;
+                    CFE_Give_Iron_Curtain(tech);
+                    if (ActiveCFEPatchConfig.EnableWideSupers) {
+                        CFE_Wide_Iron_Curtain(this, cell);
                     }
-#endif
-                    tech->Mark(MARK_CHANGE);
                     Sound_Effect(VOC_IRON1, tech->Center_Coord());
                     if (this == PlayerPtr) {
                         Map.IsTargettingMode = SPC_NONE;
@@ -3049,28 +3238,43 @@ bool HouseClass::Place_Special_Blast(SpecialWeaponType id, CELL cell)
                 oldcell = drive->MoebiusCell;
                 drive->Teleport_To(cell);
                 drive->IsMoebius = true;
+                if (ActiveCFEPatchConfig.EnableSmarterChrono) {
+                    drive->Unselect_All_Players_Except_Owner();
+                    Minimal_Detach_This_From_All(drive->As_Target(), true);
+                }
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
                 if (tech->What_Am_I() == RTTI_UNIT && *(UnitClass*)tech == UNIT_CHRONOTANK) {
                     drive->IsMoebius = false;
                 }
-                drive->MoebiusCountDown = Rule.ChronoDuration * TICKS_PER_MINUTE;
+                drive->MoebiusCountDown = CFE_Chrono_Duration();
                 if (tech->What_Am_I() == RTTI_UNIT && *(UnitClass*)tech == UNIT_CHRONOTANK) {
                     drive->MoebiusCountDown = ChronoTankDuration * TICKS_PER_MINUTE;
                 }
 #else
                 drive->MoebiusCountDown = Rule.ChronoDuration * TICKS_PER_MINUTE;
 #endif
+                if (ActiveCFEPatchConfig.EnableWideSupers && tech->IsActive
+                    && (tech->What_Am_I() != RTTI_UNIT || *(UnitClass*)tech != UNIT_CHRONOTANK)) {
+                    CFE_Wide_Chrono(this, oldcell, cell);
+                }
                 Scen.Do_BW_Fade();
                 Sound_Effect(VOC_CHRONO, drive->Coord);
+                if (ActiveCFEPatchConfig.EnableSmarterChrono) {
+                    Sound_Effect(VOC_CHRONO, Cell_Coord(oldcell)); // At both ends.
+                }
 
                 /*
                 **	Set active animation on Chronospheres.
                 */
-                for (int index = 0; index < Buildings.Count(); ++index) {
-                    BuildingClass* building = Buildings.Ptr(index);
-                    if (building != nullptr && building->IsActive && building->Owner() == Class->House
-                        && *building == STRUCT_CHRONOSPHERE) {
-                        building->Begin_Mode(BSTATE_ACTIVE);
+                // CFE: not if a chronotank shifted itself.
+                if (!ActiveCFEPatchConfig.EnableSmarterChrono
+                    || (tech->IsActive && (tech->What_Am_I() != RTTI_UNIT || *(UnitClass*)tech != UNIT_CHRONOTANK))) {
+                    for (int index = 0; index < Buildings.Count(); ++index) {
+                        BuildingClass* building = Buildings.Ptr(index);
+                        if (building != nullptr && building->IsActive && building->Owner() == Class->House
+                            && *building == STRUCT_CHRONOSPHERE) {
+                            building->Begin_Mode(BSTATE_ACTIVE);
+                        }
                     }
                 }
             }
@@ -3089,6 +3293,12 @@ bool HouseClass::Place_Special_Blast(SpecialWeaponType id, CELL cell)
         IsRecalcNeeded = true;
         fired = true;
         what = "CHRONO2";
+
+        if (ActiveCFEPatchConfig.EnableTimeQuakeFix || ActiveCFEPatchConfig.EnableSharedChronoDisasterOdds
+            || ActiveCFEPatchConfig.EnableCumulativeTimelineDamage || ActiveCFEPatchConfig.EnableQuickSupers) {
+            CFE_Chrono_Disasters(tech);
+            break;
+        }
 
         /*
         ** Now set a percentage chance that a time quake will occur.

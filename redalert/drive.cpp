@@ -1337,8 +1337,16 @@ void DriveClass::AI(void)
 #endif
             if (MoebiusCountDown == 0) {
                 IsMoebius = false;
+                if (ActiveCFEPatchConfig.EnableSmarterChrono) {
+                    Sound_Effect(VOC_CHRONO, Coord); // At both ends.
+                }
                 Teleport_To(MoebiusCell);
                 MoebiusCell = 0;
+                if (ActiveCFEPatchConfig.EnableSmarterChrono) {
+                    Sound_Effect(VOC_CHRONO, Coord);
+                    Unselect_All_Players();
+                    Minimal_Detach_This_From_All(As_Target(), true);
+                }
             }
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
         }

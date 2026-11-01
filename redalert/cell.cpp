@@ -2498,6 +2498,13 @@ bool CellClass::Goodie_Check(FootClass* object)
         switch (powerup) {
         case CRATE_TIMEQUAKE:
             TimeQuake = true;
+
+            // CFE: if timequakes are fixed, make this do something.
+            if (ActiveCFEPatchConfig.EnableTimeQuakeFix) {
+                Scen.Do_BW_Fade();
+                Sound_Effect(VOC_CHRONO, Cell_Coord());
+                PendingGlobalTimeQuake = true;
+            }
             break;
 
         /*

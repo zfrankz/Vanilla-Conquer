@@ -162,6 +162,10 @@ bool TimeQuake;
 
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
 bool PendingTimeQuake;
+bool GlobalTimeQuake = false;
+bool PendingGlobalTimeQuake = false;
+int CFE_Timeline_Damage = 0;
+int CFE_Permanent_Timeline_Damage = 0;
 TARGET TimeQuakeCenter;
 fixed QuakeUnitDamage = 0x300;
 fixed QuakeBuildingDamage = 0x300;

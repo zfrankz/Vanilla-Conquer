@@ -240,6 +240,8 @@ void Main_Game(int argc, char* argv[])
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
                 TimeQuake = PendingTimeQuake;
                 PendingTimeQuake = false;
+                GlobalTimeQuake = PendingGlobalTimeQuake;
+                PendingGlobalTimeQuake = false;
 #else
                 TimeQuake = false;
 #endif
@@ -1834,6 +1836,7 @@ bool Main_Loop()
     */
     Logic.AI();
     TimeQuake = false;
+    GlobalTimeQuake = false;
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
     if (!PendingTimeQuake) {
         TimeQuakeCenter = 0;

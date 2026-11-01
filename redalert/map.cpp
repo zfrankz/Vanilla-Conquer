@@ -2714,6 +2714,8 @@ static FootClass* ReservingVehicles[MAP_CELL_TOTAL];
 void MapClass::Clear_CFE_Cell_State(void)
 {
     memset(ReservingVehicles, 0, sizeof(ReservingVehicles));
+    CFE_Timeline_Damage = 0;
+    CFE_Permanent_Timeline_Damage = 0;
 }
 
 FootClass*& CellClass::Reserving_Vehicle(void) const

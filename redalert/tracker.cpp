@@ -35,6 +35,35 @@
 
 #include "function.h"
 
+/*
+**	CFE smarter chrono: only reflects that the unit is no longer where it was, so anyone targeting it
+**	loses the target and any bullets flying at it miss.
+*/
+void Minimal_Detach_This_From_All(TARGET target, bool all)
+{
+    if (Target_Legal(target)) {
+        for (int index = 0; index < Units.Count(); index++) {
+            Units.Ptr(index)->Detach(target, all);
+        }
+        for (int index = 0; index < Vessels.Count(); index++) {
+            Vessels.Ptr(index)->Detach(target, all);
+        }
+        for (int index = 0; index < Aircraft.Count(); index++) {
+            Aircraft.Ptr(index)->Detach(target, all);
+        }
+        for (int index = 0; index < Buildings.Count(); index++) {
+            Buildings.Ptr(index)->Detach(target, all);
+        }
+        for (int index = 0; index < Bullets.Count(); index++) {
+            Bullets.Ptr(index)->Minimal_Detach(target);
+        }
+        for (int index = 0; index < Infantry.Count(); index++) {
+            Infantry.Ptr(index)->Detach(target, all);
+        }
+        ChronalVortex.Detach(target);
+    }
+}
+
 /***********************************************************************************************
  * Detach_This_From_All -- Detaches this object from all others.                               *
  *                                                                                             *

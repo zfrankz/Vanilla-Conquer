@@ -7893,6 +7893,8 @@ void CFE_Save_Veterancy(Pipe& file)
             }
         }
     }
+    file.Put(&CFE_Timeline_Damage, sizeof(CFE_Timeline_Damage));
+    file.Put(&CFE_Permanent_Timeline_Damage, sizeof(CFE_Permanent_Timeline_Damage));
 }
 
 void CFE_Load_Veterancy(Straw& file)
@@ -7928,6 +7930,8 @@ void CFE_Load_Veterancy(Straw& file)
             table[id] = record;
         }
     }
+    file.Get(&CFE_Timeline_Damage, sizeof(CFE_Timeline_Damage));
+    file.Get(&CFE_Permanent_Timeline_Damage, sizeof(CFE_Permanent_Timeline_Damage));
 }
 
 /*
@@ -7987,6 +7991,10 @@ void TechnoClass::CFE_Attack_Move_AI(void)
                 cfe.SkipNavQueueUpdate = true;
                 ((UnitClass*)this)->Teleport_To(tpdestination);
                 cfe.SkipNavQueueUpdate = false;
+                if (ActiveCFEPatchConfig.EnableSmarterChrono) {
+                    Unselect_All_Players_Except_Owner();
+                    Minimal_Detach_This_From_All(As_Target(), true);
+                }
                 ((UnitClass*)this)->MoebiusCountDown = ChronoTankDuration * TICKS_PER_MINUTE;
                 Scen.Do_BW_Fade();
                 Sound_Effect(VOC_CHRONO, Coord);
