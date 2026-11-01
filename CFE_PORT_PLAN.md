@@ -550,6 +550,17 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
      No options vs upstream: 7 cases identical, 3000 frames.
    - Not verified: chronotank teleport, boats, aircraft queues and recall, multiselection, and any of it by hand.
 
+7. Rally points, walls, building gap – ported (`bbef5edd`), play-test pending
+   - `RALLY_POINTS` (factories that build infantry, vehicles or ships; repair bays with `SMARTER_REPAIRBAY`; stored in the veterancy block),
+     `WALL_BUILD_LENGTH`, `WALLS_HAVE_FULL_COST`, `BUILDING_GAP_OFFSET`, `LONG_BGAP_BUGFIX`, aircraft `Do_Smarter_Run_Away`, the rally parts of repair bays.
+   - Differences from CFE: `WALL_BUILD_LENGTH` defaults to 1 (the original game; CFE 5). Rally line is a plain green line (CFE's dots are Remastered
+     rendering). `INVERSE_PREVIEW_MODE` isn't ported: it draws through the Remastered client only. Multiplayer ignores Ctrl for walls, as TD.
+   - Verified on SCG08EA: `SET_RALLY` stored; a medium tank leaving a factory stays 2 cells away off, 18 cells away and heading to the rally point on. Rally
+     point kept through save and load. Two walls 4 apart with length 5: 2 pieces off, 5 on, 300 spent, 0 with `WALLS_HAVE_FULL_COST=0`. Cells passing the proximity
+     check for a power plant: 601 off, 749 with offset 2, 1055 with offset 4, 749 with offset 2 and `LONG_BGAP_BUGFIX`, 411 with the fix alone (its radius is Adjacent, 1, while
+     the original reaches 2 cells; same logic as CFE). No options vs upstream: 7 cases identical, 3000 frames.
+   - Not verified: placement cursor preview, Ctrl, repair bay rally, aircraft leaving a bay, and any of it by hand.
+
 ## Phase 5 – Multiplayer / 8 players
 VC `MAX_PLAYERS 6`; needs legacy lobby/score UI work. Needs a CFE config hash shared
 between peers to avoid desyncs. Until then CFE features are SP/skirmish only.

@@ -355,3 +355,9 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] A chronotank with Shift+click teleports when charged.
 - [ ] Stop (S) halts a queue at once.
 
+## RA 7. Rally points, walls, gap (`RALLY_POINTS`, `WALL_BUILD_LENGTH=5`, `BUILDING_GAP_OFFSET`)
+- [ ] Select a factory and click the ground: a green line shows the rally point, and new units go there. Stop (S) clears it.
+- [ ] Repair bay with a rally point: repaired units go there; helicopters go to a pad.
+- [ ] Place a wall in line with another up to 5 cells away: the cursor covers the gap and it fills in. Ctrl places one piece.
+- [ ] With a gap offset, buildings can go further from the base.
+
