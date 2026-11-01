@@ -1769,6 +1769,11 @@ void BuildingClass::Drop_Debris(TARGET source)
         odds -= 1;
     if (IsCaptured)
         odds += 6;
+    if (Target_Legal(WhomToRepay)
+        && ((ActiveCFEPatchConfig.SafeSabotage == 1 && Session.Type == GAME_NORMAL)
+            || ActiveCFEPatchConfig.SafeSabotage == 2)) {
+        IsSurvivorless = true;
+    }
     int count = How_Many_Survivors();
     while (*offset != REFRESH_EOL) {
         CELL newcell;
@@ -3238,6 +3243,9 @@ bool BuildingClass::Captured(HouseClass* newowner)
             break;
         }
 #endif
+        if (ActiveCFEPatchConfig.EnableBuildingCaptureAnnouncements && (House == PlayerPtr || newowner == PlayerPtr)) {
+            Speak(VOX_BUILDING_CAPTURE);
+        }
 #ifdef REMASTER_BUILD
         /*
         ** Maybe trigger an achivement. ST - 11/14/2019 1:53PM
@@ -5874,7 +5882,7 @@ void BuildingClass::Repair_AI(void)
                 Strength = Class->MaxStrength;
                 IsRepairing = false;
             }
-        } else {
+        } else if (!ActiveCFEPatchConfig.EnableOOMRepair) {
             IsRepairing = false;
         }
     }

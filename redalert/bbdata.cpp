@@ -271,7 +271,9 @@ bool BulletTypeClass::Read_INI(CCINIClass& ini)
         IsProximityArmed = ini.Get_Bool(Name(), "Proximity", IsProximityArmed);
         IsFlameEquipped = ini.Get_Bool(Name(), "Animates", IsFlameEquipped);
         IsFueled = ini.Get_Bool(Name(), "Ranged", IsFueled);
-        IsInaccurate = ini.Get_Bool(Name(), "Inaccuate", IsInaccurate);
+        // CFE: the original misspells the key, so rules.ini's "Inaccurate" had no effect
+        IsInaccurate = ini.Get_Bool(
+            Name(), ActiveCFEPatchConfig.EnableInaccuracyBugfix ? "Inaccurate" : "Inaccuate", IsInaccurate);
         IsAntiAircraft = ini.Get_Bool(Name(), "AA", IsAntiAircraft);
         IsAntiGround = ini.Get_Bool(Name(), "AG", IsAntiGround);
         IsAntiSub = ini.Get_Bool(Name(), "ASW", IsAntiSub);

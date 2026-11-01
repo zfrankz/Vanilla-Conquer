@@ -157,6 +157,11 @@ public:
     bool Load(Straw& file);
     bool Save(Pipe& file) const;
 
+    bool Is_On_Fire(void) const
+    {
+        return IsOnFire;
+    }
+
 private:
     /*
     **	If this terrain object is on fire, then this flag will be true.

@@ -2634,6 +2634,21 @@ bool Read_Scenario_INI(char* fname, bool)
 #endif
     }
 
+    /*
+    **	CFE: two-shooters with odd max ammo get a free extra shot unless GENERAL_BUGFIXES is on.
+    **	This formalizes the free shot by raising max ammo by 1.
+    */
+    if (ActiveCFEPatchConfig.EnableMIGAmmoFudge) {
+        AircraftTypeClass& miggy = AircraftTypeClass::As_Reference(AIRCRAFT_MIG);
+        if ((miggy.MaxAmmo % 2 != 0) && miggy.Is_Two_Shooter()) {
+            miggy.MaxAmmo++;
+        }
+        AircraftTypeClass& yakky = AircraftTypeClass::As_Reference(AIRCRAFT_YAK);
+        if ((yakky.MaxAmmo % 2 != 0) && yakky.Is_Two_Shooter()) {
+            yakky.MaxAmmo++;
+        }
+    }
+
     Call_Back();
 
     /*

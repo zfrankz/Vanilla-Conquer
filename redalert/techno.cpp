@@ -6793,7 +6793,7 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
             /*
             ** New feature - Turkey has a 10% build speed bonus even though it isn't specified in the rules
             */
-            if (hptr->ActLike == HOUSE_TURKEY) {
+            if (hptr->ActLike == HOUSE_TURKEY && ActiveCFEPatchConfig.TurkeyFixMode == 1) {
                 if (hptr->BuildSpeedBias == fixed(1)) {
                     time *= 9;
                     time /= 10;
@@ -6831,6 +6831,24 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
         time *= scale;
 
         int divisor = hptr->Factory_Count(What_Am_I());
+
+        /*
+        **	CFE: optional balance fix gives Turkey a build speed bonus as if it had 1.1x as many
+        **	factories beyond the first.
+        */
+        if (divisor > 1 && hptr->ActLike == HOUSE_TURKEY && ActiveCFEPatchConfig.TurkeyFixMode == 2) {
+#ifdef FIXIT_CSII
+            if (NewUnitsEnabled) {
+                divisor = 2;
+            }
+#endif
+            float fdivisor = (float)divisor;
+            fdivisor = fdivisor + ((fdivisor - 1.0f) / 10.0f);
+            float ftime = (float)time;
+            ftime = (ftime / fdivisor) + 0.5f;
+            return ((int)ftime);
+        }
+
         if (divisor != 0) {
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
             // Hack: allow the multiple-factory bonus, but only up to two factories if

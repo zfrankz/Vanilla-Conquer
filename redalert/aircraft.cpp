@@ -826,7 +826,8 @@ int AircraftClass::Mission_Hunt(void)
                     }
                 }
                 Fire_At(targ, 0);
-                if (Class->Is_Two_Shooter()) {
+                // CFE: two-shooters with odd max ammo fired one shot more than they had
+                if ((Ammo || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && Class->Is_Two_Shooter()) {
                     Fire_At(targ, 0);
                 }
                 return (Arm);

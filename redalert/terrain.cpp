@@ -109,6 +109,31 @@ ResultType TerrainClass::Take_Damage(int& damage, int distance, WarheadType warh
     ResultType res = RESULT_NONE;
 
     /*
+    **	CFE: burning trees used to live on as indestructible zombies. Burning trees now take damage
+    **	from any source, are held at 1 hp by ObjectClass::Take_Damage() and burn down when the fire
+    **	goes out.
+    */
+    if (ActiveCFEPatchConfig.EnableBurningTreeFix) {
+        if (!IsCrumbling && warhead != WARHEAD_SA && !Class->IsImmune) {
+            res = ObjectClass::Take_Damage(damage, distance, warhead, source, forced);
+
+            if (damage && warhead == WARHEAD_FIRE) {
+                Catch_Fire();
+            }
+
+            if (res == RESULT_DESTROYED) {
+                if (IsOnFire) {
+                    Shorten_Attached_Anims(this);
+                } else {
+                    Mark();
+                    Start_To_Crumble();
+                }
+            }
+        }
+        return (res);
+    }
+
+    /*
     **	Small arms can never destroy a terrain element.
     */
     if ((!IsOnFire || warhead == WARHEAD_FIRE) && warhead != WARHEAD_SA && !Class->IsImmune) {
@@ -457,6 +482,13 @@ void TerrainClass::Fire_Out(void)
 
     if (IsOnFire) {
         IsOnFire = false;
+
+        /*
+        **	CFE: the tree was held at 1 hp while burning; now it burns down.
+        */
+        if (ActiveCFEPatchConfig.EnableBurningTreeFix && Strength == 1) {
+            Strength = 0;
+        }
         if (!IsCrumbling && !Strength) {
             Detach_All();
             Mark();
@@ -589,7 +621,7 @@ void TerrainClass::Start_To_Crumble(void)
 
     if (!IsCrumbling) {
         IsCrumbling = true;
-        Set_Rate(2);
+        Set_Rate(ActiveCFEPatchConfig.EnableBurningTreeFix ? 3 : 2); // CFE: 2 looks too abbreviated
         Set_Stage(0);
     }
 }

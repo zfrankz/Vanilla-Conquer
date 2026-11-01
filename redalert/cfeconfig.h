@@ -57,6 +57,7 @@ struct CFEPatchConfig
     bool EnableBurningTreeFix = false;
     bool EnableDeathsDoorFix = false;
     bool EnableNewSkirmishAI = false;
+    bool EnableGeneralBugfixes = false; // Not a CFE setting: CFE always applies these fixes
 
     int EnableVeterancy = 0;
     int EnableTanyaGuard = 0;
@@ -77,7 +78,7 @@ struct CFEPatchConfig
     int BuildingGapOffset = 0;
     int OreCapacityOffset = 0;
     int SharedChronoDisasterOdds = 20;
-    int TurkeyFixMode = 0; // 0=no bonus (buggy original RA behavior, 11/18/2024 Remastered patch behavior); 1=90% build time (intended original RA behavior, Remastered launch behavior, insanely overpowered); 2=110% build speed bonus from extra production structures (CFE patch rebalance)
+    int TurkeyFixMode = 1; // 0=no bonus (11/18/2024 Remastered patch behavior); 1=90% build time outside the campaign (unmodified VC, Remastered launch behavior); 2=110% build speed bonus from extra production structures (CFE patch rebalance)
 };
 
 extern CFEPatchConfig ActiveCFEPatchConfig;

@@ -3644,6 +3644,9 @@ bool BuildingTypeClass::Read_INI(CCINIClass& ini)
     if (TechnoTypeClass::Read_INI(ini)) {
         Speed = ini.Get_Bool(Name(), "WaterBound", (Speed == SPEED_FLOAT)) ? SPEED_FLOAT : SPEED_NONE;
         Capacity = ini.Get_Int(Name(), "Storage", Capacity);
+        if (ini.Is_Present(Name(), "Storage")) {
+            Capacity += ActiveCFEPatchConfig.OreCapacityOffset;
+        }
         Adjacent = ini.Get_Int(Name(), "Adjacent", Adjacent);
         IsCaptureable = ini.Get_Bool(Name(), "Capturable", IsCaptureable);
         IsPowered = ini.Get_Bool(Name(), "Powered", IsPowered);

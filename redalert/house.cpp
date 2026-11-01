@@ -979,6 +979,16 @@ void HouseClass::AI(void)
     // Set PlayerPtr to be this house. ST - 8/7/2019 10:12AM
     Logic_Switch_Player_Context(this);
 #endif
+    if (Frame == 75 && this == PlayerPtr && ActiveCFEPatchConfig.EnableVersionAnnounce) {
+        Session.Messages.Add_Message(NULL,
+                                     0,
+                                     "CFE Patch Redux RA version 1.9",
+                                     PCOLOR_GREEN,
+                                     TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW,
+                                     TICKS_PER_SECOND * 20);
+        Map.Flag_To_Redraw(false);
+    }
+
     /*
     **	If base building has been turned on by a trigger, then force the house to begin
     **	production and team creation as well. This is also true if the IQ is high enough to
@@ -2800,7 +2810,8 @@ bool HouseClass::Place_Special_Blast(SpecialWeaponType id, CELL cell)
             for (int index = 0; index < Vessels.Count(); index++) {
                 VesselClass* sub = Vessels.Ptr(index);
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
-                if (*sub == VESSEL_SS || *sub == VESSEL_MISSILESUB) {
+                if ((*sub == VESSEL_SS || *sub == VESSEL_MISSILESUB)
+                    && (!ActiveCFEPatchConfig.EnableSmarterSonar || !Is_Ally(sub))) {
 #else
                 if (*sub == VESSEL_SS) {
 #endif

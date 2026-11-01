@@ -83,6 +83,7 @@ static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
     GetSetting(ActiveCFEPatchConfig.EnableSmarterSonar, "FEATURES", "SMARTER_SONAR");
     GetSetting(ActiveCFEPatchConfig.EnableBurningTreeFix, "FEATURES", "BURNING_TREE_FIX");
     GetSetting(ActiveCFEPatchConfig.EnableDeathsDoorFix, "FEATURES", "DEATHS_DOOR_FIX");
+    GetSetting(ActiveCFEPatchConfig.EnableGeneralBugfixes, "FEATURES", "GENERAL_BUGFIXES");
 
     // Settings
     GetSetting(ActiveCFEPatchConfig.EnableVeterancy, "SETTINGS", "VETERANCY");
@@ -113,6 +114,7 @@ static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
     // Clamp mode settings to their legal ranges
     cfg.InverseBuildingPreviewMode = std::max(0, std::min(cfg.InverseBuildingPreviewMode, 2));
     cfg.SafeSabotage = std::max(0, std::min(cfg.SafeSabotage, 2));
+    cfg.TurkeyFixMode = std::max(0, std::min(cfg.TurkeyFixMode, 2));
 
     // If A-Star isn't enabled, distance constants will be compared against leptons rather than cells, so convert here
     if (!cfg.EnableASPathing) {

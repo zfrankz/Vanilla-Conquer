@@ -1651,6 +1651,7 @@ ResultType ObjectClass::Take_Damage(int& damage, int distance, WarheadType warhe
 
     if (oldstrength && damage != 0 && (forced || !Class_Of().IsImmune)) {
         int maxstrength = Class_Of().MaxStrength;
+        int rawdamage = damage;
 
         /*
         **	Modify damage based on the warhead type and the armor of the object. This results
@@ -1715,8 +1716,23 @@ ResultType ObjectClass::Take_Damage(int& damage, int distance, WarheadType warhe
             **	When an object is damaged to destruction, it will instead stop at one
             **	damage point. This will prolong the damage state as well as
             **	give greater satisfaction when it is finally destroyed.
+            **
+            **	CFE: this mechanic was missing; it is restored where survival is plausible and not
+            **	balance breaking.
             */
-            damage = oldstrength;
+            int overkill = damage - oldstrength;
+            if (ActiveCFEPatchConfig.EnableDeathsDoorFix && Is_Techno() // not for trees
+                && rawdamage < 100                                      // big hits always do the expected damage
+                && damage < maxstrength / 2                             // one- and two-shot kills stay kills
+                && overkill < damage / 2                                // don't negate half or more of the incoming damage
+                && overkill < maxstrength / 10                          // don't save from 110% dead
+                && oldstrength > 4                                      // at least ~3 seconds of healing since the last save
+                && (What_Am_I() != RTTI_BUILDING
+                    || oldstrength > (3 * ((BuildingClass*)this)->Class->Repair_Step()) + 1)) {
+                damage = oldstrength - 1;
+            } else {
+                damage = oldstrength;
+            }
         }
 
         /*
@@ -1729,6 +1745,15 @@ ResultType ObjectClass::Take_Damage(int& damage, int distance, WarheadType warhe
         */
         switch (Strength) {
         case 0:
+            /*
+            **	CFE: a burning tree stays at 1 hp until the fire goes out (see TerrainClass::Fire_Out).
+            */
+            if (ActiveCFEPatchConfig.EnableBurningTreeFix && What_Am_I() == RTTI_TERRAIN
+                && ((TerrainClass*)this)->Is_On_Fire()) {
+                Strength = 1;
+                result = RESULT_MAJOR;
+                break;
+            }
             Record_The_Kill(source);
             result = RESULT_DESTROYED;
             if (this->Is_Techno()) {

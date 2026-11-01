@@ -3466,6 +3466,7 @@ typedef enum VoxType : char
     VOX_ALLIED_REINFORCEMENTS,
     VOX_SAVE1,
     VOX_LOAD1,
+    VOX_BUILDING_CAPTURE, // CFE: generic "building captured" voice, unused by the original game
 
     VOX_COUNT,
     VOX_FIRST = 0

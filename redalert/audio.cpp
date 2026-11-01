@@ -619,7 +619,8 @@ int Sound_Effect(VocType voc, fixed volume, int variation, signed short pan_valu
     "AAVAIL1",  //	VOX_ABOMB_AVAILABLE
     "AARRIVE1", //	VOX_ALLIED_REINFORCEMENTS
     "SAVE1",    //	VOX_MISSION_SAVED
-    "LOAD1"     //	VOX_MISSION_LOADED
+    "LOAD1",    //	VOX_MISSION_LOADED
+    "STRUCAP1"  //	VOX_BUILDING_CAPTURE
 };
 
 static VoxType CurrentVoice = VOX_NONE;

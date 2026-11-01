@@ -766,7 +766,7 @@ bool BulletClass::Unlimbo(COORDINATE coord, DirType dir)
             **	Circular Error of Probability (CEP) algorithm. High speed projectiles usually
             **	just overshoot the target by extending the straight line flight.
             */
-            if (/*Class->ROT != 0 ||*/ Class->IsArcing) {
+            if ((ActiveCFEPatchConfig.EnableInaccuracyBugfix && Class->ROT != 0) || Class->IsArcing) {
                 int scatterdist = (::Distance(coord, tcoord) / 16) - 0x0040;
                 scatterdist = min(scatterdist, Rule.HomingScatter);
                 scatterdist = max(scatterdist, 0);

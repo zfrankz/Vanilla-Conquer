@@ -687,7 +687,8 @@ AnimClass::~AnimClass(void)
             */
             int index;
             for (index = 0; index < Anims.Count(); index++) {
-                if (Anims.Ptr(index) != this && Anims.Ptr(index)->xObject == xObject)
+                if (Anims.Ptr(index) != this && Anims.Ptr(index)->xObject == xObject
+                    && (!ActiveCFEPatchConfig.EnableBurningTreeFix || Anims.Ptr(index)->IsActive))
                     break;
             }
 
