@@ -306,3 +306,17 @@ These data lack 10 EVA voices: `NOCASH1`, `MOCASH1`, `INCOME1`, `ENEMYA`, `NOBUI
 `ENMYAPP1`, `REPAIR1`. Nothing is said for them, and this used to crash on the second repair in a row.
 
 - Repair two damaged vehicles in a row on a repair bay: no crash, no spoken "repairing".
+
+## RA 1. Small fixes (`cfepatchredux_ra.ini` in the `vanillara` folder)
+Play any Red Alert mission with the switches of that file on.
+- [ ] `VERSION_ANNOUNCE`: about 5 s in, "CFE Patch Redux RA version 1.9" shows top left.
+- [ ] `INSTANT_CAPTURE`: an engineer captures a full-health enemy building at once.
+- [ ] `BUILDING_CAPTURE_ANNOUNCE`: you hear "building captured" when you take a building and when you lose one.
+- [ ] `BURNING_TREE_FIX`: trees set alight by a flamethrower burn down and leave a passable cell.
+- [ ] `DEATHS_DOOR_FIX`: units on low health sometimes survive a hit at 1 hp.
+- [ ] `ORE_INDEX_BUGFIX`: ore fields look more varied at mission start; harvesters still fill up normally.
+- [ ] `OOM_REPAIR`: a building repairing with no money pauses and resumes when money arrives.
+- [ ] `SAFE_SABOTAGE`: selling a building under capture gives no enemy survivors.
+- [ ] `SMARTER_SONAR`: a sonar pulse surfaces enemy subs, not yours or your allies'.
+- [ ] `MIG_AMMO_FUDGE`: a MiG fires 4 missiles and shows 4 ammo pips.
+- [ ] `INACCURACY_BUGFIX`: artillery and V2 shots scatter a bit more than before.

@@ -465,6 +465,32 @@ VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be
 cherry-picked; each feature's diff is applied by hand, then clang-formatted.
 
 ## Phase 4 – RA features (same process)
+Order, following TD: 1 small fixes; 2 harvesters; 3 ore growth and gems; 4 A* and cell reservation; 5 veterancy, Tanya guard,
+smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, walls, building gap; 8 OpenRA supers and chrono;
+9 remaining unflagged CFE fixes (`GENERAL_BUGFIXES`) and audit.
+
+1. Small fixes – ported in one commit (`bd4aa33b`), play-test pending
+   - `ORE_INDEX_BUGFIX`, `DEATHS_DOOR_FIX`, `BURNING_TREE_FIX`, `INACCURACY_BUGFIX`, `MIG_AMMO_FUDGE`, `TURKEY_FIX_MODE`,
+     `SMARTER_SONAR`, `BUILDING_CAPTURE_ANNOUNCE`, `INSTANT_CAPTURE`, `VERSION_ANNOUNCE`, `OOM_REPAIR`,
+     `ORE_CAPACITY_OFFSET`, `SAFE_SABOTAGE`, and new `GENERAL_BUGFIXES` (so far only the extra shot of out-of-ammo two-shooters).
+   - Differences from CFE: `TURKEY_FIX_MODE` defaults to 1, which is what unmodified VC does (CFE's 0 follows the 11/2024
+     patch); the capture voice uses `House == PlayerPtr || newowner == PlayerPtr`, since legacy `Speak` ignores its house
+     argument; the anim `IsActive` check is under `BURNING_TREE_FIX` (CFE: always); `Shorten_Attached_Anims` stays as in VC
+     (it scans active anims only); no extra `Limbo()` (the destructor calls it); the offset uses `Is_Present` instead of a new
+     `INIClass::Get_Int` parameter; the gem promotion code in `Grow_Tiberium` belongs to step 3.
+   - `STRUCAP1.AUD` is in `speech.mix`; only `TANK01` of the voice table isn't, and `Speak_AI` already survives a missing voice.
+   - Verified with temporary code (removed). No options vs upstream `ce83b59e`: full per-frame logs (seeds, units, infantry,
+     buildings, vessels, aircraft, houses) byte-identical for 1500 frames on `savegame.001`, SCG01EA, SCG05EA, SCG10EA, SCU01EA,
+     SCU05EA. No positive control run for RA, and no player input in these runs.
+     Off→on: inaccurate bullets 0→5; MIG/Yak max ammo 3/15→4/16; level 0 ore reduced 0→1; spread at level 6 0→1; refinery/silo
+     storage 2000/1500→2500/2000 with offset 500; survivors 427→0 in 344 sabotage calls; own sub surfaced by sonar 1→0,
+     enemy sub still 1; engineer on a full-health building: action damage→capture, BARR and DOME captured, `STRUCAP1` spoken;
+     2TNK and V2RL at 10 hp hit by 12: 0→1 hp; repair with no money stays on 0→1; burning trees 2 of 2 left standing→gone by
+     frame 900 on both scenarios; version text seen in a dumped frame.
+     MIG shots with 3 ammo: 4 originally, 3 with `GENERAL_BUGFIXES`; 4 with the fudge (4 ammo).
+     Turkey heavy tank build time, 2 factories, other house 612: mode 0 612, 1 550, 2 583; 3 factories, other 408: 408, 367, 383.
+   - Not verified: play by hand; capture voice actually audible (the call was logged, the run has no audio); `NewUnitsEnabled`
+     turkey path; Yak fudge in combat.
 
 ## Phase 5 – Multiplayer / 8 players
 VC `MAX_PLAYERS 6`; needs legacy lobby/score UI work. Needs a CFE config hash shared
