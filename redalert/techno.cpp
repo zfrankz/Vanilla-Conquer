@@ -3143,7 +3143,7 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
             (which == 0) ? Techno_Type_Class()->PrimaryWeapon : Techno_Type_Class()->SecondaryWeapon;
         if (second && weapon != NULL) {
             if (Vet().Rank) {
-                return (weapon->ROF * Vet().ROFBias * (float)House->ROFBias);
+                return ((int)(weapon->ROF * House->ROFBias) * Vet().ROFBias);
             }
             return (weapon->ROF * House->ROFBias);
         }
