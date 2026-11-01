@@ -2062,9 +2062,11 @@ void CellClass::Incoming(COORDINATE threat, bool forced, bool nokidding)
         /*
         **	Special check to make sure that friendly units never scatter.
         */
+        // CFE: veteran infantry always scatter.
+        bool imavet = object->What_Am_I() == RTTI_INFANTRY && ((TechnoClass*)object)->Vet().Rank > 0;
         if (nokidding || Rule.IsScatter
-            || (object->Is_Techno() && ((TechnoClass*)object)->House->IQ >= Rule.IQScatter)) {
-            object->Scatter(threat, forced, nokidding);
+            || (object->Is_Techno() && ((TechnoClass*)object)->House->IQ >= Rule.IQScatter) || imavet) {
+            object->Scatter(threat, forced, nokidding || imavet);
         }
         object = object->Next;
     }

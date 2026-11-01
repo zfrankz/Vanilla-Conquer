@@ -90,6 +90,7 @@ VesselClass::VesselClass(VesselType classid, HousesType house)
     , SecondaryFacing(PrimaryFacing)
 {
     House->Tracking_Add(this);
+    Reset_Veterancy();
 
     /*
     **	The ammo member is actually part of the techno class, but must be initialized
@@ -838,6 +839,30 @@ void VesselClass::AI(void)
     assert(Vessels.ID(this) == ID);
     assert(IsActive);
 
+    /*
+    **	CFE: rank 3 veteran destroyers have a built-in short range sonar.
+    */
+    if (Vet().Rank == 3 && *this == VESSEL_DD) {
+        if (Vet().Recharge) {
+            Vet_Entry().Recharge--;
+        } else {
+            bool foundone = false;
+            for (int index = 0; index < Vessels.Count(); index++) {
+                VesselClass* sub = Vessels.Ptr(index);
+                if ((*sub == VESSEL_SS || *sub == VESSEL_MISSILESUB) && !House->Is_Ally(sub)
+                    && Lepton_To_Cell(Distance(sub)) <= 10) {
+                    sub->PulseCountDown = 15 * TICKS_PER_SECOND;
+                    sub->Do_Uncloak();
+                    foundone = true;
+                }
+            }
+            if (foundone) {
+                Vet_Entry().Recharge = 30 * TICKS_PER_SECOND;
+                Sound_Effect(VOC_SONAR, Coord);
+            }
+        }
+    }
+
     if (Mission == MISSION_NONE && MissionQueue == MISSION_NONE) {
         Enter_Idle_Mode();
     }
@@ -1231,6 +1256,10 @@ ResultType VesselClass::Take_Damage(int& damage, int distance, WarheadType warhe
             **	Only infantry can run from a destroyed vehicle. Even then, it is not a sure
             **	thing.
             */
+            if (source != NULL && source->IsActive && !House->Is_Ally(source)) {
+                source->Gain_Veterancy_XP((object->Strength * object->Class_Of().Cost_Of())
+                                          / object->Class_Of().MaxStrength);
+            }
             object->Record_The_Kill(source);
             delete object;
         }

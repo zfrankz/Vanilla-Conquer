@@ -188,6 +188,7 @@ InfantryClass::InfantryClass(InfantryType classid, HousesType house)
     , LookCell(0)
 {
     House->Tracking_Add(this);
+    Reset_Veterancy();
 #ifdef FIXIT_CSII //	checked - ajw 9/28/98
     IsCloakable = Class->IsCloakable;
 #endif
@@ -1006,6 +1007,9 @@ void InfantryClass::Per_Cell_Process(PCPType why)
             */
             COORDINATE blcoord = bldng->Center_Coord();
             new AnimClass(Combat_Anim(Rule.APMineDamage, WARHEAD_HE, cellptr->Land_Type()), blcoord);
+            // CFE: the mine has its layer's veterancy, and the layer gets the XP.
+            TARGET minelayer = bldng->Vet_Entry().WhoLaidMe;
+            float vbonus = 1.0f + (0.1f * bldng->Vet().Rank);
             delete bldng;
             int damage;
             for (int index = 0; index < Infantry.Count(); index++) {
@@ -1013,7 +1017,8 @@ void InfantryClass::Per_Cell_Process(PCPType why)
                 if (obj != NULL && !obj->IsInLimbo) {
                     int dist = ::Distance(obj->Coord, blcoord);
                     if (dist <= 0xC0) {
-                        damage = Rule.APMineDamage;
+                        damage = Rule.APMineDamage * vbonus;
+                        CFE_Indirect_Source = minelayer;
                         obj->Take_Damage(damage, 0, WARHEAD_HE);
                     }
                 }
@@ -1232,6 +1237,11 @@ void InfantryClass::Assign_Target(TARGET target)
             Assign_Destination(target);
         }
     }
+
+    // CFE: rank 3 veteran dogs howl when they get a target.
+    if (Class->IsDog && Vet().Rank == 3 && Target_Legal(TarCom)) {
+        Alpha_Howl();
+    }
 }
 
 /***********************************************************************************************
@@ -1335,6 +1345,42 @@ void InfantryClass::AI(void)
     **	Perform movement operations at this time.
     */
     Movement_AI();
+
+    if (IsActive && !IsInLimbo && Strength) {
+
+        /*
+        **	CFE: rank 3 veteran medics heal themselves. Firing at oneself is buggy, so this fakes
+        **	the firing logic and heals directly.
+        */
+        if (*this == INFANTRY_MEDIC && Vet().Rank == 3 && !IsDriving
+            && (Doing == DO_NOTHING || MasterDoControls[Doing].Interrupt) && Health_Ratio() < Rule.ConditionGreen
+            && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && !Target_Legal(TarCom) && !Arm && !IsFiring) {
+            if (IsProne) {
+                Do_Action(DO_FIRE_PRONE);
+            } else {
+                Do_Action(DO_FIRE_WEAPON);
+            }
+            Mark(MARK_OVERLAP_UP);
+            IsFiring = true;
+            Mark(MARK_OVERLAP_DOWN);
+            WeaponTypeClass const* weapon = Techno_Type_Class()->PrimaryWeapon;
+            int firepower = weapon->Attack * FirepowerBias * House->FirepowerBias;
+            Strength -= firepower; // Firepower is negative.
+            if (Strength > Class_Of().MaxStrength) {
+                Strength = Class_Of().MaxStrength;
+            }
+            Arm = Rearm_Delay(IsSecondShot, 0);
+            Sound_Effect(weapon->Sound, Coord);
+            Clicked_As_Target(HOUSE_COUNT, 7);
+            Mark(MARK_CHANGE);
+        }
+
+        // CFE: dogs smell cloaked infantry (rank 3 veteran Tanya).
+        if (ActiveCFEPatchConfig.EnableVeterancy && IsCloakable && (Cloak == CLOAKED || Cloak == CLOAKING)
+            && Unfriendly_Dog_Nearby()) {
+            Do_Uncloak();
+        }
+    }
 }
 
 /***********************************************************************************************
@@ -2670,6 +2716,13 @@ TARGET InfantryClass::Greatest_Threat(ThreatType threat) const
     **	human player.
     */
     if (*this == INFANTRY_TANYA && House->IsHuman) {
+        /*
+        **	CFE: Tanya guards against infantry: her colts mean nothing to anything else.
+        */
+        if (ActiveCFEPatchConfig.EnableTanyaGuard == 2
+            || (ActiveCFEPatchConfig.EnableTanyaGuard == 1 && Session.Type != GAME_NORMAL)) {
+            return (TechnoClass::Greatest_Threat((threat & (THREAT_RANGE | THREAT_AREA)) | THREAT_INFANTRY));
+        }
         return (TARGET_NONE);
     }
 
@@ -3976,6 +4029,11 @@ void InfantryClass::Firing_AI(void)
 
             case FIRE_CLOAKED:
                 Do_Uncloak();
+                // CFE: a stealth Tanya decloaks faster.
+                if (*this == INFANTRY_TANYA && Vet().Rank == 3) {
+                    CloakingDevice.Graphic_Logic();
+                    CloakingDevice.Graphic_Logic();
+                }
                 break;
 
             case FIRE_OK:
@@ -4375,6 +4433,10 @@ void InfantryClass::Movement_AI(void)
                             */
                             if (Target_Legal(TarCom)) {
                                 Do_Action(DO_CRAWL);
+                                // CFE: rank 3 veteran dogs howl now and then while chasing.
+                                if (Vet().Rank == 3 && (Frame % (3 * TICKS_PER_SECOND)) == 0) {
+                                    Alpha_Howl();
+                                }
                             } else {
                                 Do_Action(DO_WALK);
                             }
@@ -4580,6 +4642,41 @@ bool InfantryClass::Paradrop(COORDINATE coord)
             Assign_Mission(MISSION_HUNT);
         }
         return (true);
+    }
+    return (false);
+}
+
+/*
+**	CFE: a rank 3 veteran dog's howl sets other dogs of its house within 10 cells on its target,
+**	if they don't have one.
+*/
+void InfantryClass::Alpha_Howl(void)
+{
+    if (!Target_Legal(TarCom)) {
+        return;
+    }
+    for (int i = 0; i < Infantry.Count(); i++) {
+        InfantryClass* dog = Infantry.Ptr(i);
+        if (dog && dog->IsActive && !dog->IsInLimbo && dog->Class->IsDog && House == dog->House
+            && Distance(dog) <= (10 * CELL_LEPTON_W) && !Target_Legal(dog->TarCom)) {
+            dog->Assign_Destination(TARGET_NONE);
+            dog->Assign_Target(TarCom);
+            dog->Assign_Mission(MISSION_ATTACK);
+        }
+    }
+}
+
+/*
+**	CFE: is this object within the guard radius of an unfriendly dog?
+*/
+bool InfantryClass::Unfriendly_Dog_Nearby(void)
+{
+    for (int i = 0; i < Infantry.Count(); i++) {
+        InfantryClass* dog = Infantry.Ptr(i);
+        if (dog && dog->IsActive && !dog->IsInLimbo && dog->Class->IsDog && !House->Is_Ally(dog)
+            && Distance(dog) <= dog->Techno_Type_Class()->ThreatRange) {
+            return (true);
+        }
     }
     return (false);
 }

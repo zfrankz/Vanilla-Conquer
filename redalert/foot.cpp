@@ -1494,7 +1494,8 @@ void FootClass::Per_Cell_Process(PCPType why)
         /*
         **	Trigger event associated with the player entering the cell.
         */
-        if (Cloak != CLOAKED) {
+        // CFE: units cloaked by a veterancy bonus still trip cell triggers; missions break otherwise.
+        if (Cloak != CLOAKED || (Vet().Rank == 3 && What_Am_I() == RTTI_INFANTRY && *((InfantryClass*)this) == INFANTRY_TANYA)) {
             TriggerClass* trigger = Map[Coord].Trigger;
             if (trigger != NULL) {
                 trigger->Spring(TEVENT_PLAYER_ENTERED, this, Coord_Cell(Coord));

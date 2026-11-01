@@ -282,6 +282,7 @@ UnitClass::UnitClass(UnitType classid, HousesType house)
 {
     Reload = 0;
     House->Tracking_Add(this);
+    Reset_Veterancy();
     Ammo = Class->MaxAmmo;
     IsCloakable = Class->IsCloakable;
     if (Class->IsAnimating)
@@ -459,6 +460,34 @@ void UnitClass::AI(void)
     Reload_AI();
 
     /*
+    **	CFE: rank 3 veteran phase transports have an onboard medic to heal passengers.
+    */
+    if (*this == UNIT_PHASE && Vet().Rank == 3 && (Frame % (Rule.RepairRate * TICKS_PER_MINUTE)) == 0) {
+        ObjectClass const* object = Attached_Object();
+        for (int pindex = 0; pindex < Class_Of().Max_Pips(); pindex++) {
+            if (object) {
+                if (object->What_Am_I() == RTTI_INFANTRY && ((InfantryClass*)object)->Health_Ratio() < Rule.ConditionGreen) {
+                    ((InfantryClass*)object)->Strength++;
+                }
+                object = object->Next;
+            }
+        }
+    }
+    if (Vet().IronCurtainCooldown) {
+        Vet_Entry().IronCurtainCooldown--;
+    }
+
+    /*
+    **	CFE: rank 3 veteran minelayers regenerate ammo slowly.
+    */
+    if (*this == UNIT_MINELAYER && Vet().Rank == 3 && Ammo < Class->MaxAmmo) {
+        if (++Vet_Entry().Recharge >= 20 * TICKS_PER_SECOND) {
+            Ammo++;
+            Vet_Entry().Recharge = 0;
+        }
+    }
+
+    /*
     **	Transporters require special logic handled here since there isn't a MISSION_WAIT_FOR_PASSENGERS
     **	mission that they can follow. Passenger loading is merely a part of their normal operation.
     */
@@ -624,7 +653,8 @@ void UnitClass::Reload_AI(void)
             if (Reload == 0) {
                 Ammo++;
                 if (Ammo < Class->MaxAmmo) {
-                    Reload = TICKS_PER_SECOND * 30;
+                    // CFE: veteran SSMs reload faster too, or the rate of fire bonus is pointless.
+                    Reload = (TICKS_PER_SECOND * ((Vet().Rank == 3) ? 20 : 30)) * Vet().ROFBias;
                 }
                 Mark(MARK_CHANGE);
             }
@@ -902,6 +932,12 @@ RadioMessageType UnitClass::Receive_Message(RadioClass* from, RadioMessageType m
                 TarCom = As_Target();
                 return (RADIO_ROGER);
             }
+        } else if (ActiveCFEPatchConfig.EnableSmarterRepairBays && In_Radio_Contact()) {
+            TechnoClass* contact = Contact_With_Whom();
+            if (contact->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)contact) == STRUCT_REPAIR
+                && Do_Smarter_Run_Away()) {
+                return (RADIO_ROGER);
+            }
         }
         return (DriveClass::Receive_Message(from, message, param));
 
@@ -1029,6 +1065,19 @@ ResultType UnitClass::Take_Damage(int& damage, int distance, WarheadType warhead
     bool select = (Is_Selected_By_Player()); //&& House->IsPlayerControl);
 
     /*
+    **	CFE: rank 3 veteran mammoth tanks have a built-in iron curtain that activates upon taking
+    **	damage, for 20 seconds once every 2 minutes.
+    */
+    if (*this == UNIT_HTANK && Vet().Rank == 3 && IronCurtainCountDown == 0 && Vet().IronCurtainCooldown == 0) {
+        IronCurtainCountDown = 20 * TICKS_PER_SECOND;
+        Vet_Entry().IronCurtainCooldown = 2 * TICKS_PER_MINUTE;
+        Mark(MARK_CHANGE);
+        Sound_Effect(VOC_IRON1, Center_Coord());
+    }
+
+    TechnoClass* xpsource = Target_Legal(CFE_Indirect_Source) ? As_Techno(CFE_Indirect_Source) : source;
+
+    /*
     **	In order for a this to be damaged, it must either be a unit
     **	with a crew or a sandworm.
     */
@@ -1121,6 +1170,10 @@ ResultType UnitClass::Take_Damage(int& damage, int distance, WarheadType warhead
                     if (select)
                         object->Select();
                 } else {
+                    if (xpsource != NULL && xpsource->IsActive && !House->Is_Ally(xpsource)) {
+                        xpsource->Gain_Veterancy_XP((object->Strength * object->Class_Of().Cost_Of())
+                                                    / object->Class_Of().MaxStrength);
+                    }
                     object->Record_The_Kill(source);
                     delete object;
                 }
@@ -1902,11 +1955,13 @@ void UnitClass::Per_Cell_Process(PCPType why)
                 /*
                 ** Vehicles blow up both mines, but they only take significant damage from AV mines.
                 */
+                float vbonus = 1.0f + (0.1f * bldng->Vet().Rank); // CFE: mines have their layer's veterancy.
+                CFE_Indirect_Source = bldng->Vet_Entry().WhoLaidMe;
                 if (*bldng == STRUCT_AVMINE) {
-                    int damage = Rule.AVMineDamage;
+                    int damage = Rule.AVMineDamage * vbonus;
                     Take_Damage(damage, 0, WARHEAD_HE);
                 } else {
-                    int damage = 10;
+                    int damage = 10 * vbonus;
                     Take_Damage(damage, 0, WARHEAD_HE);
                 }
                 delete bldng;
@@ -2797,6 +2852,10 @@ int UnitClass::Mission_Unload(void)
                             ScenarioInit = false;
                             building->Revealed(House);
                             Ammo--;
+                            if (ActiveCFEPatchConfig.EnableVeterancy) {
+                                building->Vet_Entry().WhoLaidMe = As_Target(); // Cleared in Detach.
+                                building->Vet_Entry().Rank = Vet().Rank;
+                            }
                         }
                         ScenarioInit = false;
                     }
@@ -3965,6 +4024,14 @@ ActionType UnitClass::What_Action(ObjectClass const* object) const
     }
 
     /*
+    **	CFE smarter repair bays let units queue for a bay that is in use.
+    */
+    if (ActiveCFEPatchConfig.EnableSmarterRepairBays && is_player_controlled && object->What_Am_I() == RTTI_BUILDING
+        && *((BuildingClass*)object) == STRUCT_REPAIR) {
+        action = ACTION_ENTER;
+    }
+
+    /*
     **	Special return to friendly repair factory action.
     */
     if (is_player_controlled && action == ACTION_SELECT && object->What_Am_I() == RTTI_BUILDING) {
@@ -5125,6 +5192,12 @@ void UnitClass::Overrun_Square(CELL cell, bool threaten)
                         ObjectClass* next = object->Next;
                         crushed = true;
 
+                        // CFE: XP for squishing a non-ally.
+                        if (object->IsActive && object->What_Am_I() == RTTI_INFANTRY && !House->Is_Ally(object)) {
+                            Gain_Veterancy_XP((object->Strength * object->Class_Of().Cost_Of())
+                                              / object->Class_Of().MaxStrength);
+                        }
+
                         /*
                         ** Record credit for the kill(s)
                         */
@@ -5848,4 +5921,93 @@ int UnitClass::Mission_Guard_Area(void)
         }
     }
     return (DriveClass::Mission_Guard_Area());
+}
+
+/***********************************************************************************************
+ * UnitClass::Do_Smarter_Run_Away -- Drives off a repair bay to the best cell around it.       *
+ *                                                                                             *
+ *    CFE Patch Redux smarter repair bays: picks an empty cell if there is one, preferring     *
+ *    little rotation, and asks the occupiers to scatter otherwise. False falls back on the    *
+ *    ordinary scatter.                                                                        *
+ *=============================================================================================*/
+bool UnitClass::Do_Smarter_Run_Away(void)
+{
+    if (Target_Legal(NavCom) && (Mission == MISSION_MOVE)){
+        return true;
+    }
+    BuildingClass* beneathme = Map[Coord].Cell_Building();
+    if (!beneathme || (*beneathme != STRUCT_REPAIR)){
+        return false;
+    }
+
+    const CELL mycell = Coord_Cell(Coord);
+    int bestscore = 0;
+    CELL bestcell = NULL;
+    FacingType bestdirection = FACING_NONE;
+    for (FacingType face = FACING_N; face < FACING_COUNT; face++) {
+        CELL newcell = Adjacent_Cell(mycell, face);
+        if (!Map.In_Radar(newcell)){
+            continue;
+        }
+        if (((int)face) % 2 == 0){
+            newcell = Adjacent_Cell(newcell, face);
+            if (!Map.In_Radar(newcell)){
+                continue;
+            }
+        }
+        int score = 0;
+        MoveType move = Can_Enter_Cell(newcell, FACING_NONE);
+        if (move == MOVE_OK){
+            score += 104;
+        }
+        else if (move == MOVE_MOVING_BLOCK){
+            score += 100;
+        }
+        else if (move == MOVE_TEMP){
+            score += 10;
+        }
+        if (score){
+            int myface = Dir_Facing(PrimaryFacing.Current());
+            int dista = (((int)face - myface) + 8) % 8;
+            int distb = ((myface - (int)face) + 8) % 8;
+            if (dista < distb){
+                score = score + 4 - dista;
+            }
+            else {
+                score = score + 4 - distb;
+            }
+
+            if (score > bestscore){
+                bestscore = score;
+                bestcell = newcell;
+                bestdirection = face;
+            }
+        }
+    }
+    if (bestscore){
+        Assign_Destination(::As_Target(bestcell));
+        Assign_Mission(MISSION_MOVE);
+        if (bestscore < 100){
+            CellClass* cellptr = &Map[bestcell];
+            TechnoClass* blockage = cellptr->Cell_Techno();
+            if (blockage && blockage->IsActive && House->Is_Ally(blockage)) {
+                cellptr->Incoming(Coord, true, true);
+            }
+            for (FacingType face = FACING_N; face < FACING_COUNT; face++) {
+                if ((face == bestdirection) || (face == bestdirection + (FacingType)1) || (face == bestdirection - (FacingType)1)){
+                    CELL newcell = Adjacent_Cell(bestcell, face);
+                    if (!Map.In_Radar(newcell)){
+                        continue;
+                    }
+                    cellptr = &Map[newcell];
+                    blockage = cellptr->Cell_Techno();
+                    if (blockage && blockage->IsActive && House->Is_Ally(blockage)) {
+                        cellptr->Incoming(Coord, true, true);
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    return false;
 }

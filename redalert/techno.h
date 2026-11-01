@@ -54,6 +54,42 @@ class TechnoTypeClass;
 /****************************************************************************
 **	This is the common data between building and units.
 */
+/*
+**	CFE veterancy: the state of one object. Kept in tables indexed by the object's heap index rather
+**	than in TechnoClass, so that class sizes stay the same; it is written as an extra block at the end
+**	of the save (see CFE_Save_Veterancy). The firepower, armor and speed bonuses go in the biases
+**	these objects already have.
+*/
+struct CFEVeterancy
+{
+    unsigned short XP = 0;
+    unsigned char Rank = 0;
+    bool TwoShooter = false;
+    bool QuadShooter = false;
+    bool ReadyQuadShot = false;
+    float ROFBias = 1.0f;
+    COORDINATE SecondaryZapTarget = 0;  // Chain lightning, rank 3 tesla units.
+    TARGET WhoLaidMe = TARGET_NONE;     // Land mines: the minelayer, which gets the XP.
+    unsigned short IronCurtainCooldown = 0; // Rank 3 mammoth tank.
+    unsigned short Recharge = 0;            // Rank 3 minelayer ammo, or rank 3 destroyer sonar.
+};
+
+class Pipe;
+class Straw;
+void CFE_Save_Veterancy(Pipe& file);
+void CFE_Load_Veterancy(Straw& file);
+extern int CFE_Armor_Pen;          // Set around a rank 3 veteran's bullet exploding.
+extern TARGET CFE_Indirect_Source; // Set around a land mine exploding, for the minelayer's XP.
+void CFE_Set_Bullet_Armor_Pen(int id, int pen);
+int CFE_Get_Bullet_Armor_Pen(int id);
+
+enum
+{
+    CFE_ARMORPEN_NONE,
+    CFE_ARMORPEN_PSEUDO_AP,
+    CFE_ARMORPEN_PSEUDO_HE
+};
+
 class TechnoClass : public RadioClass, public FlasherClass, public StageClass, public CargoClass, public DoorClass
 {
 public:
@@ -383,6 +419,12 @@ public:
     bool
     Evaluate_Object(ThreatType method, int mask, int range, TechnoClass const* object, int& value, int zone = -1) const;
     int Evaluate_Just_Cell(CELL cell) const;
+    CFEVeterancy const& Vet(void) const;
+    CFEVeterancy& Vet_Entry(void) const;
+    void Reset_Veterancy(void);
+    void Gain_Veterancy_XP(unsigned short xp);
+    void Gain_Mechanic_XP_Boost(int delta);
+    TARGET Find_Chain_Lightning_Target(TARGET primarytarget, int which, float rangescalar);
     virtual bool Electric_Zap(COORDINATE target_coord,
                               int which,
                               WindowNumberType window,

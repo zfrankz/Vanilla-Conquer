@@ -251,6 +251,7 @@ AircraftClass::AircraftClass(AircraftType classid, HousesType house)
     */
     IsSecondShot = !Class->Is_Two_Shooter();
     House->Tracking_Add(this);
+    Reset_Veterancy();
     Ammo = Class->MaxAmmo;
     Height = FLIGHT_LEVEL;
     Strength = Class->MaxStrength;
@@ -714,8 +715,15 @@ int AircraftClass::Mission_Hunt(void)
         **	Acquiring target stage.
         */
         case LOOK_FOR_TARGET:
-            if (Target_Legal(TarCom)) {
+            if (Target_Legal(TarCom) && (Ammo || !ActiveCFEPatchConfig.EnableSmarterAircraft || IsALoaner)) {
                 Status = TAKE_OFF;
+                return (1);
+            } else if (!Ammo && ActiveCFEPatchConfig.EnableSmarterAircraft) {
+                AttacksRemaining = 0;
+                if (Team.Is_Valid()) {
+                    Team->Remove(this);
+                }
+                Enter_Idle_Mode();
                 return (1);
             } else {
                 if (!Team.Is_Valid()) {
@@ -826,6 +834,12 @@ int AircraftClass::Mission_Hunt(void)
                     }
                 }
                 Fire_At(targ, 0);
+
+                // CFE: rank 3 MiGs and Yaks fire two missiles per ammo pip.
+                if (Vet().Rank == 3 && (*this == AIRCRAFT_MIG || *this == AIRCRAFT_YAK) && Class->Is_Two_Shooter()) {
+                    Ammo++;
+                }
+
                 // CFE: two-shooters with odd max ammo fired one shot more than they had
                 if ((Ammo || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && Class->Is_Two_Shooter()) {
                     Fire_At(targ, 0);
@@ -936,6 +950,30 @@ void AircraftClass::AI(void)
 {
     assert(Aircraft.ID(this) == ID);
     assert(IsActive);
+
+    /*
+    **	CFE: rank 3 veteran aircraft repair for free while docked, at half the rate of a repair bay.
+    */
+    if (Vet().Rank == 3 && (*this == AIRCRAFT_LONGBOW || *this == AIRCRAFT_HIND || *this == AIRCRAFT_MIG || *this == AIRCRAFT_YAK)
+        && Height == 0 && !IsLanding && !IsTakingOff && Health_Ratio() < Rule.ConditionGreen) {
+        TechnoClass* tech = Contact_With_Whom();
+        if (tech != NULL && tech->What_Am_I() == RTTI_BUILDING
+            && ((*((BuildingClass*)tech) == STRUCT_HELIPAD && (*this == AIRCRAFT_LONGBOW || *this == AIRCRAFT_HIND))
+                || (*((BuildingClass*)tech) == STRUCT_AIRSTRIP && (*this == AIRCRAFT_MIG || *this == AIRCRAFT_YAK)))
+            && ::Distance(Center_Coord(), tech->Docking_Coord()) < 0x0040) {
+            fixed pfrac = Saturate(House->Power_Fraction(), 1);
+            if (pfrac < fixed::_1_2) {
+                pfrac = fixed::_1_2;
+            }
+            int repaircycle = Inverse(pfrac) * 28;
+            if (Frame % repaircycle == 0) {
+                Strength += Class->Repair_Step();
+                if (Strength > Class_Of().MaxStrength) {
+                    Strength = Class_Of().MaxStrength;
+                }
+            }
+        }
+    }
 
     /*
     **	A Mission change can always occur if the aircraft is landed or flying.
@@ -2550,7 +2588,7 @@ int AircraftClass::Mission_Attack(void)
     **	Double check target and validate the attack zone.
     */
     case VALIDATE_AZ:
-        if (!Target_Legal(TarCom)) {
+        if (!Target_Legal(TarCom) || (ActiveCFEPatchConfig.EnableSmarterAircraft && !IsALoaner && !Ammo)) {
             Status = RETURN_TO_BASE;
         } else {
             Status = PICK_ATTACK_LOCATION;
@@ -2617,6 +2655,17 @@ int AircraftClass::Mission_Attack(void)
             if (!Target_Legal(NavCom)) {
                 Status = PICK_ATTACK_LOCATION;
                 return (1);
+            }
+
+            /*
+            **	CFE smarter aircraft: every 120 ticks of flying to the target, make sure it hasn't moved.
+            */
+            if (ActiveCFEPatchConfig.EnableSmarterAircraft) {
+                if (++Vet_Entry().Recharge >= 120) {
+                    Vet_Entry().Recharge = 0;
+                    Status = PICK_ATTACK_LOCATION;
+                    return (1);
+                }
             }
 
             int distance = Process_Fly_To(true, NavCom);

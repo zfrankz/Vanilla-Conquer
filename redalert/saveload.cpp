@@ -279,6 +279,11 @@ static void Put_All(Pipe& pipe, int save_net)
         Save_MPlayer_Values(pipe);
     }
 
+    /*
+    **	CFE state that doesn't fit in the classes. Older saves end here.
+    */
+    CFE_Save_Veterancy(pipe);
+
     pipe.Flush();
 }
 
@@ -805,6 +810,11 @@ bool Load_Game(const char* file_name)
     if (load_net) {
         Load_MPlayer_Values(straw);
     }
+
+    /*
+    **	CFE state that doesn't fit in the classes. Older saves end here.
+    */
+    CFE_Load_Veterancy(straw);
 
     file.Close();
     Decode_All_Pointers();

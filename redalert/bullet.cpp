@@ -111,6 +111,7 @@ BulletClass::BulletClass(BulletType id,
  *=============================================================================================*/
 BulletClass::~BulletClass(void)
 {
+    CFE_Set_Bullet_Armor_Pen(ID, CFE_ARMORPEN_NONE);
     if (GameActive) {
 
         /*
@@ -1037,7 +1038,9 @@ void BulletClass::Bullet_Explodes(bool forced)
     **	Non-aircraft targets apply damage to the ground.
     */
     if (!Is_Target_Aircraft(TarCom) || As_Aircraft(TarCom)->In_Which_Layer() == LAYER_GROUND) {
+        CFE_Armor_Pen = CFE_Get_Bullet_Armor_Pen(ID);
         Explosion_Damage(Coord, Strength, Payback, Warhead);
+        CFE_Armor_Pen = CFE_ARMORPEN_NONE;
         if (!IsActive)
             return;
 
@@ -1051,8 +1054,11 @@ void BulletClass::Bullet_Explodes(bool forced)
             AircraftClass* object = As_Aircraft(TarCom);
 
             int str = Strength;
-            if (object)
+            if (object) {
+                CFE_Armor_Pen = CFE_Get_Bullet_Armor_Pen(ID);
                 object->Take_Damage(str, 0, Warhead, Payback);
+                CFE_Armor_Pen = CFE_ARMORPEN_NONE;
+            }
         }
     }
 

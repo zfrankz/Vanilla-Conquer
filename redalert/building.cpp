@@ -1730,6 +1730,7 @@ BuildingClass::BuildingClass(StructType type, HousesType house)
     , PlacementDelay(0)
 {
     House->Tracking_Add(this);
+    Reset_Veterancy();
     IsSecondShot = !Class->Is_Two_Shooter();
     Strength = Class->MaxStrength;
     Ammo = Class->MaxAmmo;
@@ -2078,9 +2079,16 @@ int BuildingClass::Exit_Object(TechnoClass* base)
             AircraftClass* air = (AircraftClass*)base;
 
             if (Cell_X(Coord_Cell(Center_Coord())) - Map.MapCellX < Map.MapCellWidth / 2) {
-                cell = XY_Cell(Map.MapCellX - 1, Random_Pick(0, Map.MapCellHeight - 1) + Map.MapCellY);
+                // CFE smarter aircraft: padless helicopters fly in on the pad's row.
+                cell = XY_Cell(Map.MapCellX - 1,
+                               ActiveCFEPatchConfig.EnableSmarterAircraft
+                                   ? Cell_Y(Coord_Cell(Center_Coord()))
+                                   : Random_Pick(0, Map.MapCellHeight - 1) + Map.MapCellY);
             } else {
-                cell = XY_Cell(Map.MapCellX + Map.MapCellWidth, Random_Pick(0, Map.MapCellHeight - 1) + Map.MapCellY);
+                cell = XY_Cell(Map.MapCellX + Map.MapCellWidth,
+                               ActiveCFEPatchConfig.EnableSmarterAircraft
+                                   ? Cell_Y(Coord_Cell(Center_Coord()))
+                                   : Random_Pick(0, Map.MapCellHeight - 1) + Map.MapCellY);
             }
             ScenarioInit++;
             if (air->Unlimbo(Cell_Coord(cell), DIR_N)) {
@@ -4492,6 +4500,13 @@ int BuildingClass::Mission_Repair(void)
                     int time = Inverse(pfrac) * Rule.ReloadRate * TICKS_PER_MINUTE;
                     //						int time = Bound((int)(TICKS_PER_SECOND * Saturate(House->Power_Fraction(), 1)), 0,
                     //TICKS_PER_SECOND); 						time = (TICKS_PER_SECOND*3) - time;
+
+                    // CFE: rank 3 veteran helicopters reload twice as fast.
+                    if (Contact_With_Whom()->Vet().Rank == 3 && Contact_With_Whom()->What_Am_I() == RTTI_AIRCRAFT
+                        && (*((AircraftClass*)Contact_With_Whom()) == AIRCRAFT_LONGBOW
+                            || *((AircraftClass*)Contact_With_Whom()) == AIRCRAFT_HIND)) {
+                        time = time / 2;
+                    }
                     IsReadyToCommence = false;
                     return (time);
                 }
@@ -5105,6 +5120,10 @@ void BuildingClass::Detach(TARGET target, bool all)
     }
     if (target == AnimToTrack) {
         AnimToTrack = TARGET_NONE;
+    }
+    // CFE: the same TARGET value could point to another unit once the minelayer is gone.
+    if (ActiveCFEPatchConfig.EnableVeterancy && target == Vet_Entry().WhoLaidMe) {
+        Vet_Entry().WhoLaidMe = TARGET_NONE;
     }
 }
 

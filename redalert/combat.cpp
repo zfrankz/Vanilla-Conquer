@@ -161,6 +161,7 @@ int Modify_Damage(int damage, WarheadType warhead, ArmorType armor, int distance
  *=============================================================================================*/
 void Explosion_Damage(COORDINATE coord, int strength, TechnoClass* source, WarheadType warhead)
 {
+    int armorpen = CFE_Armor_Pen; // CFE: Take_Damage uses this up, and it has to reach everything hit.
     CELL cell;                // Cell number under explosion.
     ObjectClass* object;      // Working object pointer.
     ObjectClass* objects[32]; // Maximum number of objects that can be damaged.
@@ -237,6 +238,7 @@ void Explosion_Damage(COORDINATE coord, int strength, TechnoClass* source, Warhe
             }
             if (object->IsDown && !object->IsInLimbo && distance < range) {
                 int damage = strength;
+                CFE_Armor_Pen = armorpen;
                 object->Take_Damage(damage, distance, warhead, source);
             }
         }
@@ -254,7 +256,8 @@ void Explosion_Damage(COORDINATE coord, int strength, TechnoClass* source, Warhe
             cellptr->Reduce_Tiberium(strength / 10);
         }
         if (optr->IsWall) {
-            if (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden)) {
+            if (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden)
+                || armorpen == CFE_ARMORPEN_PSEUDO_HE) {
                 Map[cell].Reduce_Wall(strength);
             }
         }
@@ -270,7 +273,8 @@ void Explosion_Damage(COORDINATE coord, int strength, TechnoClass* source, Warhe
         || cellptr->TType == TEMPLATE_BRIDGE_2B || cellptr->TType == TEMPLATE_BRIDGE_3A
         || cellptr->TType == TEMPLATE_BRIDGE_3B) {
 
-        if (((warhead == WARHEAD_AP || warhead == WARHEAD_HE) && Random_Pick(1, Rule.BridgeStrength) < strength)) {
+        if (((warhead == WARHEAD_AP || warhead == WARHEAD_HE || armorpen == CFE_ARMORPEN_PSEUDO_HE)
+             && Random_Pick(1, Rule.BridgeStrength) < strength)) {
             Map.Destroy_Bridge_At(cell);
         }
     }

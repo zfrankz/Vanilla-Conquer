@@ -369,7 +369,7 @@ bool DriveClass::Teleport_To(CELL cell)
     /*
     **	All cargo gets destroyed.
     */
-    if (Rule.IsChronoKill) {
+    if (Rule.IsChronoKill && !(What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_APC && Vet().Rank == 3)) {
         Kill_Cargo(NULL);
     }
 

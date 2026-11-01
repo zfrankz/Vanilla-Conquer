@@ -188,6 +188,7 @@ public:
     BuildingClass* Tiberium_Unload_Refinery(void) const;
     int CFE_AStar_Refinery_Distance(BuildingClass const* refinery) const;
     void Reconsider_Refinery(void);
+    bool Do_Smarter_Run_Away(void);
 
     /*
     **	Coordinate inquiry functions. These are used for both display and
