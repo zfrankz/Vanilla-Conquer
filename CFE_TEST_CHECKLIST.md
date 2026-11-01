@@ -338,3 +338,11 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Ships in a narrow strait: they pass or wait, without getting stuck.
 - [ ] Save mid-move, load, and carry on: nothing freezes.
 
+## RA 5. Veterancy and smarter units (`VETERANCY=2`, `TANYA_GUARD=2`, `SMARTER_AIRCRAFT`, `SMARTER_REPAIRBAY`)
+- [ ] Units that fight gain yellow pips when selected (one per rank), and a beep on promotion.
+- [ ] Rank 3 specials: light/medium tank double shot, heavy/mammoth extra volley, tesla chain lightning, stealth Tanya.
+- [ ] Tanya on guard shoots enemy infantry on her own.
+- [ ] Aircraft with no ammo go home, and don't take off to attack.
+- [ ] Click a vehicle on a busy repair bay: it queues, and leaves cleanly when done.
+- [ ] Save and load: pips and ranks stay.
+

@@ -520,6 +520,23 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
    - Steps 2-4, no options vs upstream `ce83b59e`: byte-identical logs on the 7 cases (save, SCG01/05/08/10, SCU01/05), 1500 frames
      for steps 2 and 3, 3000 for step 4.
 
+5. Veterancy, Tanya guard, smarter aircraft and repair bays – ported (`f35ffe3a` + ROF fix), play-test pending
+   - `VETERANCY`: state in tables by heap index (2048 per type; heaps are 500 or less by default), written as an extra block at the end
+     of the save inside the compressed stream, so class sizes don't change and older saves still load. Firepower, armor and speed use
+     the biases these objects already have. All rank 3 bonuses in CFE ported. Pips are small yellow squares and promotion plays
+     `VOC_RADAR_ON` (CFE's graphic and sound are Remastered assets, absent in classic data).
+   - Differences from CFE: `specialarmorpen` and `indirectsource` are globals read once by `TechnoClass::Take_Damage` instead of new
+     parameters. CFE's `Explosion_Damage` passes the pen in the `forced` position by mistake, so its rank 3 bullets ignore armor; here the
+     pen works as its comments say. Bias constants use `fixed(n,d)`, off by 1/65536 from CFE's raw values at most.
+   - `TANYA_GUARD`, `SMARTER_AIRCRAFT` (no-ammo checks, target recheck, padless helicopters on the pad's row; attack-move parts in step 6),
+     `SMARTER_REPAIRBAY` (queueing, `Do_Smarter_Run_Away`, minelayer leaves after re-arming; rally parts in step 7).
+   - Verified on SCG08EA: medium tank rank 0/1/2/3 at XP 0/800/2400/4800, 799 still rank 0; firepower 1.00/1.05/1.10/1.15, damage taken
+     1.00/0.90/0.80/0.70, speed 1.00/1.10/1.20/1.30, ROF 1/0.952/-/0.870, two-shooter at rank 3. Artillery range 1536→1792. Rank 3 mammoth:
+     first hit 600→600 with curtain on, off 600→550. Damage XP 0→70 for 15 of 150 hp on a 700 unit. Save and load in a run: 2 ranked units
+     before, 0 after clearing, 2 after loading. All switches, everything rank 3 and hunting, 5 missions: 1 ran 2000 frames to the end, 4 no crash
+     in 120 s. Off: no ranks, no bonus. No options vs upstream: 7 cases identical, 3000 frames, which includes loading an older save.
+   - Not verified: rank 3 specials in real combat (chain lightning, quad shot, dog howl, medic, sonar, phase medic); mine XP.
+
 ## Phase 5 – Multiplayer / 8 players
 VC `MAX_PLAYERS 6`; needs legacy lobby/score UI work. Needs a CFE config hash shared
 between peers to avoid desyncs. Until then CFE features are SP/skirmish only.
