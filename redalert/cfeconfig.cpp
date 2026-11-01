@@ -47,68 +47,68 @@ const int SettingReader::InvalidSetting = std::numeric_limits<int>::min();
 
 } // namespace
 
-static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
+// Every entry of the file goes through here, so the reader and the hash can't disagree.
+template <typename Visitor> static void Visit_CFE_Settings(CFEPatchConfig& cfg, const Visitor& GetSetting)
 {
-    const SettingReader GetSetting = {ini};
-
     // Features
-    GetSetting(ActiveCFEPatchConfig.EnableVersionAnnounce, "FEATURES", "VERSION_ANNOUNCE");
-    GetSetting(ActiveCFEPatchConfig.EnableASPathing, "FEATURES", "ASTAR_PATHING");
-    GetSetting(ActiveCFEPatchConfig.EnableCellReservationFix, "FEATURES", "CELL_RESERVATION_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableOOMRepair, "FEATURES", "OOM_REPAIR");
-    GetSetting(ActiveCFEPatchConfig.EnableRallyPoints, "FEATURES", "RALLY_POINTS");
-    GetSetting(ActiveCFEPatchConfig.EnableHarvyQueueJump, "FEATURES", "HARVY_QUEUE_JUMP");
-    GetSetting(ActiveCFEPatchConfig.EnableHarvyLoadBalancing, "FEATURES", "HARVY_LOAD_BALANCING");
-    GetSetting(ActiveCFEPatchConfig.EnableHarvyOptimize, "FEATURES", "HARVY_OPTIMIZE");
-    GetSetting(ActiveCFEPatchConfig.EnableInstantCapture, "FEATURES", "INSTANT_CAPTURE");
-    GetSetting(ActiveCFEPatchConfig.EnableAttackMove, "FEATURES", "ATTACK_MOVE");
-    GetSetting(ActiveCFEPatchConfig.EnableChronoTankAttackMove, "FEATURES", "CHRONOTANK_ATTACK_MOVE");
-    GetSetting(ActiveCFEPatchConfig.EnableQMoveLoops, "FEATURES", "QMOVE_LOOPS");
-    GetSetting(ActiveCFEPatchConfig.EnableAirQMove, "FEATURES", "AIR_QMOVE");
-    GetSetting(ActiveCFEPatchConfig.EnableAirQAMLRecall, "FEATURES", "AIR_QAML_RECALL");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterAircraft, "FEATURES", "SMARTER_AIRCRAFT");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterRepairBays, "FEATURES", "SMARTER_REPAIRBAY");
-    GetSetting(ActiveCFEPatchConfig.BetterOreGrowth, "FEATURES", "BETTER_ORE_GROWTH");
-    GetSetting(ActiveCFEPatchConfig.OreIndexBugfix, "FEATURES", "ORE_INDEX_BUGFIX");
-    GetSetting(ActiveCFEPatchConfig.GemOverloadFix, "FEATURES", "GEM_OVERLOAD_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableInaccuracyBugfix, "FEATURES", "INACCURACY_BUGFIX");
-    GetSetting(ActiveCFEPatchConfig.EnableWideSupers, "FEATURES", "OPENRA_WIDE_SUPERS");
-    GetSetting(ActiveCFEPatchConfig.EnableQuickSupers, "FEATURES", "OPENRA_QUICK_SUPERS");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterChrono, "FEATURES", "SMARTER_CHRONO");
-    GetSetting(ActiveCFEPatchConfig.EnableTimeQuakeFix, "FEATURES", "TIMEQUAKE_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableSharedChronoDisasterOdds, "FEATURES", "USE_SHARED_CHRONO_ODDS");
-    GetSetting(ActiveCFEPatchConfig.EnableCumulativeTimelineDamage, "FEATURES", "CUMULATIVE_TIMELINE_DAMAGE");
-    GetSetting(ActiveCFEPatchConfig.EnableLongGapFix, "FEATURES", "LONG_BGAP_BUGFIX");
-    GetSetting(ActiveCFEPatchConfig.EnableMIGAmmoFudge, "FEATURES", "MIG_AMMO_FUDGE");
-    GetSetting(ActiveCFEPatchConfig.EnableBuildingCaptureAnnouncements, "FEATURES", "BUILDING_CAPTURE_ANNOUNCE");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterSonar, "FEATURES", "SMARTER_SONAR");
-    GetSetting(ActiveCFEPatchConfig.EnableBurningTreeFix, "FEATURES", "BURNING_TREE_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableDeathsDoorFix, "FEATURES", "DEATHS_DOOR_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableGeneralBugfixes, "FEATURES", "GENERAL_BUGFIXES");
+    GetSetting(cfg.EnableVersionAnnounce, "FEATURES", "VERSION_ANNOUNCE");
+    GetSetting(cfg.EnableASPathing, "FEATURES", "ASTAR_PATHING");
+    GetSetting(cfg.EnableCellReservationFix, "FEATURES", "CELL_RESERVATION_FIX");
+    GetSetting(cfg.EnableOOMRepair, "FEATURES", "OOM_REPAIR");
+    GetSetting(cfg.EnableRallyPoints, "FEATURES", "RALLY_POINTS");
+    GetSetting(cfg.EnableHarvyQueueJump, "FEATURES", "HARVY_QUEUE_JUMP");
+    GetSetting(cfg.EnableHarvyLoadBalancing, "FEATURES", "HARVY_LOAD_BALANCING");
+    GetSetting(cfg.EnableHarvyOptimize, "FEATURES", "HARVY_OPTIMIZE");
+    GetSetting(cfg.EnableInstantCapture, "FEATURES", "INSTANT_CAPTURE");
+    GetSetting(cfg.EnableAttackMove, "FEATURES", "ATTACK_MOVE");
+    GetSetting(cfg.EnableChronoTankAttackMove, "FEATURES", "CHRONOTANK_ATTACK_MOVE");
+    GetSetting(cfg.EnableQMoveLoops, "FEATURES", "QMOVE_LOOPS");
+    GetSetting(cfg.EnableAirQMove, "FEATURES", "AIR_QMOVE");
+    GetSetting(cfg.EnableAirQAMLRecall, "FEATURES", "AIR_QAML_RECALL");
+    GetSetting(cfg.EnableSmarterAircraft, "FEATURES", "SMARTER_AIRCRAFT");
+    GetSetting(cfg.EnableSmarterRepairBays, "FEATURES", "SMARTER_REPAIRBAY");
+    GetSetting(cfg.BetterOreGrowth, "FEATURES", "BETTER_ORE_GROWTH");
+    GetSetting(cfg.OreIndexBugfix, "FEATURES", "ORE_INDEX_BUGFIX");
+    GetSetting(cfg.GemOverloadFix, "FEATURES", "GEM_OVERLOAD_FIX");
+    GetSetting(cfg.EnableInaccuracyBugfix, "FEATURES", "INACCURACY_BUGFIX");
+    GetSetting(cfg.EnableWideSupers, "FEATURES", "OPENRA_WIDE_SUPERS");
+    GetSetting(cfg.EnableQuickSupers, "FEATURES", "OPENRA_QUICK_SUPERS");
+    GetSetting(cfg.EnableSmarterChrono, "FEATURES", "SMARTER_CHRONO");
+    GetSetting(cfg.EnableTimeQuakeFix, "FEATURES", "TIMEQUAKE_FIX");
+    GetSetting(cfg.EnableSharedChronoDisasterOdds, "FEATURES", "USE_SHARED_CHRONO_ODDS");
+    GetSetting(cfg.EnableCumulativeTimelineDamage, "FEATURES", "CUMULATIVE_TIMELINE_DAMAGE");
+    GetSetting(cfg.EnableLongGapFix, "FEATURES", "LONG_BGAP_BUGFIX");
+    GetSetting(cfg.EnableMIGAmmoFudge, "FEATURES", "MIG_AMMO_FUDGE");
+    GetSetting(cfg.EnableBuildingCaptureAnnouncements, "FEATURES", "BUILDING_CAPTURE_ANNOUNCE");
+    GetSetting(cfg.EnableSmarterSonar, "FEATURES", "SMARTER_SONAR");
+    GetSetting(cfg.EnableBurningTreeFix, "FEATURES", "BURNING_TREE_FIX");
+    GetSetting(cfg.EnableDeathsDoorFix, "FEATURES", "DEATHS_DOOR_FIX");
+    GetSetting(cfg.EnableGeneralBugfixes, "FEATURES", "GENERAL_BUGFIXES");
 
     // Settings
-    GetSetting(ActiveCFEPatchConfig.EnableVeterancy, "SETTINGS", "VETERANCY");
-    GetSetting(ActiveCFEPatchConfig.EnableTanyaGuard, "SETTINGS", "TANYA_GUARD");
-    GetSetting(ActiveCFEPatchConfig.SafeSabotage, "SETTINGS", "SAFE_SABOTAGE");
-    GetSetting(ActiveCFEPatchConfig.HarvyQueueJumpCutoff, "SETTINGS", "QUEUE_JUMP_CUTOFF");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeUnloadWaitWeight, "SETTINGS", "HARVY_OPTIMIZE_UNLOAD_WAIT_WEIGHT");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeThrashingCutoff, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_CUTOFF");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeThrashingNumerator, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_NUMERATOR");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeThrashingDenominator, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_DENOMINATOR");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeCommunalismNumerator, "SETTINGS", "HARVY_OPTIMIZE_COMMUNALISM_NUMERATOR");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeCommunalismDenominator, "SETTINGS", "HARVY_OPTIMIZE_COMMUNALISM_DENOMINATOR");
-    GetSetting(ActiveCFEPatchConfig.OreGrowthScale, "SETTINGS", "ORE_GROWTH_SCALE");
-    GetSetting(ActiveCFEPatchConfig.OreToGemPromotionSlowFactor, "SETTINGS", "ORE_TO_GEM_SLOW_FACTOR");
-    GetSetting(ActiveCFEPatchConfig.WallBuildLength, "SETTINGS", "WALL_BUILD_LENGTH");
-    GetSetting(ActiveCFEPatchConfig.BuildingGapOffset, "SETTINGS", "BUILDING_GAP_OFFSET");
-    GetSetting(ActiveCFEPatchConfig.OreCapacityOffset, "SETTINGS", "ORE_CAPACITY_OFFSET");
-    GetSetting(ActiveCFEPatchConfig.WallsAlwaysHaveFullCost, "SETTINGS", "WALLS_HAVE_FULL_COST");
-    GetSetting(ActiveCFEPatchConfig.InverseBuildingPreviewMode, "SETTINGS", "INVERSE_PREVIEW_MODE");
-    GetSetting(ActiveCFEPatchConfig.SharedChronoDisasterOdds, "SETTINGS", "SHARED_CHRONO_ODDS");
-    GetSetting(ActiveCFEPatchConfig.TurkeyFixMode, "SETTINGS", "TURKEY_FIX_MODE");
+    GetSetting(cfg.EnableVeterancy, "SETTINGS", "VETERANCY");
+    GetSetting(cfg.EnableTanyaGuard, "SETTINGS", "TANYA_GUARD");
+    GetSetting(cfg.SafeSabotage, "SETTINGS", "SAFE_SABOTAGE");
+    GetSetting(cfg.HarvyQueueJumpCutoff, "SETTINGS", "QUEUE_JUMP_CUTOFF");
+    GetSetting(cfg.HarvyOptimizeUnloadWaitWeight, "SETTINGS", "HARVY_OPTIMIZE_UNLOAD_WAIT_WEIGHT");
+    GetSetting(cfg.HarvyOptimizeThrashingCutoff, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_CUTOFF");
+    GetSetting(cfg.HarvyOptimizeThrashingNumerator, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_NUMERATOR");
+    GetSetting(cfg.HarvyOptimizeThrashingDenominator, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_DENOMINATOR");
+    GetSetting(cfg.HarvyOptimizeCommunalismNumerator, "SETTINGS", "HARVY_OPTIMIZE_COMMUNALISM_NUMERATOR");
+    GetSetting(cfg.HarvyOptimizeCommunalismDenominator, "SETTINGS", "HARVY_OPTIMIZE_COMMUNALISM_DENOMINATOR");
+    GetSetting(cfg.OreGrowthScale, "SETTINGS", "ORE_GROWTH_SCALE");
+    GetSetting(cfg.OreToGemPromotionSlowFactor, "SETTINGS", "ORE_TO_GEM_SLOW_FACTOR");
+    GetSetting(cfg.WallBuildLength, "SETTINGS", "WALL_BUILD_LENGTH");
+    GetSetting(cfg.BuildingGapOffset, "SETTINGS", "BUILDING_GAP_OFFSET");
+    GetSetting(cfg.OreCapacityOffset, "SETTINGS", "ORE_CAPACITY_OFFSET");
+    GetSetting(cfg.WallsAlwaysHaveFullCost, "SETTINGS", "WALLS_HAVE_FULL_COST");
+    GetSetting(cfg.InverseBuildingPreviewMode, "SETTINGS", "INVERSE_PREVIEW_MODE");
+    GetSetting(cfg.SharedChronoDisasterOdds, "SETTINGS", "SHARED_CHRONO_ODDS");
+    GetSetting(cfg.TurkeyFixMode, "SETTINGS", "TURKEY_FIX_MODE");
+}
 
-    CFEPatchConfig& cfg = ActiveCFEPatchConfig;
-
+static void Normalize_CFE_Settings(CFEPatchConfig& cfg)
+{
     // Clamp wall length between 1 (build at all) and 10 (buffer limits)
     cfg.WallBuildLength = std::max(1, std::min(cfg.WallBuildLength, 10));
 
@@ -157,6 +157,58 @@ static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
     if (cfg.SharedChronoDisasterOdds < 0) {
         cfg.SharedChronoDisasterOdds = 0;
     }
+}
+
+static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
+{
+    const SettingReader reader = {ini};
+    Visit_CFE_Settings(ActiveCFEPatchConfig, reader);
+    Normalize_CFE_Settings(ActiveCFEPatchConfig);
+}
+
+namespace {
+
+// FNV-1a over the settings that change the simulation. These ones only change what the local
+// player sees or hears, so peers may differ on them.
+struct SettingHasher
+{
+    unsigned* hash;
+
+    template <typename T> void operator()(T& target, const char* section, const char* entry) const
+    {
+        static const char* const local[] = {"VERSION_ANNOUNCE", "BUILDING_CAPTURE_ANNOUNCE", "INVERSE_PREVIEW_MODE",};
+        for (unsigned i = 0; i < ARRAY_SIZE(local); i++) {
+            if (strcmp(entry, local[i]) == 0) {
+                return;
+            }
+        }
+        const int value = (int)target;
+        for (int shift = 0; shift < 32; shift += 8) {
+            *hash = (*hash ^ ((unsigned)value >> shift & 0xFF)) * 16777619u;
+        }
+    }
+};
+
+} // namespace
+
+static unsigned Hash_CFE_Settings(CFEPatchConfig& cfg)
+{
+    unsigned hash = 2166136261u;
+    const SettingHasher hasher = {&hash};
+    Visit_CFE_Settings(cfg, hasher);
+    return hash;
+}
+
+/*
+**	Peers must agree on these or the game desyncs, so joining compares them. The unmodified game
+**	gives 0, which keeps it compatible with a Vanilla Conquer that doesn't have this file.
+*/
+unsigned CFE_Patch_Config_Hash()
+{
+    CFEPatchConfig defaults;
+    Normalize_CFE_Settings(defaults);
+    const unsigned hash = Hash_CFE_Settings(ActiveCFEPatchConfig);
+    return hash == Hash_CFE_Settings(defaults) ? 0 : (hash | 1);
 }
 
 void Initialise_CFE_Patch_Config()

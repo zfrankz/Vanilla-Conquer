@@ -47,114 +47,114 @@ const int SettingReader::InvalidSetting = std::numeric_limits<int>::min();
 
 } // namespace
 
-static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
+// Every entry of the file goes through here, so the reader and the hash can't disagree.
+template <typename Visitor> static void Visit_CFE_Settings(CFEPatchConfig& cfg, const Visitor& GetSetting)
 {
-    const SettingReader GetSetting = {ini};
-
     // Features
-    GetSetting(ActiveCFEPatchConfig.EnableVersionAnnounce, "FEATURES", "VERSION_ANNOUNCE");
-    GetSetting(ActiveCFEPatchConfig.EnableRallyPoints, "FEATURES", "RALLY_POINTS");
-    GetSetting(ActiveCFEPatchConfig.EnableASPathing, "FEATURES", "ASTAR_PATHING");
-    GetSetting(ActiveCFEPatchConfig.EnableCellReservationFix, "FEATURES", "CELL_RESERVATION_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableOOMRepair, "FEATURES", "OOM_REPAIR");
-    GetSetting(ActiveCFEPatchConfig.EnableHarvyQueueJump, "FEATURES", "HARVY_QUEUE_JUMP");
-    GetSetting(ActiveCFEPatchConfig.EnableHarvyLoadBalancing, "FEATURES", "HARVY_LOAD_BALANCING");
-    GetSetting(ActiveCFEPatchConfig.EnableHarvyOptimize, "FEATURES", "HARVY_OPTIMIZE");
-    GetSetting(ActiveCFEPatchConfig.EnableHarvySelfRepair, "FEATURES", "HARVY_SELF_REPAIR");
-    GetSetting(ActiveCFEPatchConfig.DisableCommandoAirstrikes, "FEATURES", "DISABLE_COMMANDO_AIRSTRIKES");
-    GetSetting(ActiveCFEPatchConfig.EnableAttackMove, "FEATURES", "ATTACK_MOVE");
-    GetSetting(ActiveCFEPatchConfig.EnableQMove, "FEATURES", "Q_MOVE");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterAircraft, "FEATURES", "SMARTER_AIRCRAFT");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterSAMs, "FEATURES", "SMARTER_SAMS");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterRepairBays, "FEATURES", "SMARTER_REPAIRBAY");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterMammoths, "FEATURES", "SMARTER_MAMMOTHS");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterHarvesters, "FEATURES", "SMARTER_HARVESTERS");
-    GetSetting(ActiveCFEPatchConfig.EnableSmarterRefineries, "FEATURES", "SMARTER_REFINERIES");
-    GetSetting(ActiveCFEPatchConfig.SmarterCPUCommandos, "FEATURES", "SMARTER_CPU_COMMANDOS");
-    GetSetting(ActiveCFEPatchConfig.EnableGunboatBugfix, "FEATURES", "GUNBOAT_BUGFIX");
-    GetSetting(ActiveCFEPatchConfig.BetterTibGrowth, "FEATURES", "BETTER_TIB_GROWTH");
-    GetSetting(ActiveCFEPatchConfig.TibIndexBugfix, "FEATURES", "TIB_INDEX_BUGFIX");
-    GetSetting(ActiveCFEPatchConfig.TibResurgence, "FEATURES", "TIB_RESURGENCE");
-    GetSetting(ActiveCFEPatchConfig.TreeVisceroidSpawnAnyway, "FEATURES", "TREE_VISCEROID_SPAWN_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.TSVisceroidSpawn, "FEATURES", "TS_VISCEROID_SPAWN");
-    GetSetting(ActiveCFEPatchConfig.EnableNukeTank, "FEATURES", "NUKE_TANK");
-    GetSetting(ActiveCFEPatchConfig.DisableMPNeutralAttacks, "FEATURES", "DISABLE_MP_NEUTRAL_ATTACKS");
-    GetSetting(ActiveCFEPatchConfig.EnableGDI9Fix, "FEATURES", "GDI9_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableBurningTreeFix, "FEATURES", "BURNING_TREE_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableNukeRadiusFix, "FEATURES", "NUKE_RADIUS_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableDeathsDoorFix, "FEATURES", "DEATHS_DOOR_FIX");
-    GetSetting(ActiveCFEPatchConfig.EnableSellChanceFix, "FEATURES", "SELL_CHANCE_FIX");
-    GetSetting(ActiveCFEPatchConfig.ForceLoanerCopters, "FEATURES", "LOANER_COPTER_DEFAULT");
-    GetSetting(ActiveCFEPatchConfig.AIvsWalls, "FEATURES", "AI_VS_WALLS");
-    GetSetting(ActiveCFEPatchConfig.EnableWallCrush, "FEATURES", "WALL_CRUSH");
-    GetSetting(ActiveCFEPatchConfig.EnableAdvancedWallOwnership, "FEATURES", "ADV_WALL_OWN");
-    GetSetting(ActiveCFEPatchConfig.EnableHuntFix, "FEATURES", "HUNT_FIX");
-    GetSetting(ActiveCFEPatchConfig.MCVAlwaysSpawnEngineer, "FEATURES", "MCV_ALWAYS_SPAWN_ENGINEER");
-    GetSetting(ActiveCFEPatchConfig.SplitDualCapturables, "FEATURES", "SPLIT_DUAL_CAPTURABLES");
-    GetSetting(ActiveCFEPatchConfig.BuildForbiddenSPCapturables, "FEATURES", "BUILD_FORBIDDEN_SP_CAPTURABLES");
-    GetSetting(ActiveCFEPatchConfig.EnableDistanceCalcFix, "FEATURES", "DISTANCE_CALC_FIX");
-    GetSetting(ActiveCFEPatchConfig.ShroudRemover, "FEATURES", "SHROUD_REMOVER");
-    GetSetting(ActiveCFEPatchConfig.EnableGeneralBugfixes, "FEATURES", "GENERAL_BUGFIXES");
-    GetSetting(ActiveCFEPatchConfig.DeadBuildingScatterFix, "FEATURES", "DEAD_BUILDING_SCATTER_FIX");
+    GetSetting(cfg.EnableVersionAnnounce, "FEATURES", "VERSION_ANNOUNCE");
+    GetSetting(cfg.EnableRallyPoints, "FEATURES", "RALLY_POINTS");
+    GetSetting(cfg.EnableASPathing, "FEATURES", "ASTAR_PATHING");
+    GetSetting(cfg.EnableCellReservationFix, "FEATURES", "CELL_RESERVATION_FIX");
+    GetSetting(cfg.EnableOOMRepair, "FEATURES", "OOM_REPAIR");
+    GetSetting(cfg.EnableHarvyQueueJump, "FEATURES", "HARVY_QUEUE_JUMP");
+    GetSetting(cfg.EnableHarvyLoadBalancing, "FEATURES", "HARVY_LOAD_BALANCING");
+    GetSetting(cfg.EnableHarvyOptimize, "FEATURES", "HARVY_OPTIMIZE");
+    GetSetting(cfg.EnableHarvySelfRepair, "FEATURES", "HARVY_SELF_REPAIR");
+    GetSetting(cfg.DisableCommandoAirstrikes, "FEATURES", "DISABLE_COMMANDO_AIRSTRIKES");
+    GetSetting(cfg.EnableAttackMove, "FEATURES", "ATTACK_MOVE");
+    GetSetting(cfg.EnableQMove, "FEATURES", "Q_MOVE");
+    GetSetting(cfg.EnableSmarterAircraft, "FEATURES", "SMARTER_AIRCRAFT");
+    GetSetting(cfg.EnableSmarterSAMs, "FEATURES", "SMARTER_SAMS");
+    GetSetting(cfg.EnableSmarterRepairBays, "FEATURES", "SMARTER_REPAIRBAY");
+    GetSetting(cfg.EnableSmarterMammoths, "FEATURES", "SMARTER_MAMMOTHS");
+    GetSetting(cfg.EnableSmarterHarvesters, "FEATURES", "SMARTER_HARVESTERS");
+    GetSetting(cfg.EnableSmarterRefineries, "FEATURES", "SMARTER_REFINERIES");
+    GetSetting(cfg.SmarterCPUCommandos, "FEATURES", "SMARTER_CPU_COMMANDOS");
+    GetSetting(cfg.EnableGunboatBugfix, "FEATURES", "GUNBOAT_BUGFIX");
+    GetSetting(cfg.BetterTibGrowth, "FEATURES", "BETTER_TIB_GROWTH");
+    GetSetting(cfg.TibIndexBugfix, "FEATURES", "TIB_INDEX_BUGFIX");
+    GetSetting(cfg.TibResurgence, "FEATURES", "TIB_RESURGENCE");
+    GetSetting(cfg.TreeVisceroidSpawnAnyway, "FEATURES", "TREE_VISCEROID_SPAWN_OVERRIDE");
+    GetSetting(cfg.TSVisceroidSpawn, "FEATURES", "TS_VISCEROID_SPAWN");
+    GetSetting(cfg.EnableNukeTank, "FEATURES", "NUKE_TANK");
+    GetSetting(cfg.DisableMPNeutralAttacks, "FEATURES", "DISABLE_MP_NEUTRAL_ATTACKS");
+    GetSetting(cfg.EnableGDI9Fix, "FEATURES", "GDI9_FIX");
+    GetSetting(cfg.EnableBurningTreeFix, "FEATURES", "BURNING_TREE_FIX");
+    GetSetting(cfg.EnableNukeRadiusFix, "FEATURES", "NUKE_RADIUS_FIX");
+    GetSetting(cfg.EnableDeathsDoorFix, "FEATURES", "DEATHS_DOOR_FIX");
+    GetSetting(cfg.EnableSellChanceFix, "FEATURES", "SELL_CHANCE_FIX");
+    GetSetting(cfg.ForceLoanerCopters, "FEATURES", "LOANER_COPTER_DEFAULT");
+    GetSetting(cfg.AIvsWalls, "FEATURES", "AI_VS_WALLS");
+    GetSetting(cfg.EnableWallCrush, "FEATURES", "WALL_CRUSH");
+    GetSetting(cfg.EnableAdvancedWallOwnership, "FEATURES", "ADV_WALL_OWN");
+    GetSetting(cfg.EnableHuntFix, "FEATURES", "HUNT_FIX");
+    GetSetting(cfg.MCVAlwaysSpawnEngineer, "FEATURES", "MCV_ALWAYS_SPAWN_ENGINEER");
+    GetSetting(cfg.SplitDualCapturables, "FEATURES", "SPLIT_DUAL_CAPTURABLES");
+    GetSetting(cfg.BuildForbiddenSPCapturables, "FEATURES", "BUILD_FORBIDDEN_SP_CAPTURABLES");
+    GetSetting(cfg.EnableDistanceCalcFix, "FEATURES", "DISTANCE_CALC_FIX");
+    GetSetting(cfg.ShroudRemover, "FEATURES", "SHROUD_REMOVER");
+    GetSetting(cfg.EnableGeneralBugfixes, "FEATURES", "GENERAL_BUGFIXES");
+    GetSetting(cfg.DeadBuildingScatterFix, "FEATURES", "DEAD_BUILDING_SCATTER_FIX");
 
     // Settings
-    GetSetting(ActiveCFEPatchConfig.DefaultCustomMissionScenarioNumber, "SETTINGS", "CUSTOM_MISSION_DEFAULT_SCENARIO");
-    GetSetting(ActiveCFEPatchConfig.LegacyRenderDisableMode, "SETTINGS", "LEGACY_RENDER_DISABLE_MODE");
-    GetSetting(ActiveCFEPatchConfig.EnableVeterancy, "SETTINGS", "VETERANCY");
-    GetSetting(ActiveCFEPatchConfig.EnableCommandoGuard, "SETTINGS", "COMMANDO_GUARD");
-    GetSetting(ActiveCFEPatchConfig.SafeSabotage, "SETTINGS", "SAFE_SABOTAGE");
-    GetSetting(ActiveCFEPatchConfig.InfantryTiberiumAversion, "SETTINGS", "INFANTRY_TIBERIUM_AVERSION");
-    GetSetting(ActiveCFEPatchConfig.BuildingGap, "SETTINGS", "BUILDING_GAP");
-    GetSetting(ActiveCFEPatchConfig.HarvyQueueJumpCutoff, "SETTINGS", "QUEUE_JUMP_CUTOFF");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeUnloadWaitWeight, "SETTINGS", "HARVY_OPTIMIZE_UNLOAD_WAIT_WEIGHT");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeThrashingCutoff, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_CUTOFF");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeThrashingNumerator, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_NUMERATOR");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeThrashingDenominator, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_DENOMINATOR");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeCommunalismNumerator, "SETTINGS", "HARVY_OPTIMIZE_COMMUNALISM_NUMERATOR");
-    GetSetting(ActiveCFEPatchConfig.HarvyOptimizeCommunalismDenominator, "SETTINGS", "HARVY_OPTIMIZE_COMMUNALISM_DENOMINATOR");
-    GetSetting(ActiveCFEPatchConfig.TibGrowthScale, "SETTINGS", "TIB_GROWTH_SCALE");
-    GetSetting(ActiveCFEPatchConfig.TibResurgeDelay, "SETTINGS", "TIB_RESURGE_DELAY");
-    GetSetting(ActiveCFEPatchConfig.TreeVisceroidSpawnMode, "SETTINGS", "TREE_VISCEROID_SPAWN_MODE");
-    GetSetting(ActiveCFEPatchConfig.MeanerVisceroids, "SETTINGS", "MEANER_VISCEROIDS");
-    GetSetting(ActiveCFEPatchConfig.WallBuildLength, "SETTINGS", "WALL_BUILD_LENGTH");
-    GetSetting(ActiveCFEPatchConfig.WallsAlwaysHaveFullCost, "SETTINGS", "WALLS_HAVE_FULL_COST");
-    GetSetting(ActiveCFEPatchConfig.InverseBuildingPreviewMode, "SETTINGS", "INVERSE_PREVIEW_MODE");
-    GetSetting(ActiveCFEPatchConfig.SmarterSAMAmmo, "SETTINGS", "SMARTER_SAM_AMMO");
-    GetSetting(ActiveCFEPatchConfig.SmarterSAMBalanceDelay, "SETTINGS", "SMARTER_SAM_BALANCE_DELAY");
-    GetSetting(ActiveCFEPatchConfig.MPPreplacedUnitOrderMode, "SETTINGS", "MP_PREPLACED_UNIT_ORDER_MODE");
-    GetSetting(ActiveCFEPatchConfig.BuildingDeathAnnounceMode, "SETTINGS", "BUILDING_DEATH_ANNOUNCE_MODE");
-    GetSetting(ActiveCFEPatchConfig.QuieterAirstrips, "SETTINGS", "QUIETER_AIRSTRIPS");
-    GetSetting(ActiveCFEPatchConfig.SearchRangeFixMode, "SETTINGS", "SEARCH_RANGE_FIX");
+    GetSetting(cfg.DefaultCustomMissionScenarioNumber, "SETTINGS", "CUSTOM_MISSION_DEFAULT_SCENARIO");
+    GetSetting(cfg.LegacyRenderDisableMode, "SETTINGS", "LEGACY_RENDER_DISABLE_MODE");
+    GetSetting(cfg.EnableVeterancy, "SETTINGS", "VETERANCY");
+    GetSetting(cfg.EnableCommandoGuard, "SETTINGS", "COMMANDO_GUARD");
+    GetSetting(cfg.SafeSabotage, "SETTINGS", "SAFE_SABOTAGE");
+    GetSetting(cfg.InfantryTiberiumAversion, "SETTINGS", "INFANTRY_TIBERIUM_AVERSION");
+    GetSetting(cfg.BuildingGap, "SETTINGS", "BUILDING_GAP");
+    GetSetting(cfg.HarvyQueueJumpCutoff, "SETTINGS", "QUEUE_JUMP_CUTOFF");
+    GetSetting(cfg.HarvyOptimizeUnloadWaitWeight, "SETTINGS", "HARVY_OPTIMIZE_UNLOAD_WAIT_WEIGHT");
+    GetSetting(cfg.HarvyOptimizeThrashingCutoff, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_CUTOFF");
+    GetSetting(cfg.HarvyOptimizeThrashingNumerator, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_NUMERATOR");
+    GetSetting(cfg.HarvyOptimizeThrashingDenominator, "SETTINGS", "HARVY_OPTIMIZE_THRASHING_DENOMINATOR");
+    GetSetting(cfg.HarvyOptimizeCommunalismNumerator, "SETTINGS", "HARVY_OPTIMIZE_COMMUNALISM_NUMERATOR");
+    GetSetting(cfg.HarvyOptimizeCommunalismDenominator, "SETTINGS", "HARVY_OPTIMIZE_COMMUNALISM_DENOMINATOR");
+    GetSetting(cfg.TibGrowthScale, "SETTINGS", "TIB_GROWTH_SCALE");
+    GetSetting(cfg.TibResurgeDelay, "SETTINGS", "TIB_RESURGE_DELAY");
+    GetSetting(cfg.TreeVisceroidSpawnMode, "SETTINGS", "TREE_VISCEROID_SPAWN_MODE");
+    GetSetting(cfg.MeanerVisceroids, "SETTINGS", "MEANER_VISCEROIDS");
+    GetSetting(cfg.WallBuildLength, "SETTINGS", "WALL_BUILD_LENGTH");
+    GetSetting(cfg.WallsAlwaysHaveFullCost, "SETTINGS", "WALLS_HAVE_FULL_COST");
+    GetSetting(cfg.InverseBuildingPreviewMode, "SETTINGS", "INVERSE_PREVIEW_MODE");
+    GetSetting(cfg.SmarterSAMAmmo, "SETTINGS", "SMARTER_SAM_AMMO");
+    GetSetting(cfg.SmarterSAMBalanceDelay, "SETTINGS", "SMARTER_SAM_BALANCE_DELAY");
+    GetSetting(cfg.MPPreplacedUnitOrderMode, "SETTINGS", "MP_PREPLACED_UNIT_ORDER_MODE");
+    GetSetting(cfg.BuildingDeathAnnounceMode, "SETTINGS", "BUILDING_DEATH_ANNOUNCE_MODE");
+    GetSetting(cfg.QuieterAirstrips, "SETTINGS", "QUIETER_AIRSTRIPS");
+    GetSetting(cfg.SearchRangeFixMode, "SETTINGS", "SEARCH_RANGE_FIX");
 
     // Balance
-    GetSetting(ActiveCFEPatchConfig.OverrideAPCReqs, "BALANCE", "DO_OVERRIDE_APC_NOREQ");
-    GetSetting(ActiveCFEPatchConfig.OverrideWarFactoryHP, "BALANCE", "DO_OVERRIDE_WFACTORY_HP");
-    GetSetting(ActiveCFEPatchConfig.OverrideWarFactoryHP_Value, "BALANCE", "WFACTORY_HP_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.OverrideStealthTankCost, "BALANCE", "DO_OVERRIDE_STEALTHTANK_COST");
-    GetSetting(ActiveCFEPatchConfig.OverrideStealthTankCost_Value, "BALANCE", "STEALTHTANK_COST_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.OverrideArtyTurn, "BALANCE", "DO_OVERRIDE_ARTY_TURN");
-    GetSetting(ActiveCFEPatchConfig.OverrideArtyTurn_Value, "BALANCE", "ARTY_TURN_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.OverrideMLRSReqs, "BALANCE", "DO_MLRS_REQ_RADAR");
-    GetSetting(ActiveCFEPatchConfig.OverrideMLRSHP, "BALANCE", "DO_OVERRIDE_MLRS_HP");
-    GetSetting(ActiveCFEPatchConfig.OverrideMLRSHP_Value, "BALANCE", "MLRS_HP_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.OverrideMLRSGDIOnly, "BALANCE", "DO_MLRS_GDI_ONLY");
-    GetSetting(ActiveCFEPatchConfig.OverrideMCVSight, "BALANCE", "DO_OVERRIDE_MCV_SIGHT");
-    GetSetting(ActiveCFEPatchConfig.OverrideMCVSight_Value, "BALANCE", "MCV_SIGHT_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.OverrideConYardSight_Value, "BALANCE", "CONYARD_SIGHT_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.OverrideChemGuyBuff, "BALANCE", "DO_CHEM_GUY_BUFF");
-    GetSetting(ActiveCFEPatchConfig.OverrideRocketGuyHP, "BALANCE", "DO_OVERRIDE_ROCKEYGUY_HP");
-    GetSetting(ActiveCFEPatchConfig.OverrideRocketGuyHP_Value, "BALANCE", "ROCKEYGUY_HP_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.OverrideRocketGuyCost, "BALANCE", "DO_OVERRIDE_ROCKEYGUY_COST");
-    GetSetting(ActiveCFEPatchConfig.OverrideRocketGuyCost_Value, "BALANCE", "ROCKEYGUY_COST_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.OverrideMinigunnerRange, "BALANCE", "DO_OVERRIDE_MINIGUNNER_RANGE");
-    GetSetting(ActiveCFEPatchConfig.OverrideMinigunnerRange_Value, "BALANCE", "MINIGUNNER_RANGE_OVERRIDE");
-    GetSetting(ActiveCFEPatchConfig.ApplyMPBalanceToSP, "BALANCE", "APPLY_BALANCE_TO_SINGLE_PLAYER");
-    GetSetting(ActiveCFEPatchConfig.MPUnitsInSP, "BALANCE", "MULTIPLAYER_UNITS_IN_SINGLE_PLAYER");
-    GetSetting(ActiveCFEPatchConfig.JDExtraAdjustments, "BALANCE", "JD_EXTRA_ADJUSTMENTS");
-    GetSetting(ActiveCFEPatchConfig.MPCivSight, "BALANCE", "MP_CIV_SIGHT");
+    GetSetting(cfg.OverrideAPCReqs, "BALANCE", "DO_OVERRIDE_APC_NOREQ");
+    GetSetting(cfg.OverrideWarFactoryHP, "BALANCE", "DO_OVERRIDE_WFACTORY_HP");
+    GetSetting(cfg.OverrideWarFactoryHP_Value, "BALANCE", "WFACTORY_HP_OVERRIDE");
+    GetSetting(cfg.OverrideStealthTankCost, "BALANCE", "DO_OVERRIDE_STEALTHTANK_COST");
+    GetSetting(cfg.OverrideStealthTankCost_Value, "BALANCE", "STEALTHTANK_COST_OVERRIDE");
+    GetSetting(cfg.OverrideArtyTurn, "BALANCE", "DO_OVERRIDE_ARTY_TURN");
+    GetSetting(cfg.OverrideArtyTurn_Value, "BALANCE", "ARTY_TURN_OVERRIDE");
+    GetSetting(cfg.OverrideMLRSReqs, "BALANCE", "DO_MLRS_REQ_RADAR");
+    GetSetting(cfg.OverrideMLRSHP, "BALANCE", "DO_OVERRIDE_MLRS_HP");
+    GetSetting(cfg.OverrideMLRSHP_Value, "BALANCE", "MLRS_HP_OVERRIDE");
+    GetSetting(cfg.OverrideMLRSGDIOnly, "BALANCE", "DO_MLRS_GDI_ONLY");
+    GetSetting(cfg.OverrideMCVSight, "BALANCE", "DO_OVERRIDE_MCV_SIGHT");
+    GetSetting(cfg.OverrideMCVSight_Value, "BALANCE", "MCV_SIGHT_OVERRIDE");
+    GetSetting(cfg.OverrideConYardSight_Value, "BALANCE", "CONYARD_SIGHT_OVERRIDE");
+    GetSetting(cfg.OverrideChemGuyBuff, "BALANCE", "DO_CHEM_GUY_BUFF");
+    GetSetting(cfg.OverrideRocketGuyHP, "BALANCE", "DO_OVERRIDE_ROCKEYGUY_HP");
+    GetSetting(cfg.OverrideRocketGuyHP_Value, "BALANCE", "ROCKEYGUY_HP_OVERRIDE");
+    GetSetting(cfg.OverrideRocketGuyCost, "BALANCE", "DO_OVERRIDE_ROCKEYGUY_COST");
+    GetSetting(cfg.OverrideRocketGuyCost_Value, "BALANCE", "ROCKEYGUY_COST_OVERRIDE");
+    GetSetting(cfg.OverrideMinigunnerRange, "BALANCE", "DO_OVERRIDE_MINIGUNNER_RANGE");
+    GetSetting(cfg.OverrideMinigunnerRange_Value, "BALANCE", "MINIGUNNER_RANGE_OVERRIDE");
+    GetSetting(cfg.ApplyMPBalanceToSP, "BALANCE", "APPLY_BALANCE_TO_SINGLE_PLAYER");
+    GetSetting(cfg.MPUnitsInSP, "BALANCE", "MULTIPLAYER_UNITS_IN_SINGLE_PLAYER");
+    GetSetting(cfg.JDExtraAdjustments, "BALANCE", "JD_EXTRA_ADJUSTMENTS");
+    GetSetting(cfg.MPCivSight, "BALANCE", "MP_CIV_SIGHT");
+}
 
-    CFEPatchConfig& cfg = ActiveCFEPatchConfig;
-
+static void Normalize_CFE_Settings(CFEPatchConfig& cfg)
+{
     // Clamp wall length between 1 (build at all) and 10 (buffer limits)
     cfg.WallBuildLength = std::max(1, std::min(cfg.WallBuildLength, 10));
 
@@ -228,6 +228,58 @@ static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
         cfg.OverrideStealthTankCost = true;
         cfg.OverrideStealthTankCost_Value = 800;
     }
+}
+
+static void Populate_CFE_Patch_Config_From_INI(const INIClass& ini)
+{
+    const SettingReader reader = {ini};
+    Visit_CFE_Settings(ActiveCFEPatchConfig, reader);
+    Normalize_CFE_Settings(ActiveCFEPatchConfig);
+}
+
+namespace {
+
+// FNV-1a over the settings that change the simulation. These ones only change what the local
+// player sees or hears, so peers may differ on them.
+struct SettingHasher
+{
+    unsigned* hash;
+
+    template <typename T> void operator()(T& target, const char* section, const char* entry) const
+    {
+        static const char* const local[] = {"VERSION_ANNOUNCE", "BUILDING_DEATH_ANNOUNCE_MODE", "QUIETER_AIRSTRIPS", "INVERSE_PREVIEW_MODE", "LEGACY_RENDER_DISABLE_MODE", "CUSTOM_MISSION_DEFAULT_SCENARIO",};
+        for (unsigned i = 0; i < ARRAY_SIZE(local); i++) {
+            if (strcmp(entry, local[i]) == 0) {
+                return;
+            }
+        }
+        const int value = (int)target;
+        for (int shift = 0; shift < 32; shift += 8) {
+            *hash = (*hash ^ ((unsigned)value >> shift & 0xFF)) * 16777619u;
+        }
+    }
+};
+
+} // namespace
+
+static unsigned Hash_CFE_Settings(CFEPatchConfig& cfg)
+{
+    unsigned hash = 2166136261u;
+    const SettingHasher hasher = {&hash};
+    Visit_CFE_Settings(cfg, hasher);
+    return hash;
+}
+
+/*
+**	Peers must agree on these or the game desyncs, so joining compares them. The unmodified game
+**	gives 0, which keeps it compatible with a Vanilla Conquer that doesn't have this file.
+*/
+unsigned CFE_Patch_Config_Hash()
+{
+    CFEPatchConfig defaults;
+    Normalize_CFE_Settings(defaults);
+    const unsigned hash = Hash_CFE_Settings(ActiveCFEPatchConfig);
+    return hash == Hash_CFE_Settings(defaults) ? 0 : (hash | 1);
 }
 
 void Initialise_CFE_Patch_Config()

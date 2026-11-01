@@ -3042,13 +3042,14 @@ CELL DisplayClass::Calculated_Cell(SourceType dir, HousesType house)
         **	Dramatic entry point is somewhere on the visible screen as defined
         **	by the current tactical map position.
         */
-        case SOURCE_VISIBLE:
-            cell = XY_Cell(Coord_XCell(TacticalCoord) + Random_Pick(0, Lepton_To_Cell(TacLeptonWidth) - 1),
-                           Coord_YCell(TacticalCoord) + Random_Pick(0, Lepton_To_Cell(TacLeptonHeight) - 1));
+        case SOURCE_VISIBLE: {
+            int x = Coord_XCell(TacticalCoord) + Random_Pick(0, Lepton_To_Cell(TacLeptonWidth) - 1);
+            cell = XY_Cell(x, Coord_YCell(TacticalCoord) + Random_Pick(0, Lepton_To_Cell(TacLeptonHeight) - 1));
             if (house == PlayerPtr->Class->House && !In_Radar(cell)) {
                 cell = 0;
             }
             break;
+        }
 
         /*
         **	Drop off near friendly base or near a friendly unit or

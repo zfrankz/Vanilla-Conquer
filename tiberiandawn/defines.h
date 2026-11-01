@@ -2804,6 +2804,7 @@ typedef struct
             HousesType House;     // player's House
             unsigned int Color;   // player's color
             unsigned int NameCRC; // CRC of player's game's name
+            unsigned int CFEHash; // CFE: joiner's CFE_Patch_Config_Hash
         } PlayerInfo;
         struct BITFIELD_STRUCT
         {

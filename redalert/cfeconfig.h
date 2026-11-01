@@ -86,6 +86,7 @@ struct CFEPatchConfig
 extern CFEPatchConfig ActiveCFEPatchConfig;
 
 void Initialise_CFE_Patch_Config();
+unsigned CFE_Patch_Config_Hash();
 int CFE_Patch_FullRange_Random_Pick(int min, int max);
 
 #endif

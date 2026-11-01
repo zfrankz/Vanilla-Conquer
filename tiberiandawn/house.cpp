@@ -1097,8 +1097,8 @@ void HouseClass::AI(void)
                 }
 
                 if (obj) {
-                    cell = XY_Cell(Map.MapCellX + Random_Pick(0, Map.MapCellWidth - 1),
-                                   Map.MapCellY + Random_Pick(0, Map.MapCellHeight - 1));
+                    int x = Map.MapCellX + Random_Pick(0, Map.MapCellWidth - 1);
+                    cell = XY_Cell(x, Map.MapCellY + Random_Pick(0, Map.MapCellHeight - 1));
 
                     /*
                     **	With meaner visceroids, dinosaurs walk in from the nearest map edge.

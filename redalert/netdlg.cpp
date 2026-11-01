@@ -2098,7 +2098,7 @@ static int Net_Join_Dialog(void)
                 } else if (why == REJECT_VERSION_TOO_NEW) {
                     item = (char*)Text_String(TXT_DESTGAME_OUTDATED);
                 } else if (why == REJECT_MISMATCH) {
-                    item = (char*)Text_String(TXT_MISMATCH);
+                    item = (char*)"Rules or CFE options differ from the host";
                 } else if (why == REJECT_DISBANDED) {
                     item = (char*)Text_String(TXT_GAME_CANCELLED);
                 }
@@ -2488,7 +2488,7 @@ static int Request_To_Join(char* playername, int join_index, HousesType house, P
     Session.GPacket.PlayerInfo.MinVersion = VerNum.Min_Version();
 #endif
     Session.GPacket.PlayerInfo.MaxVersion = VerNum.Max_Version();
-    Session.GPacket.PlayerInfo.CheatCheck = RuleINI.Get_Unique_ID();
+    Session.GPacket.PlayerInfo.CheatCheck = RuleINI.Get_Unique_ID() ^ CFE_Patch_Config_Hash();
 
     Ipx.Send_Global_Message(&Session.GPacket, sizeof(GlobalPacketType), 1, &(Session.Games[join_index]->Address));
 
@@ -4685,9 +4685,9 @@ static JoinEventType Get_NewGame_Responses(ColorListClass* playerlist, int* colo
         }
 
         /*
-        **	Don't allow joining if the rules.ini file doesn't appear to match.
+        **	Don't allow joining if the rules.ini file or the CFE options don't appear to match.
         */
-        else if (Session.GPacket.PlayerInfo.CheatCheck != RuleINI.Get_Unique_ID() && !resend) {
+        else if (Session.GPacket.PlayerInfo.CheatCheck != (RuleINI.Get_Unique_ID() ^ CFE_Patch_Config_Hash()) && !resend) {
             memset(&Session.GPacket, 0, sizeof(GlobalPacketType));
             Session.GPacket.Command = NET_REJECT_JOIN;
             Session.GPacket.Reject.Why = (int)REJECT_MISMATCH;

@@ -2147,6 +2147,7 @@ static int Request_To_Join(char* playername, int join_index, ListClass* playerli
     strcpy(GPacket.Name, MPlayerName);
     GPacket.PlayerInfo.House = house;
     GPacket.PlayerInfo.Color = color;
+    GPacket.PlayerInfo.CFEHash = CFE_Patch_Config_Hash();
 
     Ipx.Send_Global_Message(&GPacket, sizeof(GlobalPacketType), 1, &(Games[join_index]->Address));
 
@@ -3892,7 +3893,8 @@ static JoinEventType Get_NewGame_Responses(ColorListClass* playerlist)
             /*.....................................................................
         Reject if name is a duplicate, or if there are too many players:
         .....................................................................*/
-            if (found || (Players.Count() >= (MPlayerMax - 1) && !resend)) {
+            if (found || (Players.Count() >= (MPlayerMax - 1) && !resend)
+                || GPacket.PlayerInfo.CFEHash != CFE_Patch_Config_Hash()) { // CFE: different rules would desync.
                 memset(&GPacket, 0, sizeof(GlobalPacketType));
 
                 GPacket.Command = NET_REJECT_JOIN;

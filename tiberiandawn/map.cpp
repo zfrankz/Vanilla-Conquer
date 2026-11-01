@@ -2211,7 +2211,8 @@ static int CFE_Random_Pick_Full_Range(int minval, int maxval)
     unsigned limit = (0x40000000u / range) * range;
     unsigned value;
     do {
-        value = ((unsigned)Random_Pick(0, 0x7FFF) << 15) | (unsigned)Random_Pick(0, 0x7FFF);
+        unsigned high = Random_Pick(0, 0x7FFF);
+        value = (high << 15) | (unsigned)Random_Pick(0, 0x7FFF);
     } while (value >= limit);
     return minval + (int)(value % range);
 }

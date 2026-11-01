@@ -137,5 +137,6 @@ struct CFEPatchConfig
 extern CFEPatchConfig ActiveCFEPatchConfig;
 
 void Initialise_CFE_Patch_Config();
+unsigned CFE_Patch_Config_Hash();
 
 #endif
