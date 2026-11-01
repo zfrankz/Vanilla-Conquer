@@ -4559,7 +4559,7 @@ void Shake_The_Screen(int shakes, HousesType house)
  *=============================================================================================*/
 void List_Copy(short const* source, int len, short* dest)
 {
-    if (len < 1 || dest == NULL || dest == NULL) {
+    if (len < 1 || source == NULL || dest == NULL) {
         return;
     }
 

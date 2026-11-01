@@ -439,7 +439,7 @@ void UnitClass::AI(void)
     /*
     **	Scatter units off buildings in guard modes.
     */
-    if (!IsTethered && !IsFiring && !IsDriving && !IsRotating
+    if ((IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && !IsTethered && !IsFiring && !IsDriving && !IsRotating
         && (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) && MissionQueue == MISSION_NONE
         && Map[Coord].Cell_Building() != NULL) {
         Scatter(0, true, true);

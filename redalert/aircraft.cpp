@@ -881,6 +881,20 @@ int AircraftClass::Mission_Hunt(void)
                 AttacksRemaining = 0;
                 if (Team.Is_Valid())
                     Team->Remove(this);
+
+                /*
+                **	CFE: going idle here and carrying on sent the aircraft in two directions; go idle
+                **	once, below.
+                */
+                if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+                    if (IsALoaner) {
+                        Assign_Mission(MISSION_RETREAT);
+                    } else {
+                        Enter_Idle_Mode();
+                    }
+                    Commence();
+                    break;
+                }
                 Enter_Idle_Mode();
             }
 
@@ -4240,6 +4254,10 @@ FireErrorType AircraftClass::Can_Fire(TARGET target, int which) const
         if (Arm != 0)
             return (FIRE_REARM);
 
+        // CFE: Distance needs a legal target.
+        if (ActiveCFEPatchConfig.EnableGeneralBugfixes && !Target_Legal(target)) {
+            return (FIRE_ILLEGAL);
+        }
         if (Distance(target) < (camera ? 0x0380 : 0x0200) && Map.In_Radar(Coord_Cell(Center_Coord()))) {
             //		if (Distance(target) < (camera ? 0x0380 : 0x0280) && Map.In_Radar(Coord_Cell(Center_Coord()))) {
             return (FIRE_OK);
@@ -4258,7 +4276,8 @@ FireErrorType AircraftClass::Can_Fire(TARGET target, int which) const
         */
         if (Class->IsFixedWing) {
 
-            int diff = PrimaryFacing.Difference(Direction(TarCom));
+            // CFE: test against the target asked about, not always TarCom.
+            int diff = PrimaryFacing.Difference(Direction(ActiveCFEPatchConfig.EnableGeneralBugfixes ? target : TarCom));
             if (ABS(diff) > (fudge ? 16 : 8)) {
                 return (FIRE_FACING);
             }

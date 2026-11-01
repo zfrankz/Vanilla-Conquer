@@ -112,7 +112,7 @@ void Shorten_Attached_Anims(ObjectClass* obj)
         for (int index = 0; index < Anims.Count(); index++) {
             AnimClass& anim = *Anims.Ptr(index);
 
-            if (As_Object(anim.xObject) == obj) {
+            if ((anim.IsActive || !ActiveCFEPatchConfig.EnableGeneralBugfixes) && As_Object(anim.xObject) == obj) {
                 anim.Loops = 0;
             }
         }
@@ -688,7 +688,8 @@ AnimClass::~AnimClass(void)
             int index;
             for (index = 0; index < Anims.Count(); index++) {
                 if (Anims.Ptr(index) != this && Anims.Ptr(index)->xObject == xObject
-                    && (!ActiveCFEPatchConfig.EnableBurningTreeFix || Anims.Ptr(index)->IsActive))
+                    && ((!ActiveCFEPatchConfig.EnableBurningTreeFix && !ActiveCFEPatchConfig.EnableGeneralBugfixes)
+                        || Anims.Ptr(index)->IsActive))
                     break;
             }
 
@@ -1262,7 +1263,7 @@ void AnimClass::Do_Atom_Damage(HousesType ownerhouse, CELL cell)
     **	order to properly enact retribution and record the kill for
     **	score purposes.
     */
-    BuildingClass* building = NULL;
+    TechnoClass* building = NULL; // CFE: this could be any techno, not just a building.
     TechnoClass* backup = NULL;
     if (ownerhouse != HOUSE_NONE) {
         for (int index = 0; index < Logic.Count(); index++) {
@@ -1271,14 +1272,14 @@ void AnimClass::Do_Atom_Damage(HousesType ownerhouse, CELL cell)
             if (obj != NULL && obj->Is_Techno() && obj->Owner() == ownerhouse) {
                 backup = (TechnoClass*)obj;
                 if (obj->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)obj) == STRUCT_MSLO) {
-                    building = (BuildingClass*)obj;
+                    building = (TechnoClass*)obj;
                     break;
                 }
             }
         }
 
         if (building == NULL)
-            building = (BuildingClass*)backup;
+            building = backup;
     }
 
     int radius;

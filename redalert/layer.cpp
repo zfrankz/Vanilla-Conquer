@@ -86,6 +86,27 @@ bool LayerClass::Submit(ObjectClass const* object, bool sort)
  *=============================================================================================*/
 void LayerClass::Sort(void)
 {
+    /*
+    **	CFE: one pass leaves objects drawn in the wrong order after anything big moves; do a full sort.
+    */
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+        bool happy = false;
+        int endpt = Count() - 1;
+        while (!happy) {
+            happy = true;
+            for (int index = 0; index < endpt; index++) {
+                if (*(*this)[index + 1] < *(*this)[index]) {
+                    happy = false;
+                    ObjectClass* temp = (*this)[index + 1];
+                    (*this)[index + 1] = (*this)[index];
+                    (*this)[index] = temp;
+                }
+            }
+            endpt--;
+        }
+        return;
+    }
+
     for (int index = 0; index < Count() - 1; index++) {
         if (*(*this)[index + 1] < *(*this)[index]) {
             ObjectClass* temp;

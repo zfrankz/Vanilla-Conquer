@@ -1347,7 +1347,7 @@ void SidebarClass::StripClass::Deactivate(void)
  *=============================================================================================*/
 bool SidebarClass::StripClass::Add(RTTIType type, int id, bool via_capture)
 {
-    if (BuildableCount <= MAX_BUILDABLES) {
+    if (BuildableCount < MAX_BUILDABLES || (BuildableCount == MAX_BUILDABLES && !ActiveCFEPatchConfig.EnableGeneralBugfixes)) {
         for (int index = 0; index < BuildableCount; index++) {
             if (Buildables[index].BuildableType == type && Buildables[index].BuildableID == id) {
                 return (false);

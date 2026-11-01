@@ -1231,7 +1231,8 @@ void InfantryClass::Assign_Target(TARGET target)
     **	If this is an infantry that can only capture, then also assign its destination to the
     **	target specified.
     */
-    if (!Target_Legal(NavCom) && Class->IsCapture && !Is_Weapon_Equipped()) {
+    // CFE: an engineer heads for a new capturable target at once, whatever it was doing.
+    if ((!Target_Legal(NavCom) || ActiveCFEPatchConfig.EnableGeneralBugfixes) && Class->IsCapture && !Is_Weapon_Equipped()) {
         BuildingClass const* building = As_Building(target);
         if (building != NULL && building->Can_Capture()) {
             Assign_Destination(target);
@@ -3574,6 +3575,17 @@ int InfantryClass::Mission_Attack(void)
     if (Class->IsBomber && As_Building(TarCom)) {
         Assign_Destination(TarCom);
         Assign_Mission(MISSION_SABOTAGE);
+        return (1);
+    }
+
+    /*
+    **	CFE: if a computer engineer's target can't be captured, it finds one that can.
+    */
+    if (ActiveCFEPatchConfig.EnableGeneralBugfixes && Class->IsCapture && As_Building(TarCom) != NULL
+        && !As_Building(TarCom)->Can_Capture() && !House->IsHuman) {
+        Assign_Target(Greatest_Threat(THREAT_CAPTURE));
+        Assign_Destination(TarCom);
+        Assign_Mission(MISSION_CAPTURE);
         return (1);
     }
 

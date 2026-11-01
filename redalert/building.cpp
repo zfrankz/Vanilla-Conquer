@@ -870,7 +870,14 @@ bool BuildingClass::Mark(MarkType mark)
                 delete this;
 
             } else {
-                if (Can_Enter_Cell(cell) == MOVE_OK) {
+                // CFE: Can_Enter_Cell cares about IsDown for rally points, which isn't what this asks.
+                bool isdownmemo = IsDown;
+                if (ActiveCFEPatchConfig.EnableRallyPoints) {
+                    IsDown = false;
+                }
+                bool canenter = (Can_Enter_Cell(cell) == MOVE_OK);
+                IsDown = isdownmemo;
+                if (canenter) {
                     /*
                     **	Determine if a bib is required for this building. If one is, then
                     **	create and place it.
@@ -2441,7 +2448,12 @@ void BuildingClass::Update_Buildables(void)
                         Sidebar_Glyphx_Add(RTTI_AIRCRAFTTYPE, a, House, buildable_via_capture);
 #endif
                     } else {
-                        Map.Add(RTTI_AIRCRAFTTYPE, a, buildable_via_capture);
+                        // CFE: an airstrip shouldn't offer helicopters or a helipad planes after an ally's MCV.
+                        if (!ActiveCFEPatchConfig.EnableGeneralBugfixes
+                            || (AircraftTypeClass::As_Reference((AircraftType)a).IsFixedWing ? *this == STRUCT_AIRSTRIP
+                                                                                             : *this == STRUCT_HELIPAD)) {
+                            Map.Add(RTTI_AIRCRAFTTYPE, a, buildable_via_capture);
+                        }
                     }
                 }
             }
@@ -2603,8 +2615,12 @@ bool BuildingClass::Limbo(void)
         **	Update the power status of the owner's house.
         */
         House->Adjust_Power(-Power_Output());
-        House->Adjust_Drain(-Class->Drain);
-        House->Adjust_Capacity(-Class->Capacity, true);
+
+        // CFE: a building destroyed while it's still going up never added its drain or capacity.
+        if (HasOpened || !ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+            House->Adjust_Drain(-Class->Drain);
+            House->Adjust_Capacity(-Class->Capacity, true);
+        }
         if (House == PlayerPtr) {
             Map.PowerClass::IsToRedraw = true;
             Map.Flag_To_Redraw(false);
@@ -3994,6 +4010,8 @@ int BuildingClass::Mission_Deconstruction(void)
 				}
 #endif
             bool mcv_redeployed = false;
+            bool wasownedbyplayer = IsOwnedByPlayer; // CFE: this building may be deleted before they're used below.
+            HouseClass* soldhouse = House;
 
             /*
             **	Construction yards that deconstruct, really just revert back
@@ -4081,8 +4099,8 @@ int BuildingClass::Mission_Deconstruction(void)
 // MCV (RA only) above, so moved here
 #if 1
             if (!mcv_redeployed) {
-                if (IsOwnedByPlayer) {
-                    if ((HouseClass*)House == PlayerPtr) {
+                if (wasownedbyplayer) {
+                    if (soldhouse == PlayerPtr) {
                         Speak(VOX_STRUCTURE_SOLD);
                     }
                 }
