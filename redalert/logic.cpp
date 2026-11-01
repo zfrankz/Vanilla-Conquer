@@ -395,6 +395,9 @@ void LogicClass::AI(void)
     /*
     **	Map related logic is performed.
     */
+    if (ActiveCFEPatchConfig.EnableCellReservationFix) {
+        Map.Cleanup_Vehicle_Reservations();
+    }
     if (ActiveCFEPatchConfig.BetterOreGrowth) {
         Map.CFE_Logic();
     } else {

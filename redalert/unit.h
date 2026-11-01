@@ -186,6 +186,7 @@ public:
     virtual fixed Tiberium_Load(void) const;
     virtual BuildingClass* Find_Best_Refinery(void) const;
     BuildingClass* Tiberium_Unload_Refinery(void) const;
+    int CFE_AStar_Refinery_Distance(BuildingClass const* refinery) const;
     void Reconsider_Refinery(void);
 
     /*
@@ -265,6 +266,7 @@ public:
     virtual int Offload_Tiberium_Bail(void);
     virtual void Enter_Idle_Mode(bool initial = false);
     virtual MoveType Can_Enter_Cell(CELL cell, FacingType facing = FACING_NONE) const;
+    MoveType CFE_Can_Enter_Reserved(CELL cell, FacingType facing, MoveType retval) const;
     virtual void Per_Cell_Process(PCPType why);
     void Exit_Repair(void);
     void Shroud_Regen(void);

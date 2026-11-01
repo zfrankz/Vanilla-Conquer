@@ -651,7 +651,19 @@ void CellClass::Occupy_Down(ObjectClass* object)
     case RTTI_VESSEL:
     case RTTI_AIRCRAFT:
     case RTTI_UNIT:
-        Flag.Occupy.Vehicle = true;
+        if (ActiveCFEPatchConfig.EnableCellReservationFix) {
+
+            /*
+            **	CFE: don't take over a flag another unit has set; that can put two units in one cell.
+            */
+            FootClass*& rv = Reserving_Vehicle();
+            if (!rv || rv == object || !Flag.Occupy.Vehicle) {
+                rv = (FootClass*)object;
+                Flag.Occupy.Vehicle = true;
+            }
+        } else {
+            Flag.Occupy.Vehicle = true;
+        }
         break;
 
     case RTTI_TERRAIN:
@@ -719,7 +731,19 @@ void CellClass::Occupy_Up(ObjectClass* object)
     case RTTI_VESSEL:
     case RTTI_AIRCRAFT:
     case RTTI_UNIT:
-        Flag.Occupy.Vehicle = false;
+        if (ActiveCFEPatchConfig.EnableCellReservationFix) {
+
+            /*
+            **	CFE: don't lift a flag another unit has set; that can put two units in one cell.
+            */
+            FootClass*& rv = Reserving_Vehicle();
+            if (!rv || rv == object || !Flag.Occupy.Vehicle) {
+                rv = NULL;
+                Flag.Occupy.Vehicle = false;
+            }
+        } else {
+            Flag.Occupy.Vehicle = false;
+        }
         break;
 
     case RTTI_TERRAIN:
@@ -823,6 +847,14 @@ void CellClass::Overlap_Up(ObjectClass* object)
             break;
         }
     }
+}
+
+/*
+**	The first aircraft occupying the cell (CFE, for the cell reservation fix).
+*/
+AircraftClass* CellClass::Cell_Aircraft(void) const
+{
+    return ((AircraftClass*)Cell_Find_Object(RTTI_AIRCRAFT));
 }
 
 /***********************************************************************************************

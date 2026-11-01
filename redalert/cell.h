@@ -294,6 +294,13 @@ public:
     TerrainClass* Cell_Terrain(void) const;
     UnitClass* Cell_Unit(void) const;
     VesselClass* Cell_Vessel(void) const;
+
+    /*
+    **	CELL_RESERVATION_FIX: the unit, vessel or aircraft that set Flag.Occupy.Vehicle. CFE keeps
+    **	this in the cell; here it lives outside the class (see MapClass::Clear_CFE_Cell_State).
+    */
+    FootClass*& Reserving_Vehicle(void) const;
+    AircraftClass* Cell_Aircraft(void) const;
     bool Goodie_Check(FootClass* object);
     bool Is_Clear_To_Build(SpeedType loco = SPEED_TRACK) const;
     bool Is_Clear_To_Move(SpeedType loco,

@@ -177,8 +177,15 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass* from, RadioMessageTy
             if (from->What_Am_I() == RTTI_UNIT && *((UnitClass*)from) == UNIT_HARVESTER) {
                 UnitClass& current = *static_cast<UnitClass*>(Contact_With_Whom());
                 UnitClass& candidate = *static_cast<UnitClass*>(from);
-                int current_distance = current.Distance(this);
-                int candidate_distance = candidate.Distance(this);
+                int current_distance;
+                int candidate_distance;
+                if (ActiveCFEPatchConfig.EnableASPathing) {
+                    current_distance = current.CFE_AStar_Refinery_Distance(this);
+                    candidate_distance = candidate.CFE_AStar_Refinery_Distance(this);
+                } else {
+                    current_distance = current.Distance(this);
+                    candidate_distance = candidate.Distance(this);
+                }
 
                 if (current_distance > ActiveCFEPatchConfig.HarvyQueueJumpCutoff
                     && candidate_distance < current_distance) {

@@ -58,6 +58,8 @@ struct CFEPatchConfig
     bool EnableDeathsDoorFix = false;
     bool EnableNewSkirmishAI = false;
     bool EnableGeneralBugfixes = false; // Not a CFE setting: CFE always applies these fixes
+    // Not a CFE setting: CFE always runs its "two units in one spot" fixes; this port switches them.
+    bool EnableCellReservationFix = false;
 
     int EnableVeterancy = 0;
     int EnableTanyaGuard = 0;

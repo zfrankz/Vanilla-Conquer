@@ -49,6 +49,10 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "function.h"
+#include <algorithm>
+#include <cmath>
+#include <unordered_map>
+#include <vector>
 //#include	<string.h>
 
 /*
@@ -395,6 +399,212 @@ bool FootClass::Register_Cell(PathType* path, CELL cell, FacingType dir, int cos
     return (true);
 }
 
+/*
+**	CFE Patch Redux A* pathing.
+*/
+static float Euclidian_Cell_Distance_Estimate_Sqrd(const CELL source, const CELL dest)
+{
+    const float x = abs(Cell_X(dest) - Cell_X(source));
+    const float y = abs(Cell_Y(dest) - Cell_Y(source));
+    return abs(x * x + y * y);
+}
+
+static float Euclidian_Cell_Distance_Estimate(const CELL source, const CELL dest)
+{
+    return sqrtf(Euclidian_Cell_Distance_Estimate_Sqrd(source, dest));
+}
+
+CELL FootClass::Find_Passable_Position_Near(const CELL target, const int maxRadius, const MoveType threshhold, const int threat) const
+{
+    if (Passable_Cell(target, FACING_NONE, threat, threshhold)) {
+        return target;
+    }
+
+    const int targetX = Cell_X(target);
+    const int targetY = Cell_Y(target);
+
+    const auto validate_cell = [this, threat, threshhold](const CELL cell)
+    {
+        return Map.In_Radar(cell) && Passable_Cell(cell, FACING_NONE, threat, threshhold);
+    };
+
+    for (int curDistance = 1; curDistance <= maxRadius; ++curDistance)
+    {
+        const int left = targetX - curDistance;
+        const int right = targetX + curDistance;
+        const int top = targetY - curDistance;
+        const int bottom = targetY + curDistance;
+
+        //Test top row
+        for (int x = left; x <= right; ++x)
+        {
+            const CELL currentCell = XY_Cell(x, top);
+            if (validate_cell(currentCell))
+                return currentCell;
+        }
+
+        //Test bottom row
+        for (int x = left; x <= right; ++x)
+        {
+            const CELL currentCell = XY_Cell(x, bottom);
+            if (validate_cell(currentCell))
+                return currentCell;
+        }
+
+        //Test left column
+        for (int y = top + 1; y < bottom; ++y)
+        {
+            const CELL currentCell = XY_Cell(y, left);
+            if (validate_cell(currentCell))
+                return currentCell;
+        }
+
+        //Test the right column
+        for (int y = top + 1; y < bottom; ++y)
+        {
+            const CELL currentCell = XY_Cell(y, right);
+            if (validate_cell(currentCell))
+                return currentCell;
+        }
+    }
+
+    return 0;
+}
+
+int FootClass::Find_Path_AStar(PathType* const resultPath, const CELL source, CELL dest, const int maxLen, const MoveType threshhold, const int threat) const
+{
+    struct AStarCell {
+        AStarCell* prev = nullptr;
+        CELL       position = 0;
+        int        cell_distance_from_start = 0;
+        float        cost_from_start = 0;
+        float      estimated_cost_to_end = 0;
+    };
+
+    const auto inverse_node_sort = [](const AStarCell* const lhs, const AStarCell* const rhs) {
+        const float lhs_cost = lhs->cost_from_start + lhs->estimated_cost_to_end;
+        const float rhs_cost = rhs->cost_from_start + rhs->estimated_cost_to_end;
+
+        return lhs_cost > rhs_cost;
+    };
+
+    //General error case early exits
+    if (maxLen <= 0 || source == dest) {
+        return 0;
+    }
+
+    //Target is impassable, try to account for that by finding a position nearby, or staying still if already close
+    if (!Passable_Cell(dest, FACING_NONE, threat, threshhold)) {
+        static const int impassableCloseEnough = 3;
+        const int distanceToDest = Lepton_To_Cell(::Distance(Cell_Coord(source), Cell_Coord(dest)));
+        if (distanceToDest > impassableCloseEnough) {
+            const CELL nearbyDest = Find_Passable_Position_Near(dest, impassableCloseEnough, threshhold, threat);
+
+            //Failed to find a passable position at or near the target or nearby position is further away or equidistant to our current position, so just stay put
+            if (nearbyDest == 0 || Lepton_To_Cell(::Distance(Cell_Coord(dest), Cell_Coord(nearbyDest))) >= distanceToDest) {
+                return 0;
+            }
+            else
+            {
+                dest = nearbyDest;
+            }
+        }
+        else {
+            return 0;
+        }
+    }
+
+    std::unordered_map<CELL, AStarCell> visited_cells;
+    static std::vector<AStarCell*> open_list;
+    open_list.clear();
+
+    //Add the source cell to the open list
+    open_list.push_back(&visited_cells.emplace(source, AStarCell()).first->second);
+    open_list.back()->position = source;
+
+    AStarCell* dest_result = nullptr;
+
+    while (!open_list.empty()) {
+        AStarCell& prev_cell = *open_list.back();
+        open_list.pop_back();
+
+        if (prev_cell.position == dest) {
+            dest_result = &prev_cell;
+            break;
+        }
+
+        for (FacingType facing = FACING_FIRST; facing < FACING_COUNT; facing++) {
+            const CELL adjacent_cell_id = Adjacent_Cell(prev_cell.position, facing);
+
+            //Passable cell returns 0 if the object can't enter the cell from this direction
+            float cell_cost = (float)Passable_Cell(adjacent_cell_id, facing, threat, threshhold);
+            // Ignore friendly units in motion unless they're really close, on the assumption that they'll move elsewhere before we arrive
+            if (cell_cost == 3) { //MOVE_MOVING_BLOCK is 3
+                if (prev_cell.cell_distance_from_start > 4) {
+                    cell_cost = 1;
+                } else if (prev_cell.cell_distance_from_start > 2) {
+                    cell_cost = 2;
+                }
+            }
+            // diagonal moves cost more
+            if (cell_cost > 0 && (facing == FACING_NE || facing == FACING_SE || facing == FACING_SW || facing == FACING_NW)) {
+                cell_cost += 0.41f;
+            }
+
+            if (cell_cost > 0)
+            {
+                cell_cost += prev_cell.cost_from_start;
+                auto emplace_result = visited_cells.emplace(adjacent_cell_id, AStarCell());
+                AStarCell& current_cell = emplace_result.first->second;
+                if (emplace_result.second || cell_cost < current_cell.cost_from_start)
+                {
+                    current_cell.position = adjacent_cell_id;
+                    current_cell.prev = &prev_cell;
+                    current_cell.cell_distance_from_start = prev_cell.cell_distance_from_start + 1;
+                    current_cell.cost_from_start = cell_cost;
+                    current_cell.estimated_cost_to_end = Euclidian_Cell_Distance_Estimate(adjacent_cell_id, dest);
+
+                    //Insert the new node before the first item that is *NOT* greater than it. Which should leave the list with the lowest cost nodes at the back.
+                    open_list.insert(std::lower_bound(open_list.begin(), open_list.end(), &current_cell, inverse_node_sort), &current_cell);
+                }
+            }
+        }
+
+    }
+
+    if (dest_result)
+    {
+        const int total_path_length = dest_result->cell_distance_from_start;
+
+        //If we don't have a path to fill in, then just return here
+        if (resultPath == nullptr)
+            return total_path_length;
+
+        //Cost is used for comparing paths with different threat thesholds, so use the overall cost regardless of truncation
+        resultPath->Cost = (int)(dest_result->cost_from_start + 0.5f); // +0.5 coupled with cast to int is equivalent to rounding (we need to go back to int unless we want to go changing WW's definition for PathType)
+
+        //Scrub back to the max path length to store. maxLen is the size of the resultPath buffer,
+        //so stop 1 element short to leave room for the END terminator.
+        while (dest_result->prev && dest_result->cell_distance_from_start >= maxLen) {
+            dest_result = dest_result->prev;
+        }
+
+        resultPath->Command[dest_result->cell_distance_from_start] = END;
+        resultPath->Length = dest_result->cell_distance_from_start;
+
+        for (; dest_result->prev != nullptr; dest_result = dest_result->prev) {
+            const AStarCell& prev_node = *dest_result->prev;
+            resultPath->Command[prev_node.cell_distance_from_start] = CELL_FACING(prev_node.position, dest_result->position);
+        }
+
+        Optimize_Moves(resultPath, threshhold);
+
+        return total_path_length;
+    }
+
+    return 0;
+}
+
 /***********************************************************************************************
  * Find_Path -- Find a path from point a to point b.                                           *
  *                                                                                             *
@@ -471,6 +681,34 @@ PathType* FootClass::Find_Path(CELL dest, FacingType* final_moves, int maxlen, M
     path.LastFixup = -1;
 
     memset(path.Overlap, 0, sizeof(MainOverlap));
+
+    if (ActiveCFEPatchConfig.EnableASPathing) {
+        int asThreat = threat;
+        bool result = false;
+        do {
+            result = Find_Path_AStar(&path, source, dest, maxlen, threshhold, threat);
+
+            if (!result && asThreat != -1) {
+                switch (++threat_stage) {
+                case 0:
+                    asThreat = unit_threat >> 1;
+                    break;
+
+                case 1:
+                    asThreat += unit_threat;
+                    break;
+
+                case 2:
+                    asThreat = -1;
+                    break;
+                }
+            }
+        } while (!result && asThreat != -1);
+
+        if (result) {
+            return &path;
+        }
+    }
 
     /*
     ** Clear the over lap list and then make sure that our starting position is marked
@@ -1023,7 +1261,7 @@ bool FootClass::Follow_Edge(CELL start,
  *   06/01/1992  JLB : Optimized and commented.                                                *
  *=============================================================================================*/
 #define EMPTY (FacingType) - 2
-int FootClass::Optimize_Moves(PathType* path, MoveType threshhold)
+int FootClass::Optimize_Moves(PathType* path, MoveType threshhold) const
 // int Optimize_Moves(PathType *path, int (*callback)(CELL, FacingType), int threshold)
 {
     /*
@@ -1256,7 +1494,7 @@ CELL FootClass::Safety_Point(CELL src, CELL dst, int start, int max)
     return (-1);
 }
 
-int FootClass::Passable_Cell(CELL cell, FacingType face, int threat, MoveType threshhold)
+int FootClass::Passable_Cell(CELL cell, FacingType face, int threat, MoveType threshhold) const
 {
     MoveType move = Can_Enter_Cell(cell, face);
 

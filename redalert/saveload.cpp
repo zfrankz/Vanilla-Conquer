@@ -816,6 +816,7 @@ bool Load_Game(const char* file_name)
     **	data loaded.
     */
     Post_Load_Game(load_net);
+    Map.Rebuild_Vehicle_Reservations();
 
     /*
     ** Re-init unit trackers. They will be garbage pointers after the load

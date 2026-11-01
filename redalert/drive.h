@@ -116,6 +116,7 @@ public:
     virtual bool Stop_Driver(void);
 
     void Mark_Track(COORDINATE headto, MarkType type);
+    CELL Track_Midpoint_Cell(void); // CFE Patch Redux cell reservation fix.
 
     /**********************************************************************
     **	These enumerations are used as working constants that exist only

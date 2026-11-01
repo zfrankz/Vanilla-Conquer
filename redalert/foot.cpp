@@ -2661,3 +2661,67 @@ int FootClass::Mission_Retreat(void)
 
     return (MissionControl[Mission].Normal_Delay() + Random_Pick(0, 2));
 }
+
+/***********************************************************************************************
+ * FootClass::Find_Docking_Bay -- Searches for a close docking bay.                            *
+ *                                                                                             *
+ *    CFE Patch Redux A* pathing: rates buildings by path length, falling back to the closest  *
+ *    one in a straight line when no path is found.                                            *
+ *=============================================================================================*/
+BuildingClass* FootClass::Find_Docking_Bay(StructType b, bool friendly) const
+{
+    if (!ActiveCFEPatchConfig.EnableASPathing) {
+        return TechnoClass::Find_Docking_Bay(b, friendly);
+    }
+
+    BuildingClass* as_best = nullptr;
+    BuildingClass* direct_best = nullptr;
+    /*
+    **	First check to see if there are ANY buildings of the specified
+    **	type in thi house's inventory. If not, then don't bother to scan
+    **	for one.
+    */
+    if (House->BScan & (1L << b)) {
+        int as_bestval = INT_MAX;
+        int direct_bestval = INT_MAX;
+
+        const bool is_aircraft = What_Am_I() == RTTI_AIRCRAFT;
+
+        /*
+        **	Loop through all the buildings and find the one that matches the specification
+        **	and is willing to dock with this object.
+        */
+        for (int index = 0; index < Buildings.Count(); index++) {
+            BuildingClass* building = Buildings.Ptr(index);
+
+            /*
+            **	Check to see if the building qualifies (preliminary scan).
+            */
+            if (!building->IsInLimbo && *building == b
+                && (friendly ? building->House->Is_Ally(this) : building->House == House)
+                && const_cast<FootClass&>(*this).TechnoClass::Transmit_Message(RADIO_CAN_LOAD, building)
+                       == RADIO_ROGER) {
+
+                /*
+                **	If the building qualifies and this building is better than the
+                **	last qualifying building (as rated by distance), then record
+                **	this building and keep scanning.
+                */
+                const int direct_distance = Distance(building);
+                const int as_distance =
+                    is_aircraft
+                        ? direct_distance
+                        : Find_Path_AStar(nullptr, Coord_Cell(Coord), building->Nearby_Location(), 1, MOVE_NO, -1);
+                if (direct_distance && (direct_distance < direct_bestval || building->IsLeader)) {
+                    direct_best = building;
+                    direct_bestval = direct_distance;
+                }
+                if (as_distance && (as_distance < as_bestval || building->IsLeader)) {
+                    as_best = building;
+                    as_bestval = as_distance;
+                }
+            }
+        }
+    }
+    return as_best ? as_best : direct_best;
+}
