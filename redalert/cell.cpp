@@ -3203,6 +3203,158 @@ bool CellClass::Spread_Tiberium(bool forced)
     return (false);
 }
 
+/*
+**	CFE better ore growth: odds of promoting ore to gems, so that the average value added matches
+**	one level of ore, slowed down by ORE_TO_GEM_SLOW_FACTOR. Falls back to 1% if gems are worth
+**	less on average than fully grown ore, which is the case without ORE_INDEX_BUGFIX.
+*/
+static int CFE_Gem_Promotion_Max_Roll(void)
+{
+    const int bugfixoffset = ActiveCFEPatchConfig.OreIndexBugfix ? 1 : 0;
+    int maxroll =
+        (((((Rule.GemValue * 4 * (3 + (3 * bugfixoffset))) / 3) - (Rule.GoldValue * (11 + bugfixoffset)))
+          * ActiveCFEPatchConfig.OreToGemPromotionSlowFactor)
+         / Rule.GoldValue)
+        - 1;
+    return (maxroll < 1) ? 99 : maxroll;
+}
+
+/***********************************************************************************************
+ * CellClass::CFE_Spread_Tiberium -- Spread_Tiberium with failovers (better ore growth).       *
+ *                                                                                             *
+ *    When no adjacent cell can germinate, grows a neighbour, then this cell, and finally has  *
+ *    a chance to turn this cell into gems. New ore gets its level once, before being drawn.   *
+ *=============================================================================================*/
+bool CellClass::CFE_Spread_Tiberium(bool forced)
+{
+    if (!forced) {
+        if (!Can_Tiberium_Spread())
+            return (false);
+    }
+    CellClass* backupcell = NULL;
+    FacingType offset = Random_Pick(FACING_N, FACING_NW);
+    for (FacingType index = FACING_N; index < FACING_COUNT; index++) {
+        CellClass* newcell = Adjacent_Cell(index + offset);
+
+        if (newcell != NULL) {
+            TerrainClass* terrainptr = newcell->Cell_Terrain();
+            if (terrainptr != NULL && (*terrainptr != TERRAIN_NONE)) {
+                continue;
+            }
+
+            if (newcell->Can_Tiberium_Germinate()) {
+                newcell->OverlayData = 0;
+                newcell->Overlay = Random_Pick(OVERLAY_GOLD1, OVERLAY_GOLD4);
+                newcell->Recalc_Attributes();
+                newcell->Redraw_Objects();
+                return (true);
+            } else if (backupcell == NULL && newcell->Can_Tiberium_Grow()) {
+                backupcell = newcell;
+            }
+        }
+    }
+
+    // Fall back to making a neighbour grow.
+    if (backupcell != NULL) {
+        backupcell->Grow_Tiberium();
+        return (true);
+    }
+
+    // Stop here if there's a mine head or any other terrain object in this cell.
+    TerrainClass* terrainptr = Cell_Terrain();
+    if (terrainptr != NULL && (*terrainptr != TERRAIN_NONE)) {
+        return (false);
+    }
+
+    // Fall back to growing this cell.
+    if (Can_Tiberium_Grow()) {
+        Grow_Tiberium();
+        return (true);
+    }
+
+    // Fall back to maybe turning into gems.
+    if (Random_Pick(0, CFE_Gem_Promotion_Max_Roll()) < 1) {
+        OverlayData = Random_Pick(0, 2);
+        Overlay = Random_Pick(OVERLAY_GEMS1, OVERLAY_GEMS4);
+        Recalc_Attributes();
+        Redraw_Objects(true);
+        return (true);
+    }
+    return (false);
+}
+
+/***********************************************************************************************
+ * CellClass::CFE_Ore_Mine_Spread_Tiberium -- Spreads ore around a mine (better ore growth).   *
+ *                                                                                             *
+ *    When no adjacent cell can germinate, grows a neighbour, or else may promote fully grown  *
+ *    ore next to the mine to gems.                                                            *
+ *=============================================================================================*/
+bool CellClass::CFE_Ore_Mine_Spread_Tiberium(void)
+{
+    CellClass* backupcell = NULL;
+    CellClass* gembackupcell = NULL;
+    FacingType offset = Random_Pick(FACING_N, FACING_NW);
+    for (FacingType index = FACING_N; index < FACING_COUNT; index++) {
+        CellClass* newcell = Adjacent_Cell(index + offset);
+
+        if (newcell != NULL) {
+            TerrainClass* terrainptr = newcell->Cell_Terrain();
+            if (terrainptr != NULL && (*terrainptr == TERRAIN_MINE)) {
+                continue;
+            }
+
+            if (newcell->Can_Tiberium_Germinate()) {
+                newcell->OverlayData = 0;
+                newcell->Overlay = Random_Pick(OVERLAY_GOLD1, OVERLAY_GOLD4);
+                newcell->Recalc_Attributes();
+                newcell->Redraw_Objects();
+                return (true);
+            } else if (backupcell == NULL && newcell->Can_Tiberium_Grow()) {
+                backupcell = newcell;
+            } else if (gembackupcell == NULL && Rule.IsTSpread && (Session.Type == GAME_NORMAL || Session.Options.Tiberium)
+                       && newcell->Land_Type() == LAND_TIBERIUM && newcell->OverlayData >= 11
+                       && (Overlay == OVERLAY_GOLD1 || Overlay == OVERLAY_GOLD2 || Overlay == OVERLAY_GOLD3
+                           || Overlay == OVERLAY_GOLD4)) {
+                gembackupcell = newcell;
+            }
+        }
+    }
+
+    // Fall back to making a neighbour grow.
+    if (backupcell != NULL) {
+        backupcell->Grow_Tiberium();
+        return (true);
+    }
+
+    // Fall back to maybe promoting a neighbour to gems.
+    if (gembackupcell != NULL && Random_Pick(0, CFE_Gem_Promotion_Max_Roll()) < 1) {
+        gembackupcell->OverlayData = Random_Pick(0, 2);
+        gembackupcell->Overlay = Random_Pick(OVERLAY_GEMS1, OVERLAY_GEMS4);
+        gembackupcell->Recalc_Attributes();
+        gembackupcell->Redraw_Objects(true);
+        return (true);
+    }
+    return (false);
+}
+
+/***********************************************************************************************
+ * CellClass::CFE_Dump_Ore_Here -- Puts ore back in this cell (gem overload fix).              *
+ *=============================================================================================*/
+bool CellClass::CFE_Dump_Ore_Here(void)
+{
+    if (Can_Tiberium_Germinate()) {
+        OverlayData = 0;
+        Overlay = Random_Pick(OVERLAY_GOLD1, OVERLAY_GOLD4);
+        Recalc_Attributes();
+        Redraw_Objects();
+        return (true);
+    } else if (Can_Tiberium_Grow()) {
+        Grow_Tiberium();
+        return (true);
+    }
+    return (false);
+}
+
 /***********************************************************************************************
  * CellClass::Can_Tiberium_Germinate -- Determines if Tiberium can begin growth in the cell.   *
  *                                                                                             *

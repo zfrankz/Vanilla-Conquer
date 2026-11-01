@@ -2449,14 +2449,29 @@ bool UnitClass::Harvesting(void)
             if (Rule.BailCount > Tiberium) {
                 Gems++;
                 Tiberium++;
+            } else if (ActiveCFEPatchConfig.GemOverloadFix && Gold) {
+                // CFE: if out of space, dump ore for gems.
+                Gems++;
+                Gold--;
+                ptr->CFE_Dump_Ore_Here();
             }
             if (Rule.BailCount > Tiberium) {
                 Gems++;
                 Tiberium++;
+            } else if (ActiveCFEPatchConfig.GemOverloadFix && Gold) {
+                // CFE: if out of space, dump ore for gems.
+                Gems++;
+                Gold--;
+                ptr->CFE_Dump_Ore_Here();
             }
             if (Rule.BailCount > Tiberium) {
                 Gems++;
                 Tiberium++;
+            } else if (ActiveCFEPatchConfig.GemOverloadFix && Gold) {
+                // CFE: if out of space, dump ore for gems.
+                Gems++;
+                Gold--;
+                ptr->CFE_Dump_Ore_Here();
             }
             break;
 

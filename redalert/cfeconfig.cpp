@@ -167,3 +167,33 @@ void Initialise_CFE_Patch_Config()
     }
     Populate_CFE_Patch_Config_From_INI(ini);
 }
+
+/*
+**	Random_Pick is capped at 32767, but the ore growth odds can go well beyond that. This uses the
+**	synchronized random number generator, like Random_Pick.
+*/
+int CFE_Patch_FullRange_Random_Pick(int min, int max)
+{
+    if (min > max) {
+        int temp = min;
+        min = max;
+        max = temp;
+    }
+    min = std::max(min, 0);
+    max = std::max(max, 0);
+    if (max == 0) {
+        return 0;
+    }
+    int adjustedmax = (max - min) + 1;
+    int ceiling = (INT_MAX / adjustedmax) * adjustedmax;
+    int fullrangerandom = 0;
+    do {
+        int random_one = Scen.RandomNumber & 0x7fff; // This is a call: RandomClass has an int conversion operator.
+        int random_two = Scen.RandomNumber & 0x7fff;
+        fullrangerandom = (random_one << 16) | random_two;
+        if (random_one > random_two) {
+            fullrangerandom |= 0x8000;
+        }
+    } while (fullrangerandom > ceiling);
+    return (fullrangerandom % adjustedmax) + min;
+}

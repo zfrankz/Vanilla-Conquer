@@ -523,8 +523,21 @@ void TerrainClass::AI(void)
 
     ObjectClass::AI();
 
-    if ((*this == TERRAIN_MINE) && (Frame % (Rule.GrowthRate * TICKS_PER_MINUTE)) == 0) {
-        Map[::As_Cell(As_Target())].Spread_Tiberium(true);
+    if (*this == TERRAIN_MINE) {
+        if (ActiveCFEPatchConfig.BetterOreGrowth) {
+            int threshhold = 1;
+            if (Session.Type == GAME_GLYPHX_MULTIPLAYER && Session.Options.Tiberium > 1) {
+                threshhold = Session.Options.Tiberium;
+            }
+            threshhold = max(threshhold, ActiveCFEPatchConfig.OreGrowthScale);
+            int maxroll = (Rule.GrowthRate * TICKS_PER_MINUTE) - 1;
+            if (CFE_Patch_FullRange_Random_Pick(0, maxroll) < threshhold) {
+                // CFE: this centers the growth on the mine itself, not on the cell below it.
+                Map[Coord_Cell(Coord)].CFE_Ore_Mine_Spread_Tiberium();
+            }
+        } else if ((Frame % (Rule.GrowthRate * TICKS_PER_MINUTE)) == 0) {
+            Map[::As_Cell(As_Target())].Spread_Tiberium(true);
+        }
     }
     if (StageClass::Graphic_Logic()) {
         Mark();

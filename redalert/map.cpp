@@ -2606,3 +2606,99 @@ void MapClass::Shroud_The_Map(void)
     Flag_To_Redraw(true);
 }
 #endif
+
+/***********************************************************************************************
+ * MapClass::CFE_Logic -- CFE Patch Redux "better ore growth".                                 *
+ *                                                                                             *
+ *    Replaces Logic: scans the whole map every tick and gives every eligible cell the same    *
+ *    odds, instead of filling lists of limited size over a whole growth period. Static lists  *
+ *    keep the save format unchanged.                                                          *
+ *=============================================================================================*/
+void MapClass::CFE_Logic(void)
+{
+    if (Debug_Force_Crash) {
+        *((int*)0) = 1;
+    }
+
+    /*
+    **	Crate regeneration is handled here.
+    */
+    if (Session.Type != GAME_NORMAL && Session.Options.Goodies) {
+
+        /*
+        **	Find any crate that has expired and then regenerate it at a new
+        **	spot.
+        */
+        for (int index = 0; index < ARRAY_SIZE(Crates); index++) {
+            if (Crates[index].Is_Expired()) {
+                Crates[index].Remove_It();
+                Place_Random_Crate();
+            }
+        }
+    }
+
+    /*
+    **	Bail early if there is no allowed growth or spread of Tiberium.
+    */
+    if (!Rule.IsTGrowth && !Rule.IsTSpread)
+        return;
+
+    static CELL cangrowlist[MAP_CELL_TOTAL];
+    static CELL canspreadlist[MAP_CELL_TOTAL];
+    int growlistsize = 0;
+    int spreadlistsize = 0;
+
+    for (int index = 0; index < MAP_CELL_TOTAL; index++) {
+        CELL cell = index;
+        if (In_Radar(cell)) {
+            CellClass* ptr = &(*this)[cell];
+            if (ptr->Can_Tiberium_Grow()) {
+                cangrowlist[growlistsize++] = cell;
+            }
+            if (ptr->Can_Tiberium_Spread()) {
+                canspreadlist[spreadlistsize++] = cell;
+            }
+        }
+    }
+
+    /*
+    **	The original grew every listed cell, up to MAP_CELL_W/2 of them, each period; the odds here
+    **	match that, reduced to account for a complete scan every tick.
+    */
+    int threshhold = 1;
+    int maxroll = 1;
+    if (growlistsize > MAP_CELL_W / 2) {
+        threshhold = MAP_CELL_W / 2;
+        maxroll = growlistsize;
+    }
+
+    // Multiplayer tiberium setting and mod setting: the bigger one wins.
+    int scalefactor = 1;
+    if (Session.Type == GAME_GLYPHX_MULTIPLAYER && Session.Options.Tiberium > 1) {
+        scalefactor = Session.Options.Tiberium;
+    }
+    scalefactor = max(scalefactor, ActiveCFEPatchConfig.OreGrowthScale);
+
+    float multiplier = ((float)(Rule.GrowthRate * TICKS_PER_MINUTE)) / (float)scalefactor;
+    maxroll = (int)((float)maxroll * multiplier + 0.5f) - 1;
+
+    for (int i = 0; i < growlistsize; i++) {
+        if (CFE_Patch_FullRange_Random_Pick(0, maxroll) < threshhold) {
+            (*this)[cangrowlist[i]].Grow_Tiberium();
+        }
+    }
+
+    threshhold = 1;
+    maxroll = 1;
+    if (spreadlistsize > MAP_CELL_W / 2) {
+        threshhold = MAP_CELL_W / 2;
+        maxroll = spreadlistsize;
+    }
+    maxroll = (int)((float)maxroll * multiplier + 0.5f) - 1;
+
+    for (int i = 0; i < spreadlistsize; i++) {
+        if (CFE_Patch_FullRange_Random_Pick(0, maxroll) < threshhold) {
+            (*this)[canspreadlist[i]].CFE_Spread_Tiberium();
+        }
+    }
+}

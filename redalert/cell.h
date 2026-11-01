@@ -344,6 +344,9 @@ public:
     */
     bool Grow_Tiberium(void);
     bool Spread_Tiberium(bool forced = false);
+    bool CFE_Spread_Tiberium(bool forced = false);
+    bool CFE_Ore_Mine_Spread_Tiberium(void);
+    bool CFE_Dump_Ore_Here(void);
     int Tiberium_Adjust(bool pregame = false);
     void Wall_Update(void);
     void Concrete_Calc(void);
