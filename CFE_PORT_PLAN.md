@@ -592,8 +592,36 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
 Phase 4 state: all 9 steps ported on `cfe-port`. Nothing in it has been played by hand.
 
 ## Phase 5 – Multiplayer / 8 players
-VC `MAX_PLAYERS 6`; needs legacy lobby/score UI work. Needs a CFE config hash shared
-between peers to avoid desyncs. Until then CFE features are SP/skirmish only.
+Done:
+- Join check (`6fbb49f5`): `CFE_Patch_Config_Hash()` covers every ini entry through one visitor, except what only changes
+  the local player's screen or sound (`VERSION_ANNOUNCE`, `BUILDING_CAPTURE_ANNOUNCE`, `BUILDING_DEATH_ANNOUNCE_MODE`,
+  `QUIETER_AIRSTRIPS`, `INVERSE_PREVIEW_MODE`, `LEGACY_RENDER_DISABLE_MODE`, `CUSTOM_MISSION_DEFAULT_SCENARIO`). The
+  unmodified game gives 0. RA mixes it into the `rules.ini` ID; TD adds `PlayerInfo.CFEHash` (13 bytes in a 35 byte union,
+  so `GlobalPacketType` stays 48). TD's joiner only sees the generic "request denied".
+- Random_Pick order (`6fbb49f5`): the 4 sibling calls left (RA `scenario.cpp`; TD `house.cpp`, `display.cpp`, and the port's
+  own `map.cpp`) now run X before Y, the order clang gave them. The rest of `f5eebc5` was already in VC.
+- Audit of the added lines reading `Keyboard`, `PlayerPtr`, selection: all are UI, sound, or read when an order is given and
+  then sent as an event. Cheats are limited to normal and skirmish games.
+- `Read_Line` drops a last line with no line end, which silently lost `INFANTRY_TIBERIUM_AVERSION=2` from the user's TD ini.
+  The CFE loader now keeps it (`960802c2`). `Read_Line` itself stays, as `rules.ini` and scenarios depend on it.
+
+Real two process LAN games, with an uncommitted harness (own UDP ports, fake peer addresses, scripted lobby, bot sending
+events), per frame hashes compared:
+- RA with the user's ini: 6000 frames identical, 5 buildings placed by each side, `SET_RALLY` sent, ranks and XP gained.
+- TD with the user's ini: 6000 frames identical, attack-move and combat. The bot placed no building, so TD rally is untested.
+- Options off: RA 1500 and TD 1200 frames identical.
+- Different options rejected: RA off vs on, RA two inis differing only in `WALL_BUILD_LENGTH`, TD off vs on.
+- Control: 1 strength point changed on one side at frame 600 shows as a difference at log line 601. The game's own CRC
+  check didn't report it within 300 frames, so it can't be relied on as the test.
+- No options vs upstream after these changes: RA 7 cases 3000 frames, TD 3 saves 2000 frames, no differences.
+
+Not verified: real network (latency, loss, two machines), more than 2 players, 2 different compilers or CPUs, the host's
+save and load in multiplayer, aircraft, boats and superweapons in LAN. Serial play has no menu entry in RA and wasn't tested.
+
+Pending, needs a decision: TD 8 players. `HOUSE_COUNT` sizes `HouseClass::UnitsKilled` and `BuildingsKilled`, so
+`SAVEGAME_VERSION` changes and existing TD saves stop loading. CFE's commit doesn't touch `NETDLG.CPP` (Remastered has its
+own lobby), so the legacy lobby's 6 color boxes and the start positions are new work. `SPLIT_DUAL_CAPTURABLES` has the same
+save cost and could share that break.
 
 ## Phase 6 – Packaging
 universal2 `.app`, dylibbundler, ad-hoc codesign, GitHub Actions macOS job.

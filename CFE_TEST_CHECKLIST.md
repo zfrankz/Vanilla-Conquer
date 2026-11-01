@@ -416,3 +416,11 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] A skirmish against the computer with your ini, with several factories, ships and aircraft.
 - [ ] With the ini moved away: the game plays as the original.
 - [ ] Multiplayer: not ready (Phase 5). Both players would need the same ini.
+
+## Multiplayer (Phase 5, two computers on one network)
+
+- [ ] RA: same `cfepatchredux_ra.ini` on both. Host a game, join it, play 10 minutes with attack-move and rally points: no "out of sync".
+- [ ] TD: same `cfepatchredux.ini` on both. Same test.
+- [ ] RA: change one option on the joiner: joining fails with "Rules or CFE options differ from the host".
+- [ ] TD: change one option on the joiner: joining is denied.
+- [ ] TD: with `INFANTRY_TIBERIUM_AVERSION=2` as the last line, infantry now avoids tiberium in pathing (it wasn't being applied before).
