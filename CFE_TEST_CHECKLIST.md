@@ -298,3 +298,11 @@ Under `[FEATURES]`, except the three marked `[SETTINGS]`.
 - Two engineers on one building: one goes in, the other survives.
 - Load 3 infantry into a Chinook: all board and the door closes.
 - Mission with crates: an explosive crate still works, and nothing stays stuck on that cell.
+- A building destroyed while it is still rising leaves the power bar as it was before it.
+
+## 2z. Missing voices
+
+These data lack 10 EVA voices: `NOCASH1`, `MOCASH1`, `INCOME1`, `ENEMYA`, `NOBUILD1`, `NEEDHARV`, `TRANSSEE`, `TRANLOAD`,
+`ENMYAPP1`, `REPAIR1`. Nothing is said for them, and this used to crash on the second repair in a row.
+
+- Repair two damaged vehicles in a row on a repair bay: no crash, no spoken "repairing".

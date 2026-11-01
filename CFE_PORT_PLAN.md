@@ -432,13 +432,34 @@ jeeps in 1440 frames, longest gap 89/116 frames. Clicking "Ready" on a busy fact
      helipad and lands; off it stays on the bay. House acting GDI building a war factory: captured flag 1 to 0. Team with
      an engineer ignores a tank's attack with `GENERAL_BUGFIXES`. Simulated skirmish (`GameToPlay` set by the harness):
      preplaced unit/infantry orders by mode 0 guard, 1 from the map, 2 timed hunt/hunt; no alliance with neutral.
-   - `Is_Near_Friendly_Cell` and the options off: a frame by frame state hash can't compare builds, as one binary differs
-     from itself with the same save and seed. Instead, every changed hunk since `54ddd7af` was checked for a switch; the
-     only unswitched behaviour is the `Goto_Tiberium` cap, which also changes how many random numbers a failed search uses.
-   - Not verified: real multiplayer and dinosaurs; `QUIETER_AIRSTRIPS` sidebar part and mode 2; `Base_Is_Attacked` (called
-     200 times without a crash, no defender assigned on or off); `THREAT_CAPTURE` teams (same target on and off in the
-     test); the `IsDown`, drain, flamethrower, gunboat and scatter fixes; real play. Audit of CFE's unflagged fixes covered
-     32 chosen commits out of 568, not all: the sound commits `47faceb` and `cef9665` were listed but not read.
+   - Third pass (headless, `SDL_VIDEODRIVER=dummy`, temporary code removed). The game is deterministic once both random
+     generators are seeded just before the first logic tick (seeding them after that tick gave the earlier false
+     result): two runs of saves 2, 5 and 8 gave the same hashes for 2000 frames and the same random calls with their
+     call stacks (736291 for save 2).
+   - Options off against the original: `HEAD` without an ini matches Vanilla-Conquer `ce83b59e` in both seeds and in the
+     unit, infantry, building and house hashes for 2000 frames on all 9 saves. Control: the real ini diverges from
+     frame 1 on saves 2, 5 and 8. No player input in these runs, so code that only input reaches isn't covered.
+   - Found and fixed: `Speak_AI` replayed the buffer after a voice file failed to load, a SIGBUS on the second repair
+     with data lacking `REPAIR1.AUD` (10 of 46 voices are missing here), reproduced and gone after the fix; the drain fix
+     left a building's drain for good if it was lost in its construction animation (now the `IsAwaitingOpening` bit,
+     inverted so old saves count as opened); CFE `9ff76b8` sidebar overflow (31 to 30 entries) and `f17677e` `Expert_AI`
+     cells (value -22658 to 422, enemy none to the candidate) had been missed.
+   - Verified off/on: flamethrower 68 to 62 hp at distance 16; `IsDown` overlap placement accepted to refused with rally
+     points; double opening drain 185 to 155, and 155 to 125 after destruction; scatter not called for inactive units,
+     still called for active ones; gunboat stuck on an out-of-range target (1 to 0, takes the near one); `Base_Is_Attacked`
+     with 10 candidates buggies/mammoths 2/1 to 3/0; mixed engineer team target unit to capturable building;
+     `QUIETER_AIRSTRIPS` modes 0-1 speak, 2-3 silent on an airstrip, weapons factory still speaks; building death voices
+     by mode, none for an undiscovered building; version message seen in a dumped frame; dinosaurs fight in campaign and
+     enter from outside the map with `MEANER_VISCEROIDS`, inside without it; real skirmish against 3 computer houses,
+     defaults, options on and with dinosaurs flags, 3600 frames each; RA loads its save and runs 2400 frames.
+   - Rerun on final code: bay same cell 18 to 0, visceroids 150 to 262 hp, sabotage survivors, Chinook 2 to 3, crates 32 of 40
+     delayed, all 9 saves load.
+   - CFE audit: all 94 ini keys are read; TD commits' surviving lines and identifiers compared with the port, then the
+     fixes for the original game reviewed by hand. `47faceb`, `cef9665` and the `cef9665` scold and seer sounds are
+     multiplayer context fixes for Remastered; hearing the opponent's scold in LAN is a Phase 5 item. `f5eebc5` (parameter
+     order of `Random_Pick`) only matters between compilers, also Phase 5.
+   - Not verified: LAN multiplayer (two copies can't share UDP port 1234 on one machine), play by hand, combat in the
+     skirmish runs (no base was destroyed), the engineer 3/6 to 6/6 figure with its original setup.
 
 VC renamed files to lowercase and clang-formatted them, so CFE commits cannot be
 cherry-picked; each feature's diff is applied by hand, then clang-formatted.
