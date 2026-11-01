@@ -635,5 +635,10 @@ Results of the local arm64 package: unzipped and run with `/opt/homebrew`, `/usr
 `sandbox-exec`, both games reach the main menu and `lsof` shows SDL2, SDL3 and OpenAL loaded from `Contents/libs`. Controls:
 the plain build dies with "Library not loaded", and removing libSDL3 gives no game window.
 
-Not verified: the CI job has never run (the fork has no registered workflows until Actions is enabled in its Actions tab), a
-universal build, x86_64 under Rosetta or on Intel, older macOS, opening a downloaded zip through Gatekeeper.
+CI moved to `macos-15` because GitHub retired `macos-14` on 2026-11-02, so universal zips need macOS 15 or later (minos 15.0).
+The release zip of run 41337071307 is x86_64 + arm64 in both binaries and both libraries, with MacPorts' real SDL2, so no
+SDL3. With the same paths denied, both games kept running with a window for 9 s natively and under Rosetta, using the bundled
+libraries.
+
+Not verified: menus or play in the universal zip (window images couldn't be captured), a real Intel Mac, a Mac without
+Homebrew, opening a downloaded zip through Gatekeeper, simulation hash between arm64 and x86_64.
