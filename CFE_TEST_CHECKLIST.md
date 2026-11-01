@@ -326,17 +326,21 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Harvesters spread between refineries instead of all queueing at one.
 - [ ] A harvester close to a refinery can take the place of one still far away.
 - [ ] No harvester stays idle, full, or shuttles endlessly between refineries.
+- [ ] Destroy the refinery a harvester is heading to: it picks another one.
 
 ## RA 3. Ore (`BETTER_ORE_GROWTH`, `ORE_GROWTH_SCALE`, `GEM_OVERLOAD_FIX`)
 - [ ] Ore spreads steadily around fields and mines, and never over a mine or a tree.
 - [ ] Long missions: some gems appear next to mines.
 - [ ] A nearly full harvester that reaches gems leaves a bit of ore behind.
+- [ ] Optional: `ORE_GROWTH_SCALE=3` makes fields grow visibly faster; `ORE_TO_GEM_SLOW_FACTOR=1` gives more gems.
 
 ## RA 4. Pathing (`ASTAR_PATHING`, `CELL_RESERVATION_FIX`)
 - [ ] Send a big group across a base and through a bridge: routes look sensible, no long freezes.
 - [ ] Two groups crossing: no two vehicles stopped on the same spot.
 - [ ] Ships in a narrow strait: they pass or wait, without getting stuck.
 - [ ] Save mid-move, load, and carry on: nothing freezes.
+- [ ] Big groups with A* on arrive in reasonable time: a stress test got fewer arrivals with A* (35) than without (52), unexplained. Note any jam.
+- [ ] Harvesters and repair-bound units pick the closest by road, not in a straight line across a river.
 
 ## RA 5. Veterancy and smarter units (`VETERANCY=2`, `TANYA_GUARD=2`, `SMARTER_AIRCRAFT`, `SMARTER_REPAIRBAY`)
 - [ ] Units that fight gain yellow pips when selected (one per rank), and a beep on promotion.
@@ -345,6 +349,16 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Aircraft with no ammo go home, and don't take off to attack.
 - [ ] Click a vehicle on a busy repair bay: it queues, and leaves cleanly when done.
 - [ ] Save and load: pips and ranks stay.
+- [ ] Rank 3 infantry: rifleman and Yak/ranger bullets hit tanks harder, grenadier +1 cell of range, rocket soldier runs faster, flamethrower barely hurts allies, medic heals itself, mechanic gives XP.
+- [ ] Rank 3 Tanya: goes stealth, fires once half decloaked, enemy dogs reveal her, cell triggers still fire in missions.
+- [ ] Rank 3 dogs: a howl sets nearby dogs on the same target.
+- [ ] Rank 3 vehicles: mammoth iron curtain when hit (20 s, every 2 min), artillery +1 range, V2 reloads faster, phase transport heals passengers, APC keeps passengers in a chrono shift, minelayer regains ammo, its mines hit harder.
+- [ ] Rank 3 ships: destroyer reveals nearby subs, submarine and gunboat double shot, cruiser extra volley, missile sub submerges sooner.
+- [ ] Rank 3 aircraft: repair for free on the pad, helicopters reload twice as fast, MiG and Yak two shots per ammo pip.
+- [ ] Rank 3 defenses: pillbox, AA gun, flame tower and SAM +1 range, turret double shot, Tesla coil chain lightning.
+- [ ] Super nukes don't exist: a missile silo never ranks up.
+- [ ] Tesla chain lightning force-fired at the ground doesn't crash.
+- [ ] An old save (made before this port) loads and plays.
 
 ## RA 6. Attack-move and Q-move (`ATTACK_MOVE`, `QMOVE_LOOPS`, `AIR_QMOVE`, `AIR_QAML_RECALL`, `CHRONOTANK_ATTACK_MOVE`)
 - [ ] Shift+click on the ground: units move and stop to fight what they meet, then carry on.
@@ -354,16 +368,49 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Helicopters and MiGs with queues; out of ammo they rearm and return to the loop.
 - [ ] A chronotank with Shift+click teleports when charged.
 - [ ] Stop (S) halts a queue at once.
+- [ ] Boats on attack-move shoot for a moment and move on, without getting stuck turning.
+- [ ] Dogs on attack-move carry on after a kill.
+- [ ] A new order or a death ends the attack-move cleanly; dying units don't twitch.
+- [ ] With `SMARTER_AIRCRAFT`, an aircraft with no ammo refuses the attack-move and goes home.
+- [ ] Several selected units take the same queue, and helicopters take a loop together.
 
 ## RA 7. Rally points, walls, gap (`RALLY_POINTS`, `WALL_BUILD_LENGTH=5`, `BUILDING_GAP_OFFSET`)
 - [ ] Select a factory and click the ground: a green line shows the rally point, and new units go there. Stop (S) clears it.
 - [ ] Repair bay with a rally point: repaired units go there; helicopters go to a pad.
 - [ ] Place a wall in line with another up to 5 cells away: the cursor covers the gap and it fills in. Ctrl places one piece.
 - [ ] With a gap offset, buildings can go further from the base.
+- [ ] Rally points on barracks, kennel, war factory, sub pen and shipyard. Click the building itself to clear it.
+- [ ] Rally point onto a unit or building: it's dropped when the target dies, and when the factory is captured.
+- [ ] Harvesters ignore rally points.
+- [ ] Minelayer re-armed on a bay with a rally point goes there.
+- [ ] Fixed wing plane on a repair bay with no free airstrip stays put and doesn't crash.
+- [ ] Selling a wall piece refunds money; with `WALLS_HAVE_FULL_COST=0` extra pieces are free and refund less.
+- [ ] Rally point survives save and load.
 
 ## RA 8. Supers and chrono (`OPENRA_WIDE_SUPERS`, `OPENRA_QUICK_SUPERS`, `SMARTER_CHRONO`, `TIMEQUAKE_FIX`)
 - [ ] Iron curtain on a group: up to 5 units glow, for 20 s; recharge 2 min.
 - [ ] Chronosphere on a group: up to 5 vehicles go together and return after 20 s.
 - [ ] A chronoshifted unit is deselected for others and enemy shots miss it.
 - [ ] Sometimes a timequake shakes the map after a chrono shift.
+- [ ] A chrono-shifted vehicle returning plays the sound at both ends and drops enemy target locks.
+- [ ] A chronotank shifting itself doesn't animate the Chronosphere and doesn't discharge it.
+- [ ] A timequake crate does something with `TIMEQUAKE_FIX`.
+- [ ] A vortex appears now and then; shifting while it's hidden can wake it.
+- [ ] Optional, not in your ini: `USE_SHARED_CHRONO_ODDS=1`, `CUMULATIVE_TIMELINE_DAMAGE=1` (the odds climb fast).
 
+## RA 9. Unflagged fixes (`GENERAL_BUGFIXES`)
+- [ ] MiGs out of ammo during a hunt go home in one smooth turn.
+- [ ] A building destroyed while still rising leaves the power bar as it was.
+- [ ] Sell a building and a construction yard: "structure sold" plays only for the building, no crash.
+- [ ] Units draw in the right order around big buildings (no vehicle over a tree it should be behind).
+- [ ] An engineer ordered to a new building goes at once, even while moving.
+- [ ] Computer engineers go for buildings they can really capture.
+- [ ] Capture an ally's construction yard and build a helipad and an airstrip: "new construction options" isn't repeated, and each offers only its own aircraft.
+- [ ] A very long sidebar (F5 cheat, many factories) doesn't crash.
+- [ ] A nuke from a house with no silo left doesn't crash.
+
+## RA 10. Everything together
+- [ ] A full campaign mission with your ini, saving and loading midway.
+- [ ] A skirmish against the computer with your ini, with several factories, ships and aircraft.
+- [ ] With the ini moved away: the game plays as the original.
+- [ ] Multiplayer: not ready (Phase 5). Both players would need the same ini.
