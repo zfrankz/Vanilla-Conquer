@@ -379,6 +379,7 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Repair bay with a rally point: repaired units go there; helicopters go to a pad.
 - [ ] Place a wall in line with another up to 5 cells away: the cursor covers the gap and it fills in. Ctrl places one piece.
 - [ ] With a gap offset, buildings can go further from the base.
+- [ ] Optional, not in your ini: `LONG_BGAP_BUGFIX=1`. Alone it narrows placement to 1 cell; use it with an offset.
 - [ ] Rally points on barracks, kennel, war factory, sub pen and shipyard.
 - [ ] Rally point onto a unit or building: it's dropped when the target dies, and when the factory is captured.
 - [ ] Harvesters ignore rally points.
@@ -407,6 +408,7 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Computer engineers go for buildings they can really capture.
 - [ ] Capture an ally's construction yard and build a helipad and an airstrip: "new construction options" isn't repeated, and each offers only its own aircraft.
 - [ ] A very long sidebar (F5 cheat, many factories) doesn't crash.
+- [ ] With a building ready to place, hold the cursor next to a building and have it destroyed: the placement stops being valid without moving the mouse.
 - [ ] A nuke from a house with no silo left doesn't crash.
 
 ## RA 10. Everything together

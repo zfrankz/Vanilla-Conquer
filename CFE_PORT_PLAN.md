@@ -575,8 +575,7 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
    - Under `GENERAL_BUGFIXES`: aircraft `Can_Fire` legality and facing check, aircraft out of ammo regrouping, drain and capacity of unfinished buildings, full layer sort,
      active checks in anims and unit scatter, atom damage cast, engineers heading at once for a new target, computer engineers retargeting, sidebar overflow, aircraft buildable
      list. Unconditional, since they change nothing else: use after free when selling in `Mission_Deconstruction`, `List_Copy` null check, `Sort_Y` null check.
-   - Audit of the 176 CFE RA commits: already in VC: helipad limit, ambush, Tesla crew spot, Movement_AI check, `ChronalVortex.Stop`, Ukraine voices, Monster Tank Madness sight, stale
-     proximity. Not ported: `INVERSE_PREVIEW_MODE`, repair icon `CanRepair` (DLL interface), `f5eebc5` (compiler evaluation order, Phase 5), `CFE_WildPointerCheck` (debug tool),
+   - Audit of the 176 CFE RA commits: already in VC: helipad limit, ambush, Tesla crew spot, Movement_AI check, `ChronalVortex.Stop`, Ukraine voices, Monster Tank Madness sight. Not ported: `INVERSE_PREVIEW_MODE`, repair icon `CanRepair` (DLL interface), `f5eebc5` (compiler evaluation order, Phase 5), `CFE_WildPointerCheck` (debug tool),
      `MADTimeQuakeCenterList`, the darkness crate and gap generator discovery changes (`Set_Undiscovered_By_Player`, which rely on the per-player masks of the Remastered client;
      VC handles this differently and it wasn't examined further). `EnableNewSkirmishAI` is not an option: CFE never reads it from its ini. The commit list was read by title; the
      diffs of 29 of them were read.
@@ -584,6 +583,11 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
      from upstream at line 1 in all 4 cases tried. With that file, 9000 frames: SCG05, SCG08, SCG10, SCG12, SCU04, SCU09 exit 0 with no player input. The save stopped at frame 3830 of the
      run: `sample` shows `Do_Lose`, the lost mission's movie, not a hang. Final build of both games; both alive at 12 s headless; no temporary code left.
    - Not verified: the fixes one by one (only that the game runs with them on), real play, multiplayer.
+
+   - Correction after a second check (`72e265b9`): the first audit missed three hunks. `SMARTER_AIRCRAFT` at take-off was missing, so a plane with no ammo accepted an attack-move:
+     now `am=0` and no destination with the switch, as before without it and with ammo. The stale proximity fix (magic build) was listed as already in VC and wasn't; the grand opening fix
+     wasn't listed. Both now under `GENERAL_BUGFIXES`, not tested on their own. Method of that check: count of each CFE switch by name in CFE and here; only `EnableSmarterAircraft` was a real
+     gap, the other lower counts are comments or merged copies, read by hand from the grep lists. It can't catch unflagged hunks. No options vs upstream after the fix: 7 cases identical.
 
 Phase 4 state: all 9 steps ported on `cfe-port`. Nothing in it has been played by hand.
 
