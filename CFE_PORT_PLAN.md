@@ -640,5 +640,8 @@ The release zip of run 41337071307 is x86_64 + arm64 in both binaries and both l
 SDL3. With the same paths denied, both games kept running with a window for 9 s natively and under Rosetta, using the bundled
 libraries.
 
-Not verified: menus or play in the universal zip (window images couldn't be captured), a real Intel Mac, a Mac without
-Homebrew, opening a downloaded zip through Gatekeeper, simulation hash between arm64 and x86_64.
+The user downloaded the universal zip from CI on their Apple Silicon Mac: macOS blocked it, and once allowed both games reach
+the main menu (2026-11-01).
+
+Not verified: play and sound in the universal zip, a real Intel Mac, a Mac without Homebrew, simulation hash between arm64
+and x86_64.
