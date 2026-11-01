@@ -561,6 +561,16 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
      the original reaches 2 cells; same logic as CFE). No options vs upstream: 7 cases identical, 3000 frames.
    - Not verified: placement cursor preview, Ctrl, repair bay rally, aircraft leaving a bay, and any of it by hand.
 
+8. OpenRA supers and chrono – ported (`1724c8ab`), play-test pending
+   - `OPENRA_WIDE_SUPERS`, `OPENRA_QUICK_SUPERS`, `SMARTER_CHRONO`, `TIMEQUAKE_FIX`, `USE_SHARED_CHRONO_ODDS`/`SHARED_CHRONO_ODDS`, `CUMULATIVE_TIMELINE_DAMAGE`.
+   - Differences from CFE: the wide super loops are one function instead of four copies, `object->Next` is read before a teleport and non-techno occupiers are skipped.
+     Odds are computed from whole percents, because `fixed * 100000` would overflow its 32 bits. The chain of timequakes per MAD tank (`MADTimeQuakeCenterList`) isn't ported.
+     The timeline counters are saved in the veterancy block.
+   - Verified on SCG08EA with 9 medium tanks in a 3x3 block, through `Place_Special_Blast`: recharge iron/chrono 9900/6300 off, 1800/1800 quick. Iron curtain 1 unit off, 5
+     wide; 675 ticks off, 300 quick. Chrono 1 off, 5 wide; 2700 ticks off, 300 quick. 400 uses: timequakes 0 off, 20 with the fix and quick, 2 shared, 331 cumulative (permanent
+     damage 332: the odds climb fast, as in CFE). No options vs upstream: 7 cases identical, 3000 frames.
+   - Not verified: the quake and vortex in play, a hidden vortex waking, chronotank self-shift sound, and any of it by hand.
+
 ## Phase 5 – Multiplayer / 8 players
 VC `MAX_PLAYERS 6`; needs legacy lobby/score UI work. Needs a CFE config hash shared
 between peers to avoid desyncs. Until then CFE features are SP/skirmish only.

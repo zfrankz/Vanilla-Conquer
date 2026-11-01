@@ -361,3 +361,9 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Place a wall in line with another up to 5 cells away: the cursor covers the gap and it fills in. Ctrl places one piece.
 - [ ] With a gap offset, buildings can go further from the base.
 
+## RA 8. Supers and chrono (`OPENRA_WIDE_SUPERS`, `OPENRA_QUICK_SUPERS`, `SMARTER_CHRONO`, `TIMEQUAKE_FIX`)
+- [ ] Iron curtain on a group: up to 5 units glow, for 20 s; recharge 2 min.
+- [ ] Chronosphere on a group: up to 5 vehicles go together and return after 20 s.
+- [ ] A chronoshifted unit is deselected for others and enemy shots miss it.
+- [ ] Sometimes a timequake shakes the map after a chrono shift.
+
