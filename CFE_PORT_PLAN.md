@@ -624,4 +624,16 @@ own lobby), so the legacy lobby's 6 color boxes and the start positions are new 
 save cost and could share that break.
 
 ## Phase 6 – Packaging
-universal2 `.app`, dylibbundler, ad-hoc codesign, GitHub Actions macOS job.
+`scripts/package_macos.sh` splits symbols, bundles the libraries with dylibbundler, ad-hoc signs both apps and zips them.
+`.github/workflows/macos.yml` calls it and fails if a binary isn't arm64 + x86_64.
+
+- sdl2-compat opens SDL3 with dlopen, so dylibbundler misses it; the script copies it next to libSDL2.
+- Homebrew's libraries here are arm64 with minos 26.0, so a local package only runs on Apple Silicon with macOS 26+.
+  Universal builds need CI's MacPorts libraries.
+
+Results of the local arm64 package: unzipped and run with `/opt/homebrew`, `/usr/local/lib` and `/opt/local` denied by
+`sandbox-exec`, both games reach the main menu and `lsof` shows SDL2, SDL3 and OpenAL loaded from `Contents/libs`. Controls:
+the plain build dies with "Library not loaded", and removing libSDL3 gives no game window.
+
+Not verified: the CI job has never run (the fork has no registered workflows until Actions is enabled in its Actions tab), a
+universal build, x86_64 under Rosetta or on Intel, older macOS, opening a downloaded zip through Gatekeeper.

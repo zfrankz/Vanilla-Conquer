@@ -69,16 +69,13 @@ jobs:
 
     - name: Create archives
       if: ${{ matrix.preset != 'testing' &&  matrix.preset != 'nonet' }}
-      run: |  
-        dsymutil build/${{ matrix.preset }}/RelWithDebInfo/vanillatd.app/Contents/MacOS/vanillatd -o build/${{ matrix.preset }}/RelWithDebInfo/vanillatd.dSYM
-        dsymutil build/${{ matrix.preset }}/RelWithDebInfo/vanillara.app/Contents/MacOS/vanillara -o build/${{ matrix.preset }}/RelWithDebInfo/vanillara.dSYM
-        strip -Sx build/${{ matrix.preset }}/RelWithDebInfo/vanillatd.app/Contents/MacOS/vanillatd
-        strip -Sx build/${{ matrix.preset }}/RelWithDebInfo/vanillara.app/Contents/MacOS/vanillara
-        dylibbundler --create-dir --bundle-deps --overwrite-files --dest-dir ./build/${{ matrix.preset }}/RelWithDebInfo/vanillatd.app/Contents/libs --fix-file build/${{ matrix.preset }}/RelWithDebInfo/vanillatd.app/Contents/MacOS/vanillatd
-        dylibbundler --create-dir --bundle-deps --overwrite-files --dest-dir ./build/${{ matrix.preset }}/RelWithDebInfo/vanillara.app/Contents/libs --fix-file build/${{ matrix.preset }}/RelWithDebInfo/vanillara.app/Contents/MacOS/vanillara
+      env:
+        SDL3_LIB_DIR: /opt/local/lib
+      run: |
         mkdir artifact
-        7z a artifact/vanilla-conquer-${{ matrix.preset }}-macos-clang-universal2-${{ steps.gitinfo.outputs.sha_short }}.zip ./build/${{ matrix.preset }}/RelWithDebInfo/vanillatd.app ./build/${{ matrix.preset }}/RelWithDebInfo/vanillara.app
-        7z a artifact/vanilla-conquer-${{ matrix.preset }}-macos-clang-universal2-${{ steps.gitinfo.outputs.sha_short }}-debug.zip ./build/${{ matrix.preset }}/RelWithDebInfo/vanillatd.dSYM ./build/${{ matrix.preset }}/RelWithDebInfo/vanillara.dSYM
+        scripts/package_macos.sh build/${{ matrix.preset }}/RelWithDebInfo artifact vanilla-conquer-${{ matrix.preset }}-macos-clang-universal2-${{ steps.gitinfo.outputs.sha_short }}
+        for BIN in artifact/*/vanilla*.app/Contents/MacOS/*; do lipo "$BIN" -verify_arch arm64 x86_64; done
+        find artifact -mindepth 1 -maxdepth 1 -type d -exec mv {} /tmp/ \;
 
     - name: Add internal tools to archive
       if: ${{ matrix.preset == 'internal' }}

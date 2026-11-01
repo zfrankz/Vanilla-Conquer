@@ -89,7 +89,11 @@ This will build Vanilla Conquer executables in the build directory.
 
 #### macOS considerations
 
-To create a portable bundle for macOS we run [macdylibbundler](https://github.com/auriamg/macdylibbundler) in our CI builds as an extra step to add the SDL2 and OpenAL libraries to the bundle. If you wish to create a portable bundle yourself, you will need to do this step manually as CMake will not currently do it for you.
+To create a portable bundle for macOS, build the release preset and run `scripts/package_macos.sh <dir with the .app bundles> <empty output dir> <zip name>`. It needs [macdylibbundler](https://github.com/auriamg/macdylibbundler) and copies SDL2 and OpenAL into each bundle, plus SDL3 when SDL2 is really sdl2-compat, which opens SDL3 at run time. Set `SDL3_LIB_DIR` if SDL3 isn't from Homebrew. A bundle only runs where its libraries do: Homebrew's are for the architecture and macOS version of the machine, so universal2 builds come from CI, which uses MacPorts.
+
+Bundles are ad-hoc signed, not notarized, so after downloading one macOS will refuse to open it until it is allowed in System Settings > Privacy & Security, or the quarantine flag is removed with `xattr -dr com.apple.quarantine vanillara.app`.
+
+Game data isn't included. Put it in `~/Library/Application Support/Vanilla-Conquer/vanillatd` and `vanillara`.
 
 ### Icons
 

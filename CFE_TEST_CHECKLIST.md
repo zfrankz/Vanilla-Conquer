@@ -424,3 +424,7 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] RA: change one option on the joiner: joining fails with "Rules or CFE options differ from the host".
 - [ ] TD: change one option on the joiner: joining is denied.
 - [ ] TD: with `INFANTRY_TIBERIUM_AVERSION=2` as the last line, infantry now avoids tiberium in pathing (it wasn't being applied before).
+
+## Packaging (Phase 6)
+- [ ] Unzip the CI zip on another Mac without Homebrew. Both apps open after allowing them in Privacy & Security
+- [ ] On an Intel Mac, or under Rosetta, a skirmish plays with sound
