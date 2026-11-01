@@ -3308,9 +3308,10 @@ int DisplayClass::TacticalClass::Action(unsigned flags, KeyNumType& key)
         }
 
         /*
-        **	Move any cursor displayed.
+        **	Move any cursor displayed. CFE: always, or the proximity check goes stale when the
+        **	building next to the cursor is destroyed (the magic build exploit).
         */
-        if (cell != Map.ZoneCell) {
+        if (cell != Map.ZoneCell || ActiveCFEPatchConfig.EnableGeneralBugfixes) {
             Map.Set_Cursor_Pos(cell);
         }
 

@@ -4855,7 +4855,13 @@ bool BuildingClass::Revealed(HouseClass* house)
         **	owned house is not yet revealed, it won't be reflected in the sidebar
         **	selection icons.
         */
-        if (!In_Radio_Contact() && House->IsHuman && Mission != MISSION_CONSTRUCTION) {
+        // CFE: in multiplayer, buildings start working when anyone finds them.
+        if (ActiveCFEPatchConfig.EnableGeneralBugfixes) {
+            if (!HasOpened && !In_Radio_Contact() && (House->IsHuman || house == House || Session.Type != GAME_NORMAL)
+                && Mission != MISSION_CONSTRUCTION) {
+                Grand_Opening();
+            }
+        } else if (!In_Radio_Contact() && House->IsHuman && Mission != MISSION_CONSTRUCTION) {
             Grand_Opening();
         } else {
             if (!In_Radio_Contact() && !House->IsHuman && house == House && Mission != MISSION_CONSTRUCTION) {

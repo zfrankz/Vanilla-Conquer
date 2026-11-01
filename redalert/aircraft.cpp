@@ -1826,6 +1826,15 @@ int AircraftClass::Mission_Move(void)
 
         case TAKE_OFF:
 
+            // CFE: with smarter aircraft, no ammo means no attack-move.
+            if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove && ActiveCFEPatchConfig.EnableSmarterAircraft
+                && !IsALoaner && !Ammo) {
+                Reset_Attack_Move();
+                Clear_Navigation_List();
+                Enter_Idle_Mode();
+                return (1);
+            }
+
             /*
             **	If the aircraft is high enough to begin its mission, then do so.
             */
