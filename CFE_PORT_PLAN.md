@@ -571,6 +571,22 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
      damage 332: the odds climb fast, as in CFE). No options vs upstream: 7 cases identical, 3000 frames.
    - Not verified: the quake and vortex in play, a hidden vortex waking, chronotank self-shift sound, and any of it by hand.
 
+9. Remaining unflagged fixes and audit – ported (`2351c8dd`), play-test pending
+   - Under `GENERAL_BUGFIXES`: aircraft `Can_Fire` legality and facing check, aircraft out of ammo regrouping, drain and capacity of unfinished buildings, full layer sort,
+     active checks in anims and unit scatter, atom damage cast, engineers heading at once for a new target, computer engineers retargeting, sidebar overflow, aircraft buildable
+     list. Unconditional, since they change nothing else: use after free when selling in `Mission_Deconstruction`, `List_Copy` null check, `Sort_Y` null check.
+   - Audit of the 176 CFE RA commits: already in VC: helipad limit, ambush, Tesla crew spot, Movement_AI check, `ChronalVortex.Stop`, Ukraine voices, Monster Tank Madness sight, stale
+     proximity. Not ported: `INVERSE_PREVIEW_MODE`, repair icon `CanRepair` (DLL interface), `f5eebc5` (compiler evaluation order, Phase 5), `CFE_WildPointerCheck` (debug tool),
+     `MADTimeQuakeCenterList`, the darkness crate and gap generator discovery changes (`Set_Undiscovered_By_Player`, which rely on the per-player masks of the Remastered client;
+     VC handles this differently and it wasn't examined further). `EnableNewSkirmishAI` is not an option: CFE never reads it from its ini. The commit list was read by title; the
+     diffs of 29 of them were read.
+   - Verified: no options vs upstream, 7 cases identical, 3000 frames. Positive control, also the proof that the real `cfepatchredux_ra.ini` is read: with a copy of that file, logs differ
+     from upstream at line 1 in all 4 cases tried. With that file, 9000 frames: SCG05, SCG08, SCG10, SCG12, SCU04, SCU09 exit 0 with no player input. The save stopped at frame 3830 of the
+     run: `sample` shows `Do_Lose`, the lost mission's movie, not a hang. Final build of both games; both alive at 12 s headless; no temporary code left.
+   - Not verified: the fixes one by one (only that the game runs with them on), real play, multiplayer.
+
+Phase 4 state: all 9 steps ported on `cfe-port`. Nothing in it has been played by hand.
+
 ## Phase 5 – Multiplayer / 8 players
 VC `MAX_PLAYERS 6`; needs legacy lobby/score UI work. Needs a CFE config hash shared
 between peers to avoid desyncs. Until then CFE features are SP/skirmish only.
