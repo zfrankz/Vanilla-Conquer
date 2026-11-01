@@ -515,7 +515,7 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
      rough one: inside 5 cells of the old goal at swap time). The 5 "orphan" flags in every mode appear before frame 500 on a moving
      line of cells, so they are a moving object the test doesn't identify, not stuck flags.
      All switches on with everything hunting: SCG05EA, SCG10EA, SCG12EA, SCU05EA and the save, 200 s, no crash; SCU05EA stopped
-     advancing near frame 1000-1500 with the switches on and off alike (likely the mission ending, not checked).
+     advancing near frame 1000-1500 with the switches on and off alike (the mission ending: `Do_Lose`, see step 6).
    - Not verified: vessels in traffic; the rebuilt reservation table against a real mid-move save.
    - Steps 2-4, no options vs upstream `ce83b59e`: byte-identical logs on the 7 cases (save, SCG01/05/08/10, SCU01/05), 1500 frames
      for steps 2 and 3, 3000 for step 4.
@@ -536,6 +536,19 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
      before, 0 after clearing, 2 after loading. All switches, everything rank 3 and hunting, 5 missions: 1 ran 2000 frames to the end, 4 no crash
      in 120 s. Off: no ranks, no bonus. No options vs upstream: 7 cases identical, 3000 frames, which includes loading an older save.
    - Not verified: rank 3 specials in real combat (chain lightning, quad shot, dog howl, medic, sonar, phase medic); mine XP.
+
+6. Attack-move and Q-move – ported (`949549f3`), play-test pending
+   - `ATTACK_MOVE` (Shift+click on the ground, as in TD), `CHRONOTANK_ATTACK_MOVE`, `QMOVE_LOOPS` (click a waypoint again), `AIR_QMOVE`, `AIR_QAML_RECALL`,
+     attack-move for boats and minelayers. State in the veterancy table and save block. RA's own queue is kept when these are off; CFE's
+     rewritten queue (index and size) runs with any of them on.
+   - Differences from CFE: the queue key is VC's `KeyQueueMove` (Q). `Unselect_All_Players_Except_Owner` for chronotanks comes with step 8.
+   - Verified on SCG08EA through `Queue_Mission`, 6 medium tanks ordered at the closest enemy building, 2000 frames: plain move same result
+     with the switch on and off; attack-move leaves units on `MISSION_ATTACK` at the target. Two-waypoint queue with `QMOVE_LOOPS`: done and back at
+     the start. Clicking the waypoint again: still moving with 2 entries each at frame 2000 (loop). Minelayer attack-move: 5 mines laid, then
+     back to repair, ammo 5 again. A queued attack-move can leave an idle unit with the flag on if its last waypoint is too close (same logic as CFE); the next
+     order clears it. The run that seemed hung was the mission being lost: `sample` shows `Do_Lose` playing the movie. The same explains the stop in the step 4 hunt run.
+     No options vs upstream: 7 cases identical, 3000 frames.
+   - Not verified: chronotank teleport, boats, aircraft queues and recall, multiselection, and any of it by hand.
 
 ## Phase 5 – Multiplayer / 8 players
 VC `MAX_PLAYERS 6`; needs legacy lobby/score UI work. Needs a CFE config hash shared

@@ -346,3 +346,12 @@ Mission with 2 refineries and 3-4 harvesters.
 - [ ] Click a vehicle on a busy repair bay: it queues, and leaves cleanly when done.
 - [ ] Save and load: pips and ranks stay.
 
+## RA 6. Attack-move and Q-move (`ATTACK_MOVE`, `QMOVE_LOOPS`, `AIR_QMOVE`, `AIR_QAML_RECALL`, `CHRONOTANK_ATTACK_MOVE`)
+- [ ] Shift+click on the ground: units move and stop to fight what they meet, then carry on.
+- [ ] Hold Q and click points: units follow them in order. Click the first point again: they loop.
+- [ ] Shift+Q: a queued attack-move.
+- [ ] A minelayer with Shift+click: goes there, lays its mines around and returns.
+- [ ] Helicopters and MiGs with queues; out of ammo they rearm and return to the loop.
+- [ ] A chronotank with Shift+click teleports when charged.
+- [ ] Stop (S) halts a queue at once.
+
