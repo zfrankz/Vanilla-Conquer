@@ -71,7 +71,8 @@ unsigned int const EditorCodes[] = {0xA2C09326, // Erik Yeo
 char const* Missions[MISSION_COUNT] = {"Sleep",   "Attack", "Move",    "QMove",   "Retreat",    "Guard",
                                        "Sticky",  "Enter",  "Capture", "Harvest", "Area Guard", "Return",
                                        "Stop",    "Ambush", "Hunt",    "Unload",  "Sabotage",   "Construction",
-                                       "Selling", "Repair", "Rescue",  "Missile", "Harmless"};
+                                       "Selling", "Repair", "Rescue",  "Missile", "Harmless",
+                                       "Attack-Move", "Attack-QMove"};
 
 /***************************************************************************
 **	Special weapon names.

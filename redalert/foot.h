@@ -348,7 +348,14 @@ public:
     /*
     **	Movement and animation.
     */
-    void Handle_Navigation_List(void);
+    bool Handle_Navigation_List(void);
+    bool CFE_Handle_Navigation_List(void);
+    void CFE_Queue_Navigation_List(TARGET target);
+    void Memorize_Navigation_List(void);
+    void Recall_Navigation_List(void);
+    void Clear_Memorized_Navigation_List(void);
+    bool Has_Nav_Queue(void) const;
+    void CFE_Detach_Navigation(TARGET target);
     void Queue_Navigation_List(TARGET target);
     void Clear_Navigation_List(void);
     virtual void Per_Cell_Process(PCPType why);

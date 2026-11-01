@@ -377,6 +377,10 @@ bool DriveClass::Teleport_To(CELL cell)
     Force_Track(-1, 0);
     PrimaryFacing.Set_Current(PrimaryFacing.Desired());
     Transmit_Message(RADIO_OVER_OUT);
+    // CFE: nothing should drive off to its prior destination after porting, except a chronotank in a queue.
+    if (ActiveCFEPatchConfig.EnableAttackMove && !Vet_Entry().SkipNavQueueUpdate) {
+        Reset_Attack_Move();
+    }
     Assign_Destination(TARGET_NONE);
     Assign_Target(TARGET_NONE);
     Assign_Mission(MISSION_NONE);

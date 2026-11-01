@@ -54,6 +54,10 @@ class TechnoTypeClass;
 /****************************************************************************
 **	This is the common data between building and units.
 */
+#define CFE_MAX_NAVQUEUE 10
+#define MAX_NAVQUEUE     CFE_MAX_NAVQUEUE
+#define MAX_NAVQUEUE_INDEX (MAX_NAVQUEUE - 1)
+
 /*
 **	CFE veterancy: the state of one object. Kept in tables indexed by the object's heap index rather
 **	than in TechnoClass, so that class sizes stay the same; it is written as an extra block at the end
@@ -71,7 +75,24 @@ struct CFEVeterancy
     COORDINATE SecondaryZapTarget = 0;  // Chain lightning, rank 3 tesla units.
     TARGET WhoLaidMe = TARGET_NONE;     // Land mines: the minelayer, which gets the XP.
     unsigned short IronCurtainCooldown = 0; // Rank 3 mammoth tank.
-    unsigned short Recharge = 0;            // Rank 3 minelayer ammo, or rank 3 destroyer sonar.
+    unsigned short Recharge = 0;            // Rank 3 minelayer ammo, rank 3 destroyer sonar, or target recheck.
+
+    /*
+    **	CFE attack-move and Q-move state, in the same table for the same reason.
+    */
+    bool AttackMove = false;
+    bool SkipNavQueueUpdate = false;
+    bool HasMemorized = false;
+    bool JustModifiedNavCom = false;
+    unsigned char BoatClock = 0;
+    unsigned char NavIndex = 0;
+    unsigned char NavSize = 0;
+    unsigned char MemorizedSize = 0;
+    unsigned char MinelayerMode = 0;
+    TARGET RememberedNavCom = TARGET_NONE;
+    TARGET UnmodifiedNavCom = TARGET_NONE;
+    TARGET MinelayerOrigin = TARGET_NONE;
+    TARGET Memorized[CFE_MAX_NAVQUEUE] = {};
 };
 
 class Pipe;
@@ -423,6 +444,11 @@ public:
     CFEVeterancy& Vet_Entry(void) const;
     void Reset_Veterancy(void);
     void Gain_Veterancy_XP(unsigned short xp);
+    void Reset_Attack_Move(int minelayercommand = 0);
+    void Attack_Move_Enter_Move_Mode(void);
+    void Attack_Move_Enter_Attack_Mode(void);
+    bool Attack_Move_Key(void) const;
+    void CFE_Attack_Move_AI(void);
     void Gain_Mechanic_XP_Boost(int delta);
     TARGET Find_Chain_Lightning_Target(TARGET primarytarget, int which, float rangescalar);
     virtual bool Electric_Zap(COORDINATE target_coord,

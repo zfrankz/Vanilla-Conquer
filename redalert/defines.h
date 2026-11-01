@@ -986,6 +986,8 @@ typedef enum MissionType : char
     MISSION_RESCUE,
     MISSION_MISSILE,
     MISSION_HARMLESS, // Sit around and don't appear like a threat.
+    MISSION_ATTACKMOVE,  // CFE: travels in the event queue, becomes MISSION_MOVE on arrival.
+    MISSION_QATTACKMOVE, // CFE: adds an attack-move waypoint; same as above.
 
     MISSION_COUNT,
     MISSION_FIRST = 0
@@ -1051,6 +1053,7 @@ typedef enum ActionType : unsigned char
     ACTION_NO_ENTER,
     ACTION_NO_GREPAIR,
     ACTION_TOGGLE_PRIMARY, // Toggle the primary status of the factory.
+    ACTION_ATTACKMOVE,     // CFE: move, but stop and fight whatever comes into range.
 
     ACTION_COUNT
 } ActionType;

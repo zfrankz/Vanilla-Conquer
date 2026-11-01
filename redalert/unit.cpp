@@ -473,6 +473,23 @@ void UnitClass::AI(void)
             }
         }
     }
+    /*
+    **	CFE attack-move: backstop in case a minelayer gets stuck.
+    */
+    if (*this == UNIT_MINELAYER && ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove && !IsDriving
+        && !IsRotating && Mission != MISSION_MOVE && Mission != MISSION_UNLOAD && MissionQueue != MISSION_MOVE
+        && MissionQueue != MISSION_UNLOAD) {
+        CFEVeterancy& cfe = Vet_Entry();
+        if (Target_Legal(cfe.RememberedNavCom) && Distance(cfe.RememberedNavCom) < 2 * Rule.CloseEnoughDistance) {
+            cfe.MinelayerMode = 1;
+        }
+        if (Ammo && cfe.MinelayerMode) {
+            Minelayer_Poop_Time();
+        } else {
+            Minelayer_Go_Home();
+        }
+    }
+
     if (Vet().IronCurtainCooldown) {
         Vet_Entry().IronCurtainCooldown--;
     }
@@ -2810,6 +2827,9 @@ int UnitClass::Mission_Unload(void)
                 Do_Turn(dir);
                 Status = MANEUVERING;
                 return (1);
+            } else if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove) {
+                Minelayer_Go_Home();
+                return (1);
             } else {
                 Assign_Mission(MISSION_GUARD);
             }
@@ -2877,6 +2897,14 @@ int UnitClass::Mission_Unload(void)
                 APC_Close_Door();
             }
             if (Is_Door_Closed()) {
+                if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove) {
+                    if (Ammo) {
+                        Minelayer_Find_Spot();
+                    } else {
+                        Minelayer_Go_Home();
+                    }
+                    return (1);
+                }
                 Assign_Mission(MISSION_GUARD);
             }
             break;
@@ -4079,6 +4107,11 @@ ActionType UnitClass::What_Action(ObjectClass const* object) const
     */
     if (action == ACTION_NONE)
         action = ACTION_NOMOVE;
+
+    // CFE: attack-move also goes to cells this class makes movable, like land mines.
+    if (action == ACTION_MOVE && Attack_Move_Key()) {
+        action = ACTION_ATTACKMOVE;
+    }
 
     return (action);
 }
@@ -6011,3 +6044,136 @@ bool UnitClass::Do_Smarter_Run_Away(void)
     }
     return false;
 }
+
+/*
+**	CFE attack-move for minelayers: drive to the destination, lay all the mines around it, and go home.
+*/
+bool UnitClass::Minelayer_Poop_Time(void)
+{
+    if (!Ammo){
+        Minelayer_Go_Home();
+        return false;
+    }
+    BuildingClass* bldng = Map[Coord_Cell(Coord)].Cell_Building();
+    if (bldng){
+        Minelayer_Find_Spot();
+        return true;
+    }
+    Assign_Mission(MISSION_UNLOAD);
+    return true;
+}
+bool UnitClass::Minelayer_Go_Home(void)
+{
+
+    bool returnvalue = false;
+    if (House->ActiveBScan & STRUCTF_REPAIR){
+        BuildingClass* closestpad = NULL;
+        int bestscore = 0;
+        for (int i = 0; i < Buildings.Count(); ++i) {
+            BuildingClass* pad = Buildings.Ptr(i);
+            if ((pad != NULL) &&
+                pad->IsActive &&
+                !pad->IsInLimbo &&
+                (pad->House == House) &&
+                (pad->Mission != MISSION_DECONSTRUCTION) &&
+                (*pad == STRUCT_REPAIR) &&
+                (Map[pad->Center_Coord()].Zones[Techno_Type_Class()->MZone] == Map[Center_Coord()].Zones[Techno_Type_Class()->MZone])
+            ){
+                    int astar_result = Find_Path_AStar(nullptr, Coord_Cell(Coord), Coord_Cell(pad->Center_Coord()), 1, MOVE_NO, -1);
+                    if (!astar_result){
+                        int crowflies_result = Lepton_To_Cell(Distance(pad));
+                        if (crowflies_result <= 6){
+                           astar_result = crowflies_result;
+                        }
+                    }
+                    if (astar_result && (!bestscore || (astar_result < bestscore))){
+                            bestscore = astar_result;
+                            closestpad = pad;
+                    }
+            }
+        }
+        if (closestpad){
+            Assign_Mission(MISSION_ENTER);
+            Assign_Destination(closestpad->As_Target());
+            returnvalue = true;
+        }
+    }
+    else if (Target_Legal(Vet_Entry().MinelayerOrigin)){
+        Assign_Destination(Vet_Entry().MinelayerOrigin);
+        Assign_Mission(MISSION_MOVE);
+        returnvalue = true;
+    }
+    else {
+        Assign_Mission(MISSION_GUARD);
+    }
+    Reset_Attack_Move(0);
+
+    return returnvalue;
+
+}
+bool UnitClass::Minelayer_Find_Spot(void)
+{
+    if (!Ammo){
+        Minelayer_Go_Home();
+        return false;
+    }
+
+    const CELL cell = Coord_Cell(Coord);
+    const int cellx = Cell_X(cell);
+    const int celly = Cell_Y(cell);
+    int scanx;
+    int scany;
+    int bestscore = 0;
+    CELL bestcell = 0;
+    for (int i=-2; i<=2; i++){
+        scanx = cellx + i;
+        if (scanx <0 ){
+            continue;
+        }
+        if (scanx > MAP_CELL_W){
+            continue;
+        }
+
+        for (int j=-2; j<=2; j++){
+            scany = celly + j;
+            if (scany < 0){
+                continue;
+            }
+            if (scany > MAP_CELL_H){
+                continue;
+            }
+
+            CELL newcell = XY_Cell(scanx, scany);
+            if (!Map.In_Radar(newcell)){
+                continue;
+            }
+            if (cell == newcell){
+                continue;
+            }
+            MoveType move = Can_Enter_Cell(newcell, FACING_NONE);
+            if (   (move <= MOVE_MOVING_BLOCK) &&
+                    !Map[newcell].Cell_Building() &&
+                    !(  (Map[newcell].Smudge != SMUDGE_NONE) &&
+                        SmudgeTypeClass::As_Reference(Map[newcell].Smudge).IsBib
+                    )
+               ){
+                int score = Find_Path_AStar(nullptr, cell, newcell, 1, MOVE_MOVING_BLOCK, -1);
+                if (score){
+                    score = 1000 - (10 * score) + Random_Pick(0, 10);
+                }
+                if (score > bestscore){
+                    bestscore = score;
+                    bestcell = newcell;
+                }
+            }
+        }
+    }
+    if (bestscore){
+        Assign_Destination(::As_Target(bestcell));
+        Assign_Mission(MISSION_MOVE);
+        return true;
+    }
+    Minelayer_Go_Home();
+    return false;
+}
+

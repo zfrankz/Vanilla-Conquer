@@ -431,7 +431,7 @@ void MissionClass::Assign_Mission(MissionType order)
     /*
     **	Ensure that a MISSION_QMOVE is translated into a MISSION_MOVE.
     */
-    if (order == MISSION_QMOVE)
+    if (order == MISSION_QMOVE || order == MISSION_ATTACKMOVE || order == MISSION_QATTACKMOVE)
         order = MISSION_MOVE;
 
     if (order != MISSION_NONE && Mission != order) {

@@ -2527,6 +2527,8 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
     {
         assert(IsActive);
 
+        CFE_Attack_Move_AI();
+
         /*
         **	Handle recoil recovery here.
         */
@@ -3057,6 +3059,9 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
         Assign_Target(TARGET_NONE);
         Assign_Destination(TARGET_NONE);
         Transmit_Message(RADIO_OVER_OUT);
+        if (ActiveCFEPatchConfig.EnableAttackMove) {
+            Reset_Attack_Move(); // CFE: attack-move mustn't interrupt death animations.
+        }
         Detach_All();
         // Unselect();
         // When an object is stunned it needs to be deselected from all players, not just the current PlayerPtr.
@@ -3658,6 +3663,9 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
             if (mission == MISSION_MOVE
                 && (Keyboard->Down(Options.KeyQueueMove1) || Keyboard->Down(Options.KeyQueueMove2))) {
                 mission = MISSION_QMOVE;
+            } else if (mission == MISSION_ATTACKMOVE
+                       && (Keyboard->Down(Options.KeyQueueMove1) || Keyboard->Down(Options.KeyQueueMove2))) {
+                mission = MISSION_QATTACKMOVE;
             }
 #else
         //
@@ -3733,6 +3741,9 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
             */
             if (altdown) {
                 if (House->IsPlayerControl && Can_Player_Move()) {
+                    if (shiftdown && Attack_Move_Key()) {
+                        return (ACTION_ATTACKMOVE); // CFE: attack-move and crush.
+                    }
                     return (ACTION_MOVE);
                 }
             }
@@ -3897,7 +3908,7 @@ bool TechnoClass::Evaluate_Object(ThreatType method,
             **	Special override to force a move regardless of what is occupying the location.
             */
             if (shiftdown) {
-                return (ACTION_MOVE);
+                return (Attack_Move_Key() ? ACTION_ATTACKMOVE : ACTION_MOVE); // CFE: the main way to attack-move.
             }
 
             /*
@@ -7843,7 +7854,8 @@ static RTTIType const _cfe_vet_types[] = {RTTI_UNIT, RTTI_INFANTRY, RTTI_BUILDIN
 
 static bool CFE_Vet_Is_Blank(CFEVeterancy const& vet)
 {
-    return (vet.XP == 0 && vet.Rank == 0 && vet.WhoLaidMe == TARGET_NONE);
+    return (vet.XP == 0 && vet.Rank == 0 && vet.WhoLaidMe == TARGET_NONE && !vet.AttackMove && !vet.NavSize
+            && !vet.HasMemorized && vet.UnmodifiedNavCom == TARGET_NONE);
 }
 
 void CFE_Save_Veterancy(Pipe& file)
@@ -7912,3 +7924,197 @@ void CFE_Load_Veterancy(Straw& file)
         }
     }
 }
+
+/*
+**	CFE attack-move: is the key held that turns a move into an attack-move, and can this object do it?
+*/
+bool TechnoClass::Attack_Move_Key(void) const
+{
+    return (ActiveCFEPatchConfig.EnableAttackMove
+            && (Techno_Type_Class()->PrimaryWeapon != NULL
+                || (What_Am_I() == RTTI_UNIT && *((UnitClass*)this) == UNIT_MINELAYER))
+            && (Keyboard->Down(Options.KeySelect1) || Keyboard->Down(Options.KeySelect2)));
+}
+
+/***********************************************************************************************
+ * TechnoClass::CFE_Attack_Move_AI -- Looks for targets during an attack-move.                 *
+ *                                                                                             *
+ *    Minelayers aren't handled here: they have their own logic. Chronotanks teleport when     *
+ *    charged, and boats alternate short attacks and moves, so as not to get stuck on targets  *
+ *    they can't hit.                                                                          *
+ *=============================================================================================*/
+void TechnoClass::CFE_Attack_Move_AI(void)
+{
+    if (!ActiveCFEPatchConfig.EnableAttackMove) {
+        return;
+    }
+    CFEVeterancy& cfe = Vet_Entry();
+    if (!cfe.AttackMove || !Strength
+        || !((What_Am_I() == RTTI_UNIT && *(UnitClass*)this != UNIT_MINELAYER) || What_Am_I() == RTTI_INFANTRY
+             || What_Am_I() == RTTI_AIRCRAFT || What_Am_I() == RTTI_VESSEL)) {
+        return;
+    }
+
+        if (   ActiveCFEPatchConfig.EnableChronoTankAttackMove &&
+                (What_Am_I() == RTTI_UNIT) &&
+                (*((UnitClass*)this) == UNIT_CHRONOTANK) &&
+                (Mission == MISSION_MOVE) &&
+                !((UnitClass*)this)->MoebiusCountDown &&
+                Target_Legal(cfe.RememberedNavCom)
+        ){
+            bool tpok = false;
+            CELL tpdestination = ::As_Cell(cfe.RememberedNavCom);
+            if (Can_Enter_Cell(tpdestination, FACING_NONE) == MOVE_OK){
+                tpok = true;
+            }
+            else {
+                tpdestination = Map.Nearby_Location(tpdestination, Techno_Type_Class()->Speed);
+                if (    Map.In_Radar(tpdestination) &&
+                        (Can_Enter_Cell(tpdestination, FACING_NONE) == MOVE_OK) &&
+                        (Lepton_To_Cell(::Distance(Cell_Coord(::As_Cell(cfe.RememberedNavCom)), Cell_Coord(tpdestination))) <= 6)
+                ){
+                    tpok = true;
+                }
+            }
+            if (tpok){
+                ((UnitClass*)this)->MoebiusCell = Coord_Cell(Coord); // probably pointless, but house.cpp sets this even on chronotanks (maybe lefover from earlier version in which they'd revert positions too?)
+                Sound_Effect(VOC_CHRONO, Coord); // let's try having sound at both ends?
+                cfe.SkipNavQueueUpdate = true;
+                ((UnitClass*)this)->Teleport_To(tpdestination);
+                cfe.SkipNavQueueUpdate = false;
+                ((UnitClass*)this)->MoebiusCountDown = ChronoTankDuration * TICKS_PER_MINUTE;
+                Scen.Do_BW_Fade();
+                Sound_Effect(VOC_CHRONO, Coord);
+                if (cfe.NavSize == 0){
+                    Reset_Attack_Move();
+                }
+            }
+        }
+        bool AttackMoveBoatMoveLock = false;
+        if (What_Am_I() == RTTI_VESSEL && (*(VesselClass *)this != VESSEL_SS)){
+
+            if (cfe.BoatClock > 0){
+                cfe.BoatClock--;
+                if (cfe.BoatClock > 0 && cfe.BoatClock < 91){
+                    AttackMoveBoatMoveLock = true;
+                    if (Mission != MISSION_MOVE){
+                        Attack_Move_Enter_Move_Mode();
+                    }
+                }
+            }
+            if ((!Target_Legal(TarCom) || !In_Range(TarCom)) && (*(VesselClass *)this != VESSEL_MISSILESUB)) {
+                Assign_Target(TARGET_NONE);
+                if (!AttackMoveBoatMoveLock && Target_Something_Nearby(THREAT_RANGE)){
+                    Attack_Move_Enter_Attack_Mode();
+                }
+                else {
+                    Attack_Move_Enter_Move_Mode();
+                }
+            }
+        }
+        if (What_Am_I() != RTTI_AIRCRAFT && Target_Legal(TarCom) && !Is_In_Same_Zone(As_Cell(TarCom))) {
+            int primary = What_Weapon_Should_I_Use(TarCom);
+            if (!In_Range(TarCom, primary)) {
+                Assign_Target(TARGET_NONE);
+                if (!AttackMoveBoatMoveLock && Target_Something_Nearby(THREAT_RANGE)){
+                    Attack_Move_Enter_Attack_Mode();
+                }
+                else {
+                    Attack_Move_Enter_Move_Mode();
+                }
+            }
+        }
+        if (Target_Legal(TarCom) && !(What_Am_I() == RTTI_INFANTRY && ((InfantryClass*)this)->Class->IsDog) && !(What_Am_I() == RTTI_AIRCRAFT) && !AttackMoveBoatMoveLock) {
+            TARGET oldtarcom = TarCom;
+            if (Target_Something_Nearby(THREAT_RANGE)){
+                if (TarCom != oldtarcom){
+                    Attack_Move_Enter_Attack_Mode();
+                }
+            }
+        }
+        if (!Target_Legal(TarCom) && !AttackMoveBoatMoveLock){
+            if (Target_Something_Nearby(THREAT_RANGE)){
+                Attack_Move_Enter_Attack_Mode();
+            }
+        }
+        if (   (What_Am_I() != RTTI_AIRCRAFT) &&
+                (Mission != MISSION_MOVE) &&
+                (Mission != MISSION_ATTACK) &&
+                (MissionQueue != MISSION_MOVE) &&
+                (MissionQueue != MISSION_ATTACK) &&
+                cfe.RememberedNavCom &&
+                Target_Legal(cfe.RememberedNavCom) &&
+                (Distance(cfe.RememberedNavCom) >= Rule.CloseEnoughDistance)
+        ){
+            Attack_Move_Enter_Move_Mode();
+        }
+
+}
+
+void TechnoClass::Reset_Attack_Move(int minelayercommand)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+
+    if ((What_Am_I() == RTTI_UNIT) && (*((UnitClass*)this) == UNIT_MINELAYER)){
+        if (cfe.AttackMove){
+            if (minelayercommand == 1){
+                if (Target_Legal(cfe.RememberedNavCom) && (Distance(cfe.RememberedNavCom) < 2*Rule.CloseEnoughDistance)){
+                    cfe.MinelayerMode = 1;
+                }
+                if (Ammo && cfe.MinelayerMode){
+                    ((UnitClass*)this)->Minelayer_Poop_Time();
+                }
+                else {
+                    ((UnitClass*)this)->Minelayer_Go_Home();
+                }
+                return;
+            }
+            else if (minelayercommand == 2){
+                ((UnitClass*)this)->Minelayer_Go_Home(); // Minelayer_Go_Home() will call Reset_Attack_Move again with special command 0
+                return;
+            }
+        }
+        cfe.MinelayerOrigin = TARGET_NONE;
+        cfe.MinelayerMode = 0;
+    }
+    cfe.RememberedNavCom = TARGET_NONE; //0
+    cfe.AttackMove = 0;
+    cfe.BoatClock = 0;
+}
+
+void TechnoClass::Attack_Move_Enter_Move_Mode(void)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+    if (!Target_Legal(cfe.RememberedNavCom)){
+        Reset_Attack_Move();
+        Enter_Idle_Mode();
+        return;
+    }
+    Assign_Target(TARGET_NONE);
+
+    Assign_Mission(MISSION_MOVE); //Set_Mission() is bad because it makes Commence() not work, and then we end up with units in impossible mission/status combinations
+    Assign_Destination(cfe.RememberedNavCom);
+    if (What_Am_I() == RTTI_AIRCRAFT){
+        AircraftClass* meplane = (AircraftClass*)this;
+        if (!meplane->CFE_Is_Flight_Transition()) {
+            Commence();
+            if (meplane->Height == FLIGHT_LEVEL){
+                if (meplane->Class->IsFixedWing){
+                    Status = 1; //FLY_TOWARD_TARGET
+                }
+            }
+        }
+    }
+
+}
+
+void TechnoClass::Attack_Move_Enter_Attack_Mode(void)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+    Assign_Destination(TARGET_NONE);
+    Assign_Mission(MISSION_ATTACK); //Set_Mission() is bad because it makes Commence() not work, and then we end up with units in impossible mission/status combinations
+    if (What_Am_I() == RTTI_VESSEL){
+        cfe.BoatClock = 180;
+    }
+}
+

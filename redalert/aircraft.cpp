@@ -884,8 +884,10 @@ int AircraftClass::Mission_Hunt(void)
                 Enter_Idle_Mode();
             }
 
+            // CFE: in an attack-move, go idle when the target dies, to get back on track.
             if (Mission == MISSION_ATTACK || (Class->PrimaryWeapon != NULL && Class->PrimaryWeapon->IsCamera)
-                || (!AttacksRemaining && !Is_Something_Attached())) {
+                || (!AttacksRemaining && !Is_Something_Attached())
+                || (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove && !Target_Legal(TarCom))) {
 
                 if (IsALoaner) {
                     if (Team)
@@ -950,6 +952,15 @@ void AircraftClass::AI(void)
 {
     assert(Aircraft.ID(this) == ID);
     assert(IsActive);
+
+    /*
+    **	CFE: a reloaded aircraft goes back to its memorized Q-attack-move loop.
+    */
+    if (ActiveCFEPatchConfig.EnableAirQAMLRecall && Vet_Entry().HasMemorized && Class->PrimaryWeapon != NULL
+        && !Class->PrimaryWeapon->IsCamera && Class->MaxAmmo > 0 && Ammo == Class->MaxAmmo && Height == 0 && !IsLanding
+        && !IsTakingOff && (Vet().Rank < 3 || Strength >= Class_Of().MaxStrength)) {
+        Recall_Navigation_List();
+    }
 
     /*
     **	CFE: rank 3 veteran aircraft repair for free while docked, at half the rate of a repair bay.
@@ -1824,6 +1835,16 @@ int AircraftClass::Mission_Move(void)
             distance = Distance(NavCom);
 
             if (distance < 0x00C0) {
+                // CFE: make Q-moves work, and go home at the end of an attack-move.
+                if (Has_Nav_Queue()) {
+                    Assign_Destination(TARGET_NONE);
+                    Assign_Target(TARGET_NONE);
+                    Enter_Idle_Mode();
+                    return (1);
+                }
+                if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove) {
+                    Reset_Attack_Move();
+                }
                 MissionType mission = MISSION_GUARD;
 
                 if (!IsALoaner) {
@@ -1913,7 +1934,14 @@ int AircraftClass::Mission_Move(void)
     **	Double check and change LZ if necessary.
     */
     case VALIDATE_LZ:
-        if (!Target_Legal(NavCom)) {
+        // CFE: with smarter aircraft, no ammo means no attack-move.
+        if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove && ActiveCFEPatchConfig.EnableSmarterAircraft
+            && !IsALoaner && !Ammo) {
+            Memorize_Navigation_List();
+            Reset_Attack_Move();
+            Clear_Navigation_List();
+            Enter_Idle_Mode();
+        } else if (!Target_Legal(NavCom)) {
             Enter_Idle_Mode();
         } else {
             if (!Is_LZ_Clear(NavCom) || !Cell_Seems_Ok(As_Cell(NavCom))) {
@@ -1958,6 +1986,20 @@ int AircraftClass::Mission_Move(void)
             int distance = Process_Fly_To(true, NavCom);
 
             if (distance < 0x0080) {
+                // CFE: make Q-moves work; helicopters go home at the end of an attack-move instead of landing.
+                if (Has_Nav_Queue()) {
+                    Assign_Destination(TARGET_NONE);
+                    Assign_Target(TARGET_NONE);
+                    Enter_Idle_Mode();
+                    return (1);
+                }
+                if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove) {
+                    Assign_Target(TARGET_NONE);
+                    Assign_Destination(TARGET_NONE);
+                    Reset_Attack_Move();
+                    Enter_Idle_Mode();
+                    return (1);
+                }
                 if (Target_Legal(TarCom)) {
                     SecondaryFacing.Set_Desired(Direction(TarCom));
                 } else {
@@ -2029,6 +2071,34 @@ void AircraftClass::Enter_Idle_Mode(bool)
 {
     assert(Aircraft.ID(this) == ID);
     assert(IsActive);
+
+    /*
+    **	CFE: aircraft follow their navigation queue too, if they have ammo for an attack-move.
+    */
+    if (ActiveCFEPatchConfig.EnableAirQMove || ActiveCFEPatchConfig.EnableAttackMove) {
+        CFEVeterancy& cfe = Vet_Entry();
+        if (!Target_Legal(NavCom) && (!cfe.AttackMove || Ammo) && Handle_Navigation_List()) {
+            Assign_Mission(MISSION_MOVE);
+            if (!IsLanding && !IsTakingOff) {
+                Commence();
+                if (Height == FLIGHT_LEVEL && Class->IsFixedWing) {
+                    Status = 1; // FLY_TOWARD_TARGET
+                }
+            }
+            return;
+        }
+
+        // If this would go idle with ammo left, carry on towards the destination.
+        if (cfe.AttackMove) {
+            if (Ammo) {
+                Attack_Move_Enter_Move_Mode();
+                return;
+            }
+            Memorize_Navigation_List();
+            Reset_Attack_Move();
+            Clear_Navigation_List();
+        }
+    }
 
     MissionType mission =
         (Class->IsFixedWing && IsALoaner && Class->PrimaryWeapon != NULL) ? MISSION_HUNT : MISSION_GUARD;
@@ -2408,6 +2478,17 @@ void AircraftClass::Player_Assign_Mission(MissionType mission, TARGET target, TA
             Response_Move();
         }
     }
+
+    /*
+    **	CFE: Q-moves for aircraft.
+    */
+    if (ActiveCFEPatchConfig.EnableAirQMove && (Keyboard->Down(Options.KeyQueueMove1) || Keyboard->Down(Options.KeyQueueMove2))) {
+        if (mission == MISSION_MOVE) {
+            mission = MISSION_QMOVE;
+        } else if (mission == MISSION_ATTACKMOVE) {
+            mission = MISSION_QATTACKMOVE;
+        }
+    }
     Queue_Mission(TargetClass(this), mission, target, destination);
 }
 
@@ -2456,7 +2537,7 @@ ActionType AircraftClass::What_Action(ObjectClass const* target) const
 #endif
 
     if (Class->IsFixedWing && action == ACTION_MOVE) {
-        action = ACTION_NOMOVE;
+        action = Attack_Move_Key() ? ACTION_ATTACKMOVE : ACTION_NOMOVE; // CFE: fixed wing planes can attack-move.
     }
 
     if (action == ACTION_NONE) {
@@ -2502,7 +2583,7 @@ ActionType AircraftClass::What_Action(CELL cell) const
     ActionType action = FootClass::What_Action(cell);
 
     // using function for IsVisible so we have different results for different players - JAS 2019/09/30
-    if ((action == ACTION_MOVE || action == ACTION_ATTACK) && !Map[cell].Is_Visible(PlayerPtr)) {
+    if ((action == ACTION_MOVE || action == ACTION_ATTACK || action == ACTION_ATTACKMOVE) && !Map[cell].Is_Visible(PlayerPtr)) {
         action = ACTION_NOMOVE;
     }
 
@@ -2511,7 +2592,7 @@ ActionType AircraftClass::What_Action(CELL cell) const
     }
 
     if (Class->IsFixedWing && action == ACTION_MOVE) {
-        action = ACTION_NOMOVE;
+        action = Attack_Move_Key() ? ACTION_ATTACKMOVE : ACTION_NOMOVE; // CFE: fixed wing planes can attack-move.
     }
 
     return (action);
@@ -2832,6 +2913,14 @@ TARGET AircraftClass::New_LZ(TARGET oldlz) const
                     TARGET newtarget = ::As_Target(newcell);
 
                     if (newcell != lastcell && Is_LZ_Clear(newtarget) && Cell_Seems_Ok(newcell)) {
+
+                        // CFE: this is always called with Assign_Destination; keep the Q-move and attack-move state right.
+                        CFEVeterancy& cfe = Vet_Entry();
+                        cfe.JustModifiedNavCom = true;
+                        cfe.UnmodifiedNavCom = oldlz;
+                        if (cfe.RememberedNavCom != TARGET_NONE && cfe.RememberedNavCom == oldlz) {
+                            cfe.RememberedNavCom = newtarget;
+                        }
                         return (newtarget);
                     }
                     lastcell = newcell;

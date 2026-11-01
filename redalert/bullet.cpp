@@ -143,6 +143,16 @@ BulletClass::~BulletClass(void)
                 ** we can put him down.  If all 8 adjacent cell checks fail, then
                 ** just delete the dog.
                 */
+                /*
+                **	CFE: the dog is going to go idle, and leave attack-move, when it unlimbos.
+                */
+                CFEVeterancy& dogcfe = dog->Vet_Entry();
+                bool resumeattackmove = ActiveCFEPatchConfig.EnableAttackMove && dogcfe.AttackMove;
+                TARGET resumerememberednavcom = dogcfe.RememberedNavCom;
+                if (resumeattackmove) {
+                    dogcfe.SkipNavQueueUpdate = true;
+                }
+
                 for (int i = -1; i < 8; i++) {
                     if (i != -1) {
                         newcoord = Adjacent_Cell(Coord, FacingType(i));
@@ -157,6 +167,12 @@ BulletClass::~BulletClass(void)
                         ScenarioInit--;
 
                         unlimbo = true;
+                        if (resumeattackmove) {
+                            dogcfe.AttackMove = true;
+                            dogcfe.RememberedNavCom = resumerememberednavcom;
+                            dog->Attack_Move_Enter_Move_Mode();
+                            dogcfe.SkipNavQueueUpdate = false;
+                        }
                         break;
                     }
                     ScenarioInit--;

@@ -3623,6 +3623,7 @@ void DisplayClass::Mouse_Left_Up(CELL cell, bool shadow, ObjectClass* object, Ac
             Set_Default_Mouse(MOUSE_CAN_SELECT, wsmall);
             break;
 
+        case ACTION_ATTACKMOVE:
         case ACTION_MOVE:
             Set_Default_Mouse(MOUSE_CAN_MOVE, wsmall);
             break;
@@ -3893,7 +3894,7 @@ void DisplayClass::Mouse_Left_Release(CELL cell, int x, int y, ObjectClass* obje
                 FormSpeed = SPEED_WHEEL;
                 FormMaxSpeed = MPH_LIGHT_SPEED;
 
-                if ((action == ACTION_MOVE || action == ACTION_NOMOVE) && CurrentObject.Count()) {
+                if ((action == ACTION_MOVE || action == ACTION_NOMOVE || action == ACTION_ATTACKMOVE) && CurrentObject.Count()) {
 
                     /*
                     ** Scan all units.  If any are selected that shouldn't be, or aren't
@@ -4009,7 +4010,7 @@ void DisplayClass::Mouse_Left_Release(CELL cell, int x, int y, ObjectClass* obje
                         */
                         CELL newmove = cell;
                         int whatami = tobject->What_Am_I();
-                        if (action == ACTION_MOVE && tobject->Is_Foot()) {
+                        if ((action == ACTION_MOVE || action == ACTION_ATTACKMOVE) && tobject->Is_Foot()) {
                             int oldisform;
                             FootClass* foot = (FootClass*)tobject;
                             oldisform = foot->IsFormationMove;
@@ -4999,7 +5000,7 @@ void DisplayClass::Flag_Cell(CELL cell)
 }
 
 static ActionType _priority_actions[] =
-    {ACTION_ATTACK, ACTION_ENTER, ACTION_HEAL, ACTION_REPAIR, ACTION_SABOTAGE, ACTION_CAPTURE, ACTION_MOVE};
+    {ACTION_ATTACK, ACTION_ENTER, ACTION_HEAL, ACTION_REPAIR, ACTION_SABOTAGE, ACTION_CAPTURE, ACTION_MOVE, ACTION_ATTACKMOVE};
 
 static int get_action_priority(ActionType action)
 {

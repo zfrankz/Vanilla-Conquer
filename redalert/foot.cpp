@@ -80,6 +80,16 @@
 
 #include "function.h"
 
+static_assert(sizeof(((FootClass*)0)->NavQueue) / sizeof(TARGET) == MAX_NAVQUEUE, "CFE nav queue size");
+
+/*
+**	CFE overhauled the navigation queue, which attack-move and Q-move loops depend on.
+*/
+static bool CFE_Nav_Overhaul(void)
+{
+    return (ActiveCFEPatchConfig.EnableQMoveLoops || ActiveCFEPatchConfig.EnableAttackMove || ActiveCFEPatchConfig.EnableAirQMove);
+}
+
 /***********************************************************************************************
  * FootClass::FootClass -- Default constructor for foot class objects.                         *
  *                                                                                             *
@@ -500,7 +510,29 @@ int FootClass::Mission_Move(void)
     assert(IsActive);
 
     if (!Target_Legal(NavCom) && !IsDriving && MissionQueue == MISSION_NONE) {
-        Enter_Idle_Mode();
+        CFEVeterancy& cfe = Vet_Entry();
+        if (ActiveCFEPatchConfig.EnableAttackMove && cfe.AttackMove) {
+
+            /*
+            **	CFE: leave attack-move if the destination is forgotten, reached or has no path;
+            **	a queue is advanced by going idle instead. Otherwise go back to moving.
+            */
+            if (!Target_Legal(cfe.RememberedNavCom) || Distance(cfe.RememberedNavCom) < Rule.CloseEnoughDistance
+                || !Find_Path_AStar(nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1)) {
+                if (cfe.NavSize > 0) {
+                    Enter_Idle_Mode();
+                } else {
+                    Reset_Attack_Move(1);
+                    if (!cfe.AttackMove) { // A minelayer that stays in attack-move doesn't go idle.
+                        Enter_Idle_Mode();
+                    }
+                }
+            } else {
+                Attack_Move_Enter_Move_Mode();
+            }
+        } else {
+            Enter_Idle_Mode();
+        }
         return (1);
     }
     //	if (!Target_Legal(TarCom) && !House->IsPlayerControl && !House->IsHuman) {
@@ -571,6 +603,11 @@ int FootClass::Mission_Attack(void)
     if (Target_Legal(TarCom)) {
         Approach_Target();
     } else {
+        // CFE: in the middle of an attack-move, go back to moving instead of going idle.
+        if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove) {
+            Attack_Move_Enter_Move_Mode();
+            return (1);
+        }
         Enter_Idle_Mode();
     }
     return (MissionControl[Mission].Normal_Delay() + Random_Pick(0, 2));
@@ -1279,6 +1316,7 @@ void FootClass::Active_Click_With(ActionType action, ObjectClass* object)
         break;
 
     case ACTION_NOMOVE:
+    case ACTION_ATTACKMOVE:
     case ACTION_MOVE:
         if (Can_Player_Move()) {
 
@@ -1347,6 +1385,7 @@ void FootClass::Active_Click_With(ActionType action, CELL cell)
         Player_Assign_Mission(MISSION_HARVEST, TARGET_NONE, ::As_Target(cell));
         break;
 
+    case ACTION_ATTACKMOVE:
     case ACTION_MOVE:
         if (AllowVoice) {
             COORDINATE coord = Map.Pixel_To_Coord(Get_Mouse_X(), Get_Mouse_Y());
@@ -1835,6 +1874,16 @@ void FootClass::Assign_Destination(TARGET target)
 
     NavCom = target;
 
+    // CFE: the Q-move input compares against this, since helicopters may change their landing zone.
+    if (ActiveCFEPatchConfig.EnableQMoveLoops || ActiveCFEPatchConfig.EnableAttackMove) {
+        CFEVeterancy& cfe = Vet_Entry();
+        if (cfe.JustModifiedNavCom) {
+            cfe.JustModifiedNavCom = false;
+        } else {
+            cfe.UnmodifiedNavCom = target;
+        }
+    }
+
     /*
     **	Presume that the easiest path is tried first. As the findpath proceeds, when
     **	a failure occurs, this threshhold will be increased until path failure
@@ -2101,8 +2150,11 @@ void FootClass::Detach(TARGET target, bool all)
     /*
     **	Remove the target from the NavQueue list as well.
     */
+    if (CFE_Nav_Overhaul()) {
+        CFE_Detach_Navigation(target);
+    }
     int loop_count = 0;
-    for (int index = 0; index < ARRAY_SIZE(NavQueue); index++) {
+    for (int index = 0; index < ARRAY_SIZE(NavQueue) && !CFE_Nav_Overhaul(); index++) {
         if (NavQueue[index] == target) {
             NavQueue[index] = TARGET_NONE;
             if (index < ARRAY_SIZE(NavQueue) - 1) {
@@ -2331,8 +2383,12 @@ CELL FootClass::Adjust_Dest(CELL cell) const
  * HISTORY:                                                                                    *
  *   07/18/1996 JLB : Created.                                                                 *
  *=============================================================================================*/
-void FootClass::Handle_Navigation_List(void)
+bool FootClass::Handle_Navigation_List(void)
 {
+    if (CFE_Nav_Overhaul()) {
+        return (CFE_Handle_Navigation_List());
+    }
+
     /*
     **	The navigation queue only needs to be processed if there is
     **	currently no navigation target for this object.
@@ -2364,6 +2420,7 @@ void FootClass::Handle_Navigation_List(void)
             }
         }
     }
+    return (false);
 }
 
 /***********************************************************************************************
@@ -2388,6 +2445,11 @@ void FootClass::Handle_Navigation_List(void)
  *=============================================================================================*/
 void FootClass::Queue_Navigation_List(TARGET target)
 {
+    if (CFE_Nav_Overhaul()) {
+        CFE_Queue_Navigation_List(target);
+        return;
+    }
+
     if (Target_Legal(target)) {
         int count;
         for (count = 0; count < ARRAY_SIZE(NavQueue); count++) {
@@ -2442,6 +2504,14 @@ void FootClass::Clear_Navigation_List(void)
 {
     for (int index = 0; index < ARRAY_SIZE(NavQueue); index++) {
         NavQueue[index] = TARGET_NONE;
+    }
+    if (CFE_Nav_Overhaul()) {
+        CFEVeterancy& cfe = Vet_Entry();
+        IsNavQueueLoop = false;
+        cfe.UnmodifiedNavCom = TARGET_NONE;
+        cfe.SkipNavQueueUpdate = false;
+        cfe.NavIndex = 0;
+        cfe.NavSize = 0;
     }
 }
 
@@ -2725,4 +2795,304 @@ BuildingClass* FootClass::Find_Docking_Bay(StructType b, bool friendly) const
         }
     }
     return as_best ? as_best : direct_best;
+}
+
+/*
+**	CFE navigation queue: an index and a size instead of shuffling on every step, loops requested by
+**	clicking on a waypoint again, and a memorized list for aircraft that go home to rearm.
+*/
+bool FootClass::CFE_Handle_Navigation_List(void)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+
+    if (cfe.SkipNavQueueUpdate){
+        return false;
+    }
+
+    /*
+    **    The navigation queue only needs to be processed if there is
+    **    currently no navigation target for this object.
+    */
+    if (Target_Legal(NavCom)){
+        return false;
+    }
+    if (cfe.NavSize == 0){
+        IsNavQueueLoop = false; // just in case it's somehow still set
+        return false;
+    }
+    if (   cfe.AttackMove &&
+            Target_Legal(cfe.RememberedNavCom) &&
+            (Distance(cfe.RememberedNavCom) >= Rule.CloseEnoughDistance) &&
+            (
+                (What_Am_I() == RTTI_AIRCRAFT) ||
+                (Find_Path_AStar(nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1) != 0)
+            )
+    ){
+        return false;
+    }
+    bool consumed = false;
+    int failcount = 0;
+    while (true){
+        TARGET target = NavQueue[cfe.NavIndex];
+        cfe.NavIndex++;
+        if ((cfe.NavIndex >= cfe.NavSize) || (cfe.NavIndex > MAX_NAVQUEUE_INDEX)){
+            if (IsNavQueueLoop){
+                cfe.NavIndex = 0;
+            }
+            else {
+                Clear_Navigation_List();
+                consumed = true;
+            }
+        }
+        if (Target_Legal(target)) {
+            bool isgood = false;
+            if (What_Am_I() == RTTI_AIRCRAFT){
+                COORDINATE coord;
+                if (Is_Target_Building(target)) {
+                    coord = As_Building(target)->Docking_Coord();
+                } else {
+                    coord = As_Coord(target);
+                }
+                int distance = Distance(coord);
+                int threshhold = Rule.CloseEnoughDistance;
+                if (distance >= threshhold){
+                    isgood = true;
+                }
+            }
+            else if (   (::As_Cell(target) != Coord_Cell(Coord)) &&
+                            (   (Distance(target) >= Rule.CloseEnoughDistance) ||
+                                (Can_Enter_Cell(::As_Cell(target)) == MOVE_OK)
+                            )
+            ){
+                isgood = true;
+            }
+            if (isgood){
+                Assign_Destination(target);
+                if (cfe.AttackMove){
+                    cfe.RememberedNavCom = target;
+                }
+                return true;
+            }
+        }
+        failcount++;
+        if (consumed || (failcount >= cfe.NavSize) || (failcount > MAX_NAVQUEUE_INDEX)){
+            Clear_Navigation_List();
+            Assign_Destination(TARGET_NONE);
+            return false;
+        }
+    }
+    return false;
+
+}
+
+void FootClass::CFE_Queue_Navigation_List(TARGET target)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+
+    if (!Target_Legal(target)){
+        return;
+    }
+    if (!IsNavQueueLoop && (cfe.NavIndex > 0)){
+        memmove(&NavQueue[0], &NavQueue[cfe.NavIndex], sizeof(NavQueue[0]) * (MAX_NAVQUEUE - cfe.NavIndex) );
+        for (int i=0; i<cfe.NavIndex; i++){
+            NavQueue[MAX_NAVQUEUE_INDEX - i] = TARGET_NONE;
+        }
+        cfe.NavSize -= cfe.NavIndex;
+        cfe.NavIndex = 0;
+    }
+    TARGET currentdestination = (cfe.AttackMove && Target_Legal(TarCom) && Target_Legal(cfe.RememberedNavCom)) ? cfe.RememberedNavCom : NavCom;
+    bool is_loop_request = false;
+    if (ActiveCFEPatchConfig.EnableQMoveLoops){
+        if ((target == currentdestination) || (target == cfe.UnmodifiedNavCom)){
+            is_loop_request = true;
+        }
+        else {
+            CELL tcell = ::As_Cell(target);
+            for (int i=0; i<cfe.NavSize; i++){
+                if (tcell == ::As_Cell(NavQueue[i])){
+                    is_loop_request = true;
+                    break;
+                }
+            }
+        }
+    }
+    if (is_loop_request){
+        if (    cfe.AttackMove &&
+                (What_Am_I() == RTTI_UNIT) &&
+                (*((UnitClass*)this) == UNIT_MINELAYER)
+        ){
+            return;
+        }
+        if (!IsNavQueueLoop){
+            if (Target_Legal(currentdestination)){
+                if (cfe.NavSize < MAX_NAVQUEUE){
+                    if (cfe.NavSize > 0){
+                        memmove(&NavQueue[1], &NavQueue[0], sizeof(NavQueue)-sizeof(NavQueue[0]));
+                        cfe.NavIndex++;
+                    }
+                    NavQueue[0] = currentdestination;
+                    cfe.NavSize++;
+                }
+            }
+        }
+        if (cfe.NavSize > 0){
+            IsNavQueueLoop = true;
+        }
+
+    }
+    else {
+        if (    IsNavQueueLoop &&
+                (   (cfe.NavSize == 0) ||
+                    (
+                        cfe.AttackMove &&
+                        (What_Am_I() == RTTI_UNIT) &&
+                        (*((UnitClass*)this) == UNIT_MINELAYER)
+                    )
+                )
+        ) {
+            IsNavQueueLoop = false;
+        }
+        if (cfe.NavSize < MAX_NAVQUEUE){
+            if (IsNavQueueLoop && (cfe.NavSize == 1) && (NavQueue[0] == currentdestination)){
+                cfe.NavIndex++;
+            }
+            NavQueue[cfe.NavSize] = target;
+            cfe.NavSize++;
+
+        }
+        else{
+            if (ActiveCFEPatchConfig.EnableQMoveLoops){
+                memmove(&NavQueue[0], &NavQueue[1], sizeof(NavQueue)-sizeof(NavQueue[0]));
+                if (cfe.NavIndex > 0){
+                    cfe.NavIndex--;
+                }
+            }
+            NavQueue[MAX_NAVQUEUE_INDEX] = target;
+        }
+
+    }
+
+    /*
+    **    If this object isn't doing anything, then start acting on the
+    **    navigation queue now.
+    */
+    if (!Target_Legal(NavCom) && Mission == MISSION_GUARD) {
+        Enter_Idle_Mode();
+    }
+
+    return;
+
+}
+
+void FootClass::Memorize_Navigation_List(void)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+
+    if (    !ActiveCFEPatchConfig.EnableAirQAMLRecall ||
+             !cfe.AttackMove ||
+             !IsNavQueueLoop ||
+             (cfe.NavSize < 2) ||
+             !Target_Legal(NavQueue[0]) ||
+             !Target_Legal(NavQueue[1])
+    ){
+        return;
+    }
+    memcpy(&cfe.Memorized[0], &NavQueue[0], sizeof(cfe.Memorized));
+    cfe.MemorizedSize = cfe.NavSize;
+    cfe.HasMemorized = true;
+
+    return;
+}
+
+void FootClass::Recall_Navigation_List(void)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+
+
+    if (!cfe.HasMemorized || (cfe.MemorizedSize < 2)){
+        Clear_Memorized_Navigation_List();
+        return;
+    }
+    cfe.AttackMove = true;
+    cfe.RememberedNavCom = cfe.Memorized[0];
+    IsNavQueueLoop = true;
+    memcpy(&NavQueue[0], &cfe.Memorized[0], sizeof(NavQueue));
+    cfe.NavSize = cfe.MemorizedSize;
+    cfe.NavIndex = (cfe.NavSize > 1) ? 1 : 0;
+    Clear_Memorized_Navigation_List();
+    Assign_Target(TARGET_NONE);
+    Assign_Mission(MISSION_MOVE);
+    Assign_Destination(cfe.RememberedNavCom);
+
+    return;
+}
+
+void FootClass::Clear_Memorized_Navigation_List(void)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+
+    for (int index = 0; index < MAX_NAVQUEUE; index++) {
+        cfe.Memorized[index] = TARGET_NONE;
+    }
+    cfe.MemorizedSize = 0;
+    cfe.HasMemorized = false;
+
+    return;
+}
+
+void FootClass::CFE_Detach_Navigation(TARGET target)
+{
+    CFEVeterancy& cfe = Vet_Entry();
+
+    bool pullback = false;
+    for (int index = MAX_NAVQUEUE_INDEX; index >= 0; index--) {
+        if (NavQueue[index] == target) {
+            if (pullback){
+                memmove(&NavQueue[index], &NavQueue[index+1], (MAX_NAVQUEUE - index - 1) * sizeof(NavQueue[0]));
+                NavQueue[MAX_NAVQUEUE_INDEX] = TARGET_NONE;
+            }
+            else {
+                NavQueue[index] = TARGET_NONE;
+                if ((index > 0) && (index == cfe.NavIndex)){
+                    cfe.NavIndex--;
+                }
+            }
+            cfe.NavSize--;
+        }
+        else if (NavQueue[index] != TARGET_NONE){
+            pullback = true;
+        }
+    }
+    if (cfe.NavSize == 0){
+        Clear_Navigation_List();
+    }
+
+    pullback = false;
+    for (int index = MAX_NAVQUEUE_INDEX; index >= 0; index--) {
+        if (cfe.Memorized[index] == target) {
+            if (pullback){
+                memmove(&cfe.Memorized[index], &cfe.Memorized[index+1], (MAX_NAVQUEUE - index - 1) * sizeof(cfe.Memorized[0]));
+                cfe.Memorized[MAX_NAVQUEUE_INDEX] = TARGET_NONE;
+            }
+            else {
+                cfe.Memorized[index] = TARGET_NONE;
+            }
+            cfe.MemorizedSize--;
+        }
+        else if (cfe.Memorized[index] != TARGET_NONE){
+            pullback = true;
+        }
+    }
+    if (cfe.MemorizedSize == 0){
+        Clear_Memorized_Navigation_List();
+    }
+
+    if (cfe.UnmodifiedNavCom == target){
+        cfe.UnmodifiedNavCom = TARGET_NONE;
+    }
+}
+
+bool FootClass::Has_Nav_Queue(void) const
+{
+    return (Vet_Entry().NavSize > 0);
 }

@@ -1579,6 +1579,14 @@ TARGET VesselClass::Greatest_Threat(ThreatType threat) const
         if (*this == VESSEL_CA) {
             threat = (ThreatType)(threat & (~THREAT_INFANTRY));
         }
+
+        // CFE: in an attack-move, hit buildings, but cruisers can't hit helicopters bouncing up and down.
+        if (ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove && *this != VESSEL_SS) {
+            threat = threat | THREAT_BUILDINGS;
+            if (*this == VESSEL_CA) {
+                threat = (ThreatType)(threat & (~THREAT_AIR));
+            }
+        }
     }
 #ifdef FIXIT_CARRIER //	checked - ajw 9/28/98
     if (*this == VESSEL_CARRIER) {
@@ -2518,6 +2526,11 @@ ActionType VesselClass::What_Action(CELL cell) const
         && Map[cell].Is_Bridge_Here()) {
         return (ACTION_ATTACK);
     }
+    // CFE: attack-move also goes to cells this class makes movable, like beaches.
+    if (action == ACTION_MOVE && Attack_Move_Key()) {
+        action = ACTION_ATTACKMOVE;
+    }
+
     return (action);
 }
 

@@ -50,6 +50,10 @@ class TechnoClass;
 class AircraftClass : public FootClass, public FlyClass
 {
 public:
+    bool CFE_Is_Flight_Transition(void) const
+    {
+        return (IsLanding || IsTakingOff);
+    }
     /*
     **	This is a pointer to the class control structure for the aircraft.
     */

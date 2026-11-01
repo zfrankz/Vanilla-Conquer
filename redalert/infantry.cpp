@@ -2105,6 +2105,21 @@ void InfantryClass::Enter_Idle_Mode(bool)
             }
         }
     }
+
+    /*
+    **	CFE attack-move: infantry end with guard, so Mission_Move, where the reset usually
+    **	happens, is never called.
+    */
+    if (order == MISSION_GUARD && ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove) {
+        CFEVeterancy& cfe = Vet_Entry();
+        if (!Target_Legal(cfe.RememberedNavCom) || Distance(cfe.RememberedNavCom) < Rule.CloseEnoughDistance
+            || !Find_Path_AStar(nullptr, Coord_Cell(Coord), ::As_Cell(cfe.RememberedNavCom), 1, MOVE_MOVING_BLOCK, -1)) {
+            Reset_Attack_Move();
+        } else {
+            Attack_Move_Enter_Move_Mode();
+            return;
+        }
+    }
     Assign_Mission(order);
 }
 
@@ -2744,7 +2759,7 @@ TARGET InfantryClass::Greatest_Threat(ThreatType threat) const
     /*
     **	Human controlled infantry don't automatically fire upon buildings.
     */
-    if (Is_Weapon_Equipped() && House->IsHuman) {
+    if (Is_Weapon_Equipped() && House->IsHuman && !(ActiveCFEPatchConfig.EnableAttackMove && Vet_Entry().AttackMove)) {
         threat = threat & ~THREAT_BUILDINGS;
     }
 
@@ -3240,7 +3255,7 @@ ActionType InfantryClass::What_Action(ObjectClass const* object) const
             }
 #endif
             if (!object->Is_Techno() || !((TechnoClass*)object)->Techno_Type_Class()->Max_Passengers()) {
-                if (action == ACTION_GUARD_AREA || action == ACTION_MOVE) {
+                if (action == ACTION_GUARD_AREA || action == ACTION_MOVE || action == ACTION_ATTACKMOVE) {
                     return (action);
                 }
                 return ((action == ACTION_TOGGLE_SELECT) ? ACTION_TOGGLE_SELECT : ACTION_SELECT);
@@ -3291,7 +3306,7 @@ ActionType InfantryClass::What_Action(ObjectClass const* object) const
     if (action == ACTION_NONE && object->What_Am_I() == RTTI_BUILDING && House->IsPlayerControl) {
         StructType blah = *((BuildingClass*)object);
         if (blah == STRUCT_AVMINE || blah == STRUCT_APMINE)
-            return (ACTION_MOVE);
+            return (Attack_Move_Key() ? ACTION_ATTACKMOVE : ACTION_MOVE);
     }
 
     /*
@@ -3427,6 +3442,7 @@ void InfantryClass::Active_Click_With(ActionType action, ObjectClass* object)
     case ACTION_SABOTAGE:
     case ACTION_ATTACK:
     case ACTION_GUARD_AREA:
+    case ACTION_ATTACKMOVE:
     case ACTION_MOVE:
         action = action;
         break;
@@ -3616,7 +3632,7 @@ ActionType InfantryClass::What_Action(CELL cell) const
     /*
     **	Demolitioners may destroy a bridge
     */
-    if (Class->IsBomber && action == ACTION_MOVE && !Special.IsCaptureTheFlag) {
+    if (Class->IsBomber && (action == ACTION_MOVE || action == ACTION_ATTACKMOVE) && !Special.IsCaptureTheFlag) {
         switch (Map[cell].TType) {
         case TEMPLATE_BRIDGE1:
         case TEMPLATE_BRIDGE2:

@@ -189,6 +189,9 @@ public:
     int CFE_AStar_Refinery_Distance(BuildingClass const* refinery) const;
     void Reconsider_Refinery(void);
     bool Do_Smarter_Run_Away(void);
+    bool Minelayer_Poop_Time(void);
+    bool Minelayer_Go_Home(void);
+    bool Minelayer_Find_Spot(void);
 
     /*
     **	Coordinate inquiry functions. These are used for both display and

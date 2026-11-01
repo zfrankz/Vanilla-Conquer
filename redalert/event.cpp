@@ -710,9 +710,44 @@ void EventClass::Execute(void)
             **	special queued move mission and there is already a valid navigation
             **	target for this unit.
             */
-            bool q = (Data.MegaMission.Mission == MISSION_QMOVE);
+            bool q = (Data.MegaMission.Mission == MISSION_QMOVE || Data.MegaMission.Mission == MISSION_QATTACKMOVE);
 
-            techno->Assign_Mission(Data.MegaMission.Mission);
+            /*
+            **	CFE attack-move: on this side of the network, the mission turns back into MISSION_MOVE
+            **	plus the attack-move state. Any other mission ends the attack-move.
+            */
+            if (ActiveCFEPatchConfig.EnableAttackMove) {
+                if (Data.MegaMission.Mission == MISSION_ATTACKMOVE || Data.MegaMission.Mission == MISSION_QATTACKMOVE) {
+                    CFEVeterancy& cfe = techno->Vet_Entry();
+                    techno->Assign_Mission(MISSION_MOVE);
+                    cfe.AttackMove = true;
+                    if (Data.MegaMission.Mission == MISSION_ATTACKMOVE) {
+                        cfe.RememberedNavCom = Data.MegaMission.Destination.As_TARGET();
+                    } else if (!Target_Legal(cfe.RememberedNavCom)) {
+                        cfe.RememberedNavCom = (techno->Is_Foot() && Target_Legal(((FootClass*)techno)->NavCom))
+                                                   ? ((FootClass*)techno)->NavCom
+                                                   : Data.MegaMission.Destination.As_TARGET();
+                    }
+                    if (techno->What_Am_I() == RTTI_UNIT && *((UnitClass*)techno) == UNIT_MINELAYER) {
+                        cfe.MinelayerOrigin = ::As_Target(Coord_Cell(techno->Coord));
+                        cfe.MinelayerMode = 0;
+                        // Ignore the order if out of ammo and unable to regenerate it.
+                        if (!techno->Ammo && techno->Vet().Rank < 3) {
+                            techno->Reset_Attack_Move(0);
+                            ((UnitClass*)techno)->Minelayer_Go_Home();
+                        }
+                    }
+                } else {
+                    if (techno->Vet_Entry().AttackMove && techno->Mission == MISSION_ATTACK && techno->Is_Foot()
+                        && Target_Legal(((FootClass*)techno)->NavCom) && Data.MegaMission.Mission == MISSION_QMOVE) {
+                        techno->Assign_Destination(techno->Vet_Entry().RememberedNavCom);
+                    }
+                    techno->Assign_Mission(Data.MegaMission.Mission);
+                    techno->Reset_Attack_Move(0);
+                }
+            } else {
+                techno->Assign_Mission(Data.MegaMission.Mission);
+            }
 
             if (techno->Is_Foot()) {
                 ((FootClass*)techno)->SuspendedNavCom = TARGET_NONE;
@@ -790,11 +825,20 @@ void EventClass::Execute(void)
     */
     case IDLE:
         techno = Data.Target.Whom.As_Techno();
+        if (ActiveCFEPatchConfig.EnableAttackMove && techno != NULL && techno->IsActive && !techno->IsInLimbo) {
+            techno->Reset_Attack_Move(2); // CFE: a new order ends attack-move.
+        }
         if (techno != NULL && techno->IsActive && !techno->IsInLimbo && !techno->IsTethered
             && techno->What_Am_I() != RTTI_BUILDING) {
             techno->Transmit_Message(RADIO_OVER_OUT);
             techno->Assign_Destination(TARGET_NONE);
             techno->Assign_Target(TARGET_NONE);
+
+            // CFE: clear the queue before going idle, so that the unit stops right away.
+            if (ActiveCFEPatchConfig.EnableQMoveLoops && techno->Is_Foot()) {
+                ((FootClass*)techno)->Clear_Navigation_List();
+                ((FootClass*)techno)->Clear_Memorized_Navigation_List();
+            }
             techno->Enter_Idle_Mode();
             if (techno->Is_Foot()) {
                 ((FootClass*)techno)->Clear_Navigation_List();
