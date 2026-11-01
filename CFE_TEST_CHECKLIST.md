@@ -320,3 +320,21 @@ Play any Red Alert mission with the switches of that file on.
 - [ ] `SMARTER_SONAR`: a sonar pulse surfaces enemy subs, not yours or your allies'.
 - [ ] `MIG_AMMO_FUDGE`: a MiG fires 4 missiles and shows 4 ammo pips.
 - [ ] `INACCURACY_BUGFIX`: artillery and V2 shots scatter a bit more than before.
+
+## RA 2. Harvesters (`HARVY_QUEUE_JUMP`, `HARVY_LOAD_BALANCING`, `HARVY_OPTIMIZE`)
+Mission with 2 refineries and 3-4 harvesters.
+- [ ] Harvesters spread between refineries instead of all queueing at one.
+- [ ] A harvester close to a refinery can take the place of one still far away.
+- [ ] No harvester stays idle, full, or shuttles endlessly between refineries.
+
+## RA 3. Ore (`BETTER_ORE_GROWTH`, `ORE_GROWTH_SCALE`, `GEM_OVERLOAD_FIX`)
+- [ ] Ore spreads steadily around fields and mines, and never over a mine or a tree.
+- [ ] Long missions: some gems appear next to mines.
+- [ ] A nearly full harvester that reaches gems leaves a bit of ore behind.
+
+## RA 4. Pathing (`ASTAR_PATHING`, `CELL_RESERVATION_FIX`)
+- [ ] Send a big group across a base and through a bridge: routes look sensible, no long freezes.
+- [ ] Two groups crossing: no two vehicles stopped on the same spot.
+- [ ] Ships in a narrow strait: they pass or wait, without getting stuck.
+- [ ] Save mid-move, load, and carry on: nothing freezes.
+

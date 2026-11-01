@@ -492,6 +492,34 @@ smarter aircraft and repair bays; 6 attack-move and Q-move; 7 rally points, wall
    - Not verified: play by hand; capture voice actually audible (the call was logged, the run has no audio); `NewUnitsEnabled`
      turkey path; Yak fudge in combat.
 
+2. Harvesters – ported (`302ed02d`), play-test pending
+   - `HARVY_QUEUE_JUMP`, `HARVY_LOAD_BALANCING`, `HARVY_OPTIMIZE`, new `RADIO_CANCEL`. The default refinery check also tests
+     `IsActive` under `GENERAL_BUGFIXES` (CFE: always).
+   - Verified with temporary code on SCG08EA, 2 refineries (the setup asked for 3, only 2 fit) and 6 harvesters, 8000 frames:
+     picks of refinery A/B and credits earned: off 56/0, 9800; load balancing 15/12, 9800; optimize 30/5, 10500; queue jump
+     44/0 with 10 jumps, 11200; all three 28/4 with 7 jumps and 7 re-picks, 10500. All exit 0.
+3. Ore growth and gems – ported (`70c2f914`), play-test pending
+   - `BETTER_ORE_GROWTH`, `ORE_GROWTH_SCALE`, `ORE_TO_GEM_SLOW_FACTOR`, `GEM_OVERLOAD_FIX`; `CFE_Patch_FullRange_Random_Pick`
+     uses the synchronized generator.
+   - Verified on SCG12EA, 12000 frames, no harvesting, ore cells/levels/gem cells: off 866/5118/34; scale 3 991/5855/34;
+     better 900/5490/34; better+scale 3 1026/7126/34; plus `ORE_INDEX_BUGFIX` 1012/6556/37; plus slow factor 1 1019/6554/47;
+     ore on terrain 0 in all. Harvester with 27 of 28 bails, all ore, on level 2 gems: 725 credits off, 800 with the fix.
+4. A* and cell reservation – ported (`fb990813`), play-test pending
+   - `ASTAR_PATHING` from CFE's RA code (simpler than TD's: no `CFE_Passable_Cell` and no periodic repathing, because CFE RA has
+     neither), A* `Find_Docking_Bay` (only with the switch on; CFE RA always uses it), A* harvester distances.
+   - `CELL_RESERVATION_FIX` (new switch, CFE always runs these): reserving unit in an unsaved table rebuilt after a load,
+     `Occupy_Down/Up`, `Mark_Track`, track jump, per-cell recheck, CFE's `Can_Enter_Cell` rewrites for units, vessels and infantry,
+     diagonal crossing, repair bay entry, stale flag cleanup from `LogicClass::AI`.
+   - Verified on SCG08EA, 24 light tanks swapping sides every 400 frames, 2500 frames, same-cell frames/episodes/stacked/arrivals:
+     off 108/8/53/52; A* 18/5/0/35; reservation 0/0/0/48; both 2/2/0/33. The arrival count fell with A*, unexplained (the count is a
+     rough one: inside 5 cells of the old goal at swap time). The 5 "orphan" flags in every mode appear before frame 500 on a moving
+     line of cells, so they are a moving object the test doesn't identify, not stuck flags.
+     All switches on with everything hunting: SCG05EA, SCG10EA, SCG12EA, SCU05EA and the save, 200 s, no crash; SCU05EA stopped
+     advancing near frame 1000-1500 with the switches on and off alike (likely the mission ending, not checked).
+   - Not verified: vessels in traffic; the rebuilt reservation table against a real mid-move save.
+   - Steps 2-4, no options vs upstream `ce83b59e`: byte-identical logs on the 7 cases (save, SCG01/05/08/10, SCU01/05), 1500 frames
+     for steps 2 and 3, 3000 for step 4.
+
 ## Phase 5 – Multiplayer / 8 players
 VC `MAX_PLAYERS 6`; needs legacy lobby/score UI work. Needs a CFE config hash shared
 between peers to avoid desyncs. Until then CFE features are SP/skirmish only.
