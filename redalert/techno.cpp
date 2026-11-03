@@ -132,6 +132,7 @@
 
 #include "function.h"
 #include "utracker.h"
+#include <cmath>
 
 /***************************************************************************
 **	Cloaking control values.
