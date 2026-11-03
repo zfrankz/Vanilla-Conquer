@@ -95,6 +95,8 @@ Bundles are ad-hoc signed, not notarized, so after downloading one macOS will re
 
 Game data isn't included. Put it in `~/Library/Application Support/Vanilla-Conquer/vanillatd` and `vanillara`.
 
+The CFE Patch Redux options are read from `cfepatchredux.ini` (TD) and `cfepatchredux_ra.ini` (RA) in those same folders. An option missing from the file is off, so without the files the games play as the originals. The zip carries both files with CFE's defaults, also in `resources/`; copy them there to play with CFE's defaults.
+
 ### Icons
 
 CMake will attempt to generate icons in an appropriate format for Windows and macOS if ImageMagick is found in the system PATH. Otherwise you will end up with generic "program" icons.

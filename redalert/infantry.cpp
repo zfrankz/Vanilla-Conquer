@@ -4364,7 +4364,9 @@ void InfantryClass::Movement_AI(void)
                                 if (TryTryAgain) {
                                     TryTryAgain--;
                                 } else {
-                                    if (IsNewNavCom)
+                                    // CFE: in multiplayer only the owner hears it.
+                                    if (IsNewNavCom
+                                        && (!ActiveCFEPatchConfig.EnableGeneralBugfixes || House == PlayerPtr))
                                         Sound_Effect(VOC_SCOLD);
                                     IsNewNavCom = false;
 
@@ -4437,7 +4439,8 @@ void InfantryClass::Movement_AI(void)
 
                     Path[0] = FACING_NONE;
                     Stop_Driver();
-                    if (IsNewNavCom)
+                    // CFE: in multiplayer only the owner hears it.
+                    if (IsNewNavCom && (!ActiveCFEPatchConfig.EnableGeneralBugfixes || House == PlayerPtr))
                         Sound_Effect(VOC_SCOLD);
                     IsNewNavCom = false;
 

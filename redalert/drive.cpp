@@ -1011,7 +1011,8 @@ bool DriveClass::Start_Of_Move(void)
                     Assign_Destination(TARGET_NONE);
                     if (!IsActive)
                         return (false);
-                    if (IsNewNavCom)
+                    // CFE: in multiplayer only the owner hears it.
+                    if (IsNewNavCom && (!ActiveCFEPatchConfig.EnableGeneralBugfixes || House == PlayerPtr))
                         Sound_Effect(VOC_SCOLD);
                     IsNewNavCom = false;
                 }
@@ -1149,7 +1150,8 @@ bool DriveClass::Start_Of_Move(void)
                     }
                 }
             } else {
-                if (IsNewNavCom)
+                // CFE: in multiplayer only the owner hears it.
+                if (IsNewNavCom && (!ActiveCFEPatchConfig.EnableGeneralBugfixes || House == PlayerPtr))
                     Sound_Effect(VOC_SCOLD);
             }
             IsNewNavCom = false;

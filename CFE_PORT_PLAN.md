@@ -645,3 +645,17 @@ the main menu (2026-11-01).
 
 Not verified: play and sound in the universal zip, a real Intel Mac, a Mac without Homebrew, simulation hash between arm64
 and x86_64.
+
+### Options files and the scold sound (2026-11-03)
+- `resources/cfepatchredux.ini` and `cfepatchredux_ra.ini`: CFE's default ini plus `GENERAL_BUGFIXES=1` and
+  `CELL_RESERVATION_FIX=1` (CFE applies both always); `NUKE_TANK` and `SPLIT_DUAL_CAPTURABLES` at 0, since they are
+  not ported. The package script puts both in the zip.
+- The user's TD ini was the one from early Phase 3 with 18 options, so rally points, attack-move, veterancy, walls,
+  balance and `GENERAL_BUGFIXES` had been off in their TD play. Their RA ini lacked `USE_SHARED_CHRONO_ODDS`,
+  `CUMULATIVE_TIMELINE_DAMAGE`, `LONG_BGAP_BUGFIX`, `TURKEY_FIX_MODE=2` and `WALLS_HAVE_FULL_COST=0`. Both completed from
+  the templates, keeping their own values; originals saved as `*.bak-2026-11-03`. Checked under lldb at `Select_Game`.
+- Movement scold (TD `drive.cpp` x2, RA `drive.cpp` x2 and `infantry.cpp` x2): only the owner hears it, under
+  `GENERAL_BUGFIXES`. The move order runs on every machine, so in LAN the opponent heard it too. Other sounds CFE
+  routed per player are already limited to `PlayerPtr` in the legacy code. `Sound_Effect` uses no game random.
+  Not verified: heard in a LAN game.
+
