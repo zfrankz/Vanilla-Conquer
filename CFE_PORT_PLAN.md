@@ -659,3 +659,18 @@ and x86_64.
   routed per player are already limited to `PlayerPtr` in the legacy code. `Sound_Effect` uses no game random.
   Not verified: heard in a LAN game.
 
+
+### Missing game data and LEEME.txt (2026-11-05)
+A tester's Mac with no game data crashed in RA `Init_Game`: `memmove` from the NULL that `MFCD::Retrieve("TEMPERAT.PAL")`
+returns (crash log `x1 = 0`, `x2 = 0x300`). Reproduced with an empty `HOME`: exit 139.
+- `common/datacheck.cpp`, called from both `startup.cpp` after the command line: lists the missing files and the data
+  folder in an SDL message box (MessageBoxA on non-SDL Windows) and exits with 1. RA needs `REDALERT.MIX` plus `MAIN.MIX`
+  in a disc folder; TD needs the 13 loose MIX files of the user's install plus `GENERAL.MIX` in a disc folder. On macOS the
+  app is activated through the objc runtime first (links `objc`), otherwise the box opens behind other windows.
+- `resources/LEEME.txt` (Spanish) and `scripts/is3extract.py` go into the zip: archive.org links, folder layout, and a
+  Terminal block that installs everything (SETUP.Z extraction, Soviet bin to iso with Perl).
+- Checked: empty data shows the box in front and exits 1 after Return in both games; only `REDALERT.MIX` lists only
+  `MAIN.MIX`; with real data no box. The Terminal block, run with `zsh -f` in an empty `HOME`, gives 22 MIX files identical
+  (SHA-1) to the user's install; the Perl conversion gives the same `RA_Soviet.iso`.
+- Not verified: Windows and Linux builds before CI, pasting the block interactively, a Mac without Command Line Tools,
+  Safari auto-unzipping the Soviet zip, TD in low-res mode (it loads `LOCAL.MIX`, the check asks for `CCLOCAL.MIX`).

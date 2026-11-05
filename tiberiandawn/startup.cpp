@@ -36,6 +36,7 @@
 
 #include "function.h"
 #include "common/ini.h"
+#include "common/datacheck.h"
 #include "common/paths.h"
 #include "common/utfargs.h"
 #include "settings.h"
@@ -227,6 +228,30 @@ int main(int argc, char** argv)
     CDFileClass::Refresh_Search_Drives();
 
     if (Parse_Command_Line(args.ArgC, args.ArgV)) {
+
+#ifndef REMASTER_BUILD
+        /*
+        ** Say which data files are missing instead of crashing on the first one the game reads.
+        */
+        static const char* const _required_data[] = {"CONQUER.MIX",
+                                                     "CCLOCAL.MIX",
+                                                     "UPDATE.MIX",
+                                                     "UPDATEC.MIX",
+                                                     "TRANSIT.MIX",
+                                                     "SOUNDS.MIX",
+                                                     "SPEECH.MIX",
+                                                     "TEMPERAT.MIX",
+                                                     "WINTER.MIX",
+                                                     "DESERT.MIX",
+                                                     "TEMPICNH.MIX",
+                                                     "WINTICNH.MIX",
+                                                     "DESEICNH.MIX",
+                                                     nullptr};
+        static const char* const _disc_dirs[] = {"gdi", "nod", "covertops", ".", nullptr};
+        if (!Check_Game_Data("Tiberian Dawn", _required_data, "GENERAL.MIX", _disc_dirs)) {
+            return EXIT_FAILURE;
+        }
+#endif
 
         WinTimerClass::Init(60);
 

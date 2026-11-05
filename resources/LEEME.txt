@@ -1,0 +1,110 @@
+Vanilla Conquer + CFE Patch Redux para macOS
+============================================
+
+Este zip trae los dos juegos (vanillatd.app = Tiberian Dawn, vanillara.app = Red Alert),
+pero NO los datos del juego. Los datos salen de los discos originales, que EA publicó
+gratis. Sin ellos el juego avisa de qué archivos faltan y se cierra.
+
+
+1. Abrir las apps la primera vez
+--------------------------------
+macOS bloquea las apps descargadas que no vienen de la App Store. Haz doble clic en la
+app y, cuando diga que no se puede abrir, ve a Ajustes del Sistema > Privacidad y
+seguridad, baja hasta el aviso de vanillatd/vanillara y pulsa "Abrir igualmente".
+
+
+2. Descargar los discos (archive.org)
+-------------------------------------
+Guárdalos en la carpeta Descargas:
+
+  Tiberian Dawn (Command & Conquer Gold), disco GDI (609 MB):
+    https://archive.org/download/gdi-95/GDI95.ISO
+  Tiberian Dawn, disco Nod (592 MB):
+    https://archive.org/download/gdi-95/NOD95.ISO
+  Red Alert, disco Aliados (583 MB):
+    https://archive.org/download/cd-2-soviet/CD1_Allies.iso
+  Red Alert, disco Soviético (548 MB, un zip con un .bin y un .cue dentro):
+    https://archive.org/download/CommandConquerRedAlertUSA/Command%20%26%20Conquer%20-%20Red%20Alert%20%28USA%29%20%28Soviet%20Disc%29.zip
+
+Con solo el disco GDI y el Aliados los juegos ya arrancan. Los discos Nod y Soviético
+traen los vídeos y datos de las campañas Nod y Soviética, así que es mejor bajarlos todos.
+
+
+3. Dónde van los datos
+----------------------
+Todo va dentro de esta carpeta (en Finder: menú Ir > Ir a la carpeta..., y pega la ruta):
+
+  ~/Library/Application Support/Vanilla-Conquer/
+
+Al terminar tiene que quedar así:
+
+  Vanilla-Conquer/
+    vanillatd/
+      AUD.MIX CONQUER.MIX DESERT.MIX SCORES.MIX SOUNDS.MIX TEMPERAT.MIX WINTER.MIX
+                        (de la raíz del disco GDI)
+      CCLOCAL.MIX UPDATE.MIX UPDATEC.MIX TRANSIT.MIX SPEECH.MIX
+      TEMPICNH.MIX WINTICNH.MIX DESEICNH.MIX
+                        (de dentro de INSTALL/SETUP.Z del disco GDI, ver nota)
+      cfepatchredux.ini (de este zip)
+      gdi/   GENERAL.MIX MOVIES.MIX   (de la raíz del disco GDI)
+      nod/   GENERAL.MIX MOVIES.MIX   (de la raíz del disco Nod)
+    vanillara/
+      REDALERT.MIX      (de la carpeta INSTALL del disco Aliados)
+      cfepatchredux_ra.ini (de este zip)
+      allied/  MAIN.MIX (de la raíz del disco Aliados)
+      soviet/  MAIN.MIX (de la raíz del disco Soviético)
+
+Notas:
+- No pongas un MAIN.MIX suelto en vanillara/. Cada uno va en su carpeta allied/ o soviet/.
+- El CCLOCAL.MIX que hay suelto en INSTALL/ del disco GDI está en alemán. El inglés es
+  el que va dentro de INSTALL/SETUP.Z, que es un archivo comprimido de InstallShield.
+  Se saca con is3extract.py (incluido en este zip), que necesita Python 3.
+- El disco Soviético viene como .bin, que macOS no sabe abrir. Hay que convertirlo a
+  .iso. Los comandos del apartado 4 lo hacen.
+- Los .ini eligen qué mejoras de CFE Patch Redux están activas. Sin ellos los juegos
+  arrancan igual, pero usan los valores por defecto del programa, no los de estos .ini.
+
+
+4. Instalación automática (Terminal)
+------------------------------------
+Hace todo lo del apartado 3. Antes de nada:
+- Los cuatro archivos del apartado 2 tienen que estar en Descargas, con su nombre original.
+- La carpeta de este zip, ya descomprimida, también tiene que estar en Descargas.
+- Si macOS ofrece instalar las "herramientas de línea de comandos" al ejecutar python3,
+  acepta y vuelve a pegar los comandos cuando termine.
+
+Abre Terminal (Aplicaciones > Utilidades), pega todo el bloque y pulsa Intro:
+
+cd ~/Downloads
+VC="$HOME/Library/Application Support/Vanilla-Conquer"
+TOOLS="$(dirname "$(find ~/Downloads -maxdepth 3 -name is3extract.py | head -1)")"
+mkdir -p "$VC/vanillatd/gdi" "$VC/vanillatd/nod" "$VC/vanillara/allied" "$VC/vanillara/soviet"
+echo "== Tiberian Dawn: disco GDI"
+M="$(hdiutil attach -readonly -nobrowse GDI95.ISO | tail -1 | cut -f3-)"
+cp "$M"/{AUD,CONQUER,DESERT,SCORES,SOUNDS,TEMPERAT,WINTER}.MIX "$VC/vanillatd/"
+cp "$M/GENERAL.MIX" "$M/MOVIES.MIX" "$VC/vanillatd/gdi/"
+python3 "$TOOLS/is3extract.py" extract "$M/INSTALL/SETUP.Z" "$TMPDIR/setupz" > /dev/null
+cp "$TMPDIR/setupz/C&C95"/{CCLOCAL,UPDATE,UPDATEC,TRANSIT,SPEECH,TEMPICNH,WINTICNH,DESEICNH}.MIX "$VC/vanillatd/"
+hdiutil detach "$M" -quiet
+echo "== Tiberian Dawn: disco Nod"
+M="$(hdiutil attach -readonly -nobrowse NOD95.ISO | tail -1 | cut -f3-)"
+cp "$M/GENERAL.MIX" "$M/MOVIES.MIX" "$VC/vanillatd/nod/"
+hdiutil detach "$M" -quiet
+echo "== Red Alert: disco Aliados"
+M="$(hdiutil attach -readonly -nobrowse CD1_Allies.iso | tail -1 | cut -f3-)"
+cp "$M/INSTALL/REDALERT.MIX" "$VC/vanillara/"
+cp "$M/MAIN.MIX" "$VC/vanillara/allied/"
+hdiutil detach "$M" -quiet
+echo "== Red Alert: disco Sovietico"
+BIN="$(find ~/Downloads -maxdepth 2 -name '*Soviet Disc*.bin' | head -1)"
+if [ -z "$BIN" ]; then unzip -o -q "Command & Conquer - Red Alert (USA) (Soviet Disc).zip" -d "$TMPDIR/soviet"; BIN="$(find "$TMPDIR/soviet" -name '*.bin' | head -1)"; fi
+perl -e 'binmode STDIN; binmode STDOUT; while (read(STDIN, $s, 2352) == 2352) { print substr($s, 16, 2048) }' < "$BIN" > "$TMPDIR/RA_Soviet.iso"
+M="$(hdiutil attach -readonly -nobrowse "$TMPDIR/RA_Soviet.iso" | tail -1 | cut -f3-)"
+cp "$M/MAIN.MIX" "$VC/vanillara/soviet/"
+hdiutil detach "$M" -quiet
+cp -n "$TOOLS/cfepatchredux.ini" "$VC/vanillatd/"
+cp -n "$TOOLS/cfepatchredux_ra.ini" "$VC/vanillara/"
+echo "== Listo"
+
+Cuando salga "== Listo", abre los juegos. Si sale algún error, o el juego sigue diciendo
+que faltan archivos, comprueba que los nombres de las descargas son los del apartado 2.

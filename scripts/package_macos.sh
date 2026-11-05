@@ -40,6 +40,6 @@ for GAME in vanillatd vanillara; do
     codesign --verify --strict "$APP"
 done
 
-cp License.txt resources/cfepatchredux.ini resources/cfepatchredux_ra.ini "$STAGE/"
+cp License.txt resources/LEEME.txt resources/cfepatchredux.ini resources/cfepatchredux_ra.ini scripts/is3extract.py "$STAGE/"
 ditto -c -k --keepParent "$STAGE" "$OUT_DIR/$NAME.zip"
 ditto -c -k --keepParent "$SYMBOLS" "$OUT_DIR/$NAME-debug.zip"

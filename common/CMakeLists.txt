@@ -117,6 +117,7 @@ set(COMMONR_SRC
 )
 
 set(COMMONV_SRC
+    datacheck.cpp
     framelimit.cpp
     gbuffer.cpp
     interpal.cpp
@@ -145,6 +146,10 @@ if(DDRAW)
     list(APPEND VANILLA_LIBS ddraw)
 elseif(SDL2)
     list(APPEND COMMONV_SRC video_sdl2.cpp wwkeyboard_sdl2.cpp)
+    if(APPLE)
+        # datacheck.cpp activates the app through the Objective-C runtime.
+        list(APPEND VANILLA_LIBS objc)
+    endif()
 elseif(SDL1)
     list(APPEND COMMONV_SRC video_sdl1.cpp wwkeyboard_sdl1.cpp)
 else()

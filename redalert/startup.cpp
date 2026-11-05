@@ -37,6 +37,7 @@
 #include "function.h"
 #include "language.h"
 #include "settings.h"
+#include "common/datacheck.h"
 #include "common/paths.h"
 #include "common/utfargs.h"
 
@@ -293,6 +294,17 @@ int main(int argc, char* argv[])
     CDFileClass::Refresh_Search_Drives();
 
     if (Parse_Command_Line(args.ArgC, args.ArgV)) {
+
+#ifndef REMASTER_BUILD
+        /*
+        ** Say which data files are missing instead of crashing on the first one the game reads.
+        */
+        static const char* const _required_data[] = {"REDALERT.MIX", nullptr};
+        static const char* const _disc_dirs[] = {"allied", "soviet", "counterstrike", "aftermath", ".", nullptr};
+        if (!Check_Game_Data("Red Alert", _required_data, "MAIN.MIX", _disc_dirs)) {
+            return EXIT_FAILURE;
+        }
+#endif
 
         WinTimerClass::Init(60);
 
